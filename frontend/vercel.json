@@ -1,0 +1,14 @@
+{
+  "routes": [
+    {
+      "src": "/[^.]+",
+      "dest": "/"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/scrape",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
