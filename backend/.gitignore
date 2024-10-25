@@ -1,0 +1,5 @@
+.env
+.vercel
+firebase_keys.json
+.DS_Store
+coverage/
