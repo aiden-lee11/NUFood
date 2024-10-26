@@ -5,6 +5,8 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
 import { postUserPreferences } from '../util/userPreferences';
 import { useNavigate } from 'react-router-dom';
+import Fuse from 'fuse.js';
+import { Input } from '@headlessui/react';
 
 interface DailyItem {
   Name: string;
@@ -22,11 +24,27 @@ const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 const DailyItems: React.FC = () => {
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
   const [favorites, setFavorites] = useState<Item[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
 
   const [user, authLoading] = useAuthState(auth);
   const userId = user?.uid || '';
 
   const navigate = useNavigate();
+
+  const fuse = new Fuse(dailyItems, {
+    keys: ['Name'], // Search by 'Name' property
+    threshold: 0.5, // Adjust this for more or less strict matching
+  });
+
+  useEffect(() => {
+    if (searchQuery) {
+      const result = fuse.search(searchQuery).map(({ item }) => item);
+      setFilteredItems(result);
+    } else {
+      setFilteredItems(dailyItems); // Show all items if search is empty
+    }
+  }, [searchQuery, dailyItems]); // Add dependencies here
 
   // Fetch userPreferences based on userID
   const getUserPreferences = async () => {
@@ -54,7 +72,10 @@ const DailyItems: React.FC = () => {
 
       const data = await response.json();
       console.log('Daily Items:', data);
-      setDailyItems(data);
+      // Get rid of duplicate names in the daily items 
+      const uniqueItems = Array.from(new Set(data.map((item: DailyItem) => item.Name)))
+        .map(name => data.find((item: DailyItem) => item.Name === name));
+      setDailyItems(uniqueItems);
     } catch (error) {
       console.error("Error fetching favorites:", error);
     }
@@ -82,24 +103,33 @@ const DailyItems: React.FC = () => {
 
   useEffect(() => {
     if (!authLoading && userId) {
+      // Fetch user preferences and daily items once
       getUserPreferences();
       fetchDailyItems();
+    } else if (!userId && !authLoading) {
+      console.error("User ID not found. Redirecting to login.");
+      // Redirect to login page if no user is found
+      navigate('/login', { replace: true });
     }
-  }, [authLoading, userId]);
+    // Only run this effect when `authLoading` or `userId` change
+  }, [authLoading, userId, navigate]);
 
-
-  if (!userId) {
-    console.error("User ID not found. Redirecting to login.");
-    // Redirect to login page if no user is found
-    navigate('/login');
-  }
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <h1 className="text-2xl font-bold mb-4 text-white">Daily Items For Today</h1>
 
+
+      <Input
+        type="text"
+        placeholder="Search for an item..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="mb-4 w-full p-2 border border-gray-300  rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent bg-gray-800 text-white"
+      />
+
       <ul className="space-y-2 mb-6">
-        {dailyItems.map((item, index) => (
-          <li key={`${item.Name}-${item.Date}-${index}`}>
+        {filteredItems.map((item, index) => (
+          <li key={`${item.Name}-${index}`}>
             <button
               onClick={() => handleItemClick(item)}
               className={clsx(
