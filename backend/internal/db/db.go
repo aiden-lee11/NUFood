@@ -50,7 +50,6 @@ type UserPreferences struct {
 }
 
 type UserPreferencesJSON struct {
-	UserID    string
 	Favorites []AllDataItem
 }
 
@@ -243,7 +242,7 @@ func GetAvailableFavorites(userID string) ([]DailyItem, error) {
 		return nil, err
 	}
 
-	for _, favorite := range userPreferences.Favorites {
+	for _, favorite := range userPreferences {
 		fmt.Println("Finding favorite item", favorite.Name)
 		result, err := FindFavoriteItemInDailyItems(favorite.Name)
 		if err != nil {
@@ -256,7 +255,7 @@ func GetAvailableFavorites(userID string) ([]DailyItem, error) {
 	return favorites, nil
 }
 
-func GetUserPreferences(userID string) (*UserPreferencesJSON, error) {
+func GetUserPreferences(userID string) ([]AllDataItem, error) {
 	var userPreferences UserPreferences
 	result := DB.Where("user_id = ?", userID).First(&userPreferences)
 
@@ -272,10 +271,7 @@ func GetUserPreferences(userID string) (*UserPreferencesJSON, error) {
 	}
 
 	// Return the deserialized maps as part of the user preferences
-	return &UserPreferencesJSON{
-		UserID:    userPreferences.UserID,
-		Favorites: favorites,
-	}, nil
+	return favorites, nil
 }
 
 func GetAllDataItems() ([]AllDataItem, error) {

@@ -4,15 +4,12 @@ import { Input } from '@headlessui/react';
 import clsx from 'clsx';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
-import { fetchUserPreferences } from '../util/userPreferences';
 import { useNavigate } from 'react-router-dom';
-import { postUserPreferences } from '../util/userPreferences';
+import { fetchAllData, postUserPreferences } from '../util/data';
 
 interface Item {
   Name: string; // Assuming your items have a 'Name' property
 }
-
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
 const FavoriteItems: React.FC = () => {
   const [allItems, setAllItems] = useState<Item[]>([]);
@@ -28,19 +25,6 @@ const FavoriteItems: React.FC = () => {
   });
 
   const navigate = useNavigate();
-
-  // Fetch all items
-  const getAllItems = async () => {
-    const response = await fetch(`${API_URL}/api/data`);
-    const data = await response.json();
-    setAllItems(data);
-  };
-
-  const getUserPreferences = async () => {
-    const favorites = await fetchUserPreferences(userId);
-    setUserPreferences(favorites.map((item: Item) => item));
-  }
-
 
   // Filter items using Fuse.js whenever searchQuery changes
   useEffect(() => {
@@ -67,7 +51,6 @@ const FavoriteItems: React.FC = () => {
       setUserPreferences(tempPreferences);
     }
 
-    console.log('User preferences of temp:', tempPreferences);
     postUserPreferences(tempPreferences, userId);
   };
 
@@ -76,10 +59,14 @@ const FavoriteItems: React.FC = () => {
   useEffect(() => {
     // Only fetch dailyItems if Firebase auth is not loading and we have a valid user
     if (!authLoading && userId) {
-      getAllItems();
-      getUserPreferences();
+      fetchAllData(userId).then((data) => {
+        if (data) {
+          setAllItems(data.allItems);
+          setUserPreferences(data.userPreferences.map((item: Item) => item));
+        }
+      });
     }
-  }, [authLoading, userId]);  // Re-run when authLoading changes or we get a new userId
+  }, [authLoading, userId]); // Re-run when authLoading changes or we get a new userId
 
 
   if (!userId && !authLoading) {

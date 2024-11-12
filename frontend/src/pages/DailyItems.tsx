@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
-import { postUserPreferences } from '../util/userPreferences';
+import { fetchAllData, postUserPreferences } from '../util/data';
 import { useNavigate } from 'react-router-dom';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
@@ -20,7 +20,6 @@ interface Item {
   Name: string;
 }
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 const DailyItems: React.FC = () => {
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
   const [favorites, setFavorites] = useState<Item[]>([]);
@@ -46,41 +45,6 @@ const DailyItems: React.FC = () => {
     }
   }, [searchQuery, dailyItems]); // Add dependencies here
 
-  // Fetch userPreferences based on userID
-  const getUserPreferences = async () => {
-    const response = await fetch(`${API_URL}/api/userPreferences?userID=${userId}`);
-    const data = await response.json();
-    const preferences = data.Favorites;
-    console.log('User preferences:', preferences);
-    setFavorites(preferences.map((item: Item) => item));
-  };
-
-  // Fetch daily items 
-  const fetchDailyItems = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/dailyItems`);
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.error("Daily Items not found");
-          return;
-        } else {
-          console.error("Error fetching daily Items:", response.statusText);
-        }
-        return;
-      }
-
-      const data = await response.json();
-      console.log('Daily Items:', data);
-      // Get rid of duplicate names in the daily items 
-      const uniqueItems = Array.from(new Set(data.map((item: DailyItem) => item.Name)))
-        .map(name => data.find((item: DailyItem) => item.Name === name));
-      setDailyItems(uniqueItems);
-    } catch (error) {
-      console.error("Error fetching favorites:", error);
-    }
-  };
-
   const handleItemClick = (item: Item) => {
     let tempPreferences = favorites;
     // Convert item name to lowercase and trim whitespace
@@ -96,7 +60,6 @@ const DailyItems: React.FC = () => {
       setFavorites(tempPreferences);
     }
 
-    console.log('User preferences of temp:', tempPreferences);
     postUserPreferences(tempPreferences, userId);
   };
 
@@ -104,8 +67,14 @@ const DailyItems: React.FC = () => {
   useEffect(() => {
     if (!authLoading && userId) {
       // Fetch user preferences and daily items once
-      getUserPreferences();
-      fetchDailyItems();
+      fetchAllData(userId).then((data) => {
+        if (data) {
+          setFavorites(data.userPreferences.map((item: Item) => item));
+          const uniqueItems = Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Name)))
+            .map(name => data.dailyItems.find((item: DailyItem) => item.Name === name));
+          setDailyItems(uniqueItems);
+        }
+      });
     } else if (!userId && !authLoading) {
       console.error("User ID not found. Redirecting to login.");
       // Redirect to login page if no user is found

@@ -4,6 +4,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
 // grab router for navigation
 import { useNavigate } from 'react-router-dom';
+import { fetchAllData } from "../util/data";
 
 type DailyItem = {
   Name: string;
@@ -13,7 +14,6 @@ type DailyItem = {
   TimeOfDay: string;
 };
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 const Home: React.FC = () => {
   const [groupedItems, setGroupedItems] = useState<Record<string, DailyItem[]>>({}); // New state for grouped items
   const [locations, setLocations] = useState<string[]>([]); // New state for locations
@@ -31,31 +31,18 @@ const Home: React.FC = () => {
         console.error("User ID not found. Redirecting to login.");
         // Redirect to login page if no user is found
         navigate('/login');
-
       };  // Ensure we have a valid userId before fetching
-      const response = await fetch(`${API_URL}/api/favorites?userID=${userId}`);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.error("Favorites not found for the user. Redirecting to favorite assignment.");
-          // Redirect to favorite assignment page if no favorites are found
-          navigate('/favorites');
-        } else {
-          console.error("Error fetching favorites:", response.statusText);
-        }
-        return;
-      }
+      const data = await fetchAllData(userId);
+      const availableFavorites = data.availableFavorites;
 
-      const data = await response.json();
-      console.log("Favorites fetched successfully:", data);
-
-      if (!data || data.length === 0) {
+      if (!availableFavorites || availableFavorites.length === 0) {
         setNoItemsMessage("None of your preferences are available today. \r Consider checking out the daily items today!");
       } else {
         setNoItemsMessage(null); // Reset message if items are available
 
         // Group the items by location after dailyItems has been set
-        const groupedItems = groupByLocation(data);
+        const groupedItems = groupByLocation(availableFavorites);
         setGroupedItems(groupedItems);
         setLocations(Object.keys(groupedItems));
       }

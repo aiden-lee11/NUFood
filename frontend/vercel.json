@@ -10,5 +10,8 @@
       "path": "/scrape",
       "schedule": "0 0 * * *"
     }
-  ]
+  ],
+  "git": {
+    "enabled": false
+  }
 }

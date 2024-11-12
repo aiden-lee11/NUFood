@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
-import { fetchUserPreferences } from '../util/userPreferences';
 import { useNavigate } from 'react-router-dom';
+import { fetchAllData } from '../util/data';
 
 interface FavoriteItem {
   Name: string;
@@ -16,8 +16,8 @@ const FavoritesPage: React.FC = () => {
 
   // Fetch user favorites based on userID
   const fetchFavorites = async () => {
-    const favorites = await fetchUserPreferences(userId);
-    setFavorites(favorites.map((item: FavoriteItem) => item));
+    const data = await fetchAllData(userId);
+    setFavorites(data.userPreferences.map((item: FavoriteItem) => item));
   };
 
   useEffect(() => {

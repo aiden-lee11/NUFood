@@ -34,10 +34,8 @@ func main() {
 	fmt.Println("Database initialized successfully")
 
 	// Define the route for getting favorites
-	http.HandleFunc("/api/favorites", api.GetAvailableFavoritesHandler)
-	http.HandleFunc("/api/data", api.GetAllDataItemsHander)
-	http.HandleFunc("/api/userPreferences", api.UserPreferencesHandler)
-	http.HandleFunc("/api/dailyItems", api.GetAllDailyItemsHander)
+	http.HandleFunc("/api/userPreferences", api.SetUserPreferences)
+	http.HandleFunc("/api/allData", api.GetAllDataHandler)
 	http.HandleFunc("/api/scrapeDailyItems", api.ScrapeDailyItemsHandler)
 	http.HandleFunc("/api/scrapeHistorical", api.ScrapeHistoricalItemsHandler)
 
