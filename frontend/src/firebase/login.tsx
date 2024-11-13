@@ -48,7 +48,7 @@ export default function Login() {
         <p className="text-2xl text-white">Find out what's cooking at Northwestern</p>
       </div>
 
-      <div className="bg-purple-600 p-12 rounded-xl shadow-2xl max-w-2xl w-full">
+      <div className="p-12 rounded-xl shadow-2xl max-w-2xl w-full">
         <div className="text-center mb-10">
           <h2 className="text-4xl font-bold text-white mb-4">Enjoy your stay!</h2>
         </div>
