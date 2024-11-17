@@ -9,7 +9,7 @@ const navItemsLeft = [
   { label: 'All Items', url: '/favorites' },
 ]
 
-const loggedIn = sessionStorage.getItem('auth') == 'true';
+const loggedIn = localStorage.getItem('auth') == 'true';
 
 function MyNavbar({ children }: { children: ReactNode }) {
   return (
@@ -26,7 +26,7 @@ function MyNavbar({ children }: { children: ReactNode }) {
           </NavbarSection>
           <NavbarSpacer />
           <NavbarSection className="max-lg:hidden">
-            <NavbarItem href="/current">Current Favorites</NavbarItem>
+            <NavbarItem href="/current">Preferences</NavbarItem>
             <NavbarItem href={loggedIn ? "/signout" : "/login"}>
               {loggedIn ? "Sign Out" : "Login"}
             </NavbarItem>
