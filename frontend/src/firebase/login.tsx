@@ -25,7 +25,7 @@ export default function Login() {
         throw new Error("Login failed: No user found");
       }
 
-      sessionStorage.setItem('auth', 'true')
+      localStorage.setItem('auth', 'true')
       navigate("/");
     } catch (error) {
       console.error(error);

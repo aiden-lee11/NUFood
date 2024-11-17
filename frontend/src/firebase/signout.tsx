@@ -13,7 +13,7 @@ const SignOutButton = () => {
     sessionStorage.removeItem('dailyItems');
     sessionStorage.removeItem('date');
     sessionStorage.removeItem('userPreferences');
-    sessionStorage.removeItem('auth');
+    localStorage.removeItem('auth');
 
     setLoading(true);
     try {
