@@ -12,14 +12,14 @@ import (
 // Global database variable
 var DB *gorm.DB
 
-// Item represents the daily menu item model with full details
 type GormDailyItem struct {
 	gorm.Model
-	Name        string
-	Description string
-	Date        string // The date this item is available
-	Location    string // The dining hall location
-	TimeOfDay   string // The time of day this item is available
+	DailyItem
+}
+
+type GormAllDataItem struct {
+	gorm.Model
+	AllDataItem `gorm:"unique"`
 }
 
 // MenuItem represents the input data for an item
@@ -29,12 +29,6 @@ type DailyItem struct {
 	Date        string // The date this item is available
 	Location    string // The dining hall location
 	TimeOfDay   string // The time of day this item is available
-}
-
-// ShortedItem represents unique menu item names
-type GormAllDataItem struct {
-	gorm.Model
-	Name string `gorm:"unique"`
 }
 
 type AllDataItem struct {
@@ -60,20 +54,12 @@ var NoUserPreferencesInDB = errors.New("no user preferences found")
 
 // ConvertShortedMenuItem converts a MenuItem into a ShortedItem
 func AllDataItemToGorm(item AllDataItem) GormAllDataItem {
-	return GormAllDataItem{
-		Name: item.Name,
-	}
+	return GormAllDataItem{AllDataItem: item}
 }
 
 // ConvertMenuItem converts a MenuItem into an Item
-func DailyItemToGorm(menuItem DailyItem) GormDailyItem {
-	return GormDailyItem{
-		Name:        menuItem.Name,
-		Description: menuItem.Description,
-		Date:        menuItem.Date,
-		Location:    menuItem.Location,
-		TimeOfDay:   menuItem.TimeOfDay,
-	}
+func DailyItemToGorm(item DailyItem) GormDailyItem {
+	return GormDailyItem{DailyItem: item}
 }
 
 // InitDB initializes the SQLite database connection and migrates the schema.
@@ -257,6 +243,7 @@ func GetAvailableFavorites(userID string) ([]DailyItem, error) {
 
 func GetUserPreferences(userID string) ([]AllDataItem, error) {
 	var userPreferences UserPreferences
+
 	result := DB.Where("user_id = ?", userID).First(&userPreferences)
 
 	if result.Error != nil {
@@ -310,14 +297,7 @@ func GetAllDailyItems() ([]DailyItem, error) {
 	// Convert the GormDailyItem slice to a DailyItem slice
 	var items []DailyItem
 	for _, item := range dailyItems {
-
-		items = append(items, DailyItem{
-			Name:        item.Name,
-			Description: item.Description,
-			Date:        item.Date,
-			Location:    item.Location,
-			TimeOfDay:   item.TimeOfDay,
-		})
+		items = append(items, item.DailyItem)
 	}
 
 	return items, nil

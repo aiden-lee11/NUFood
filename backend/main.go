@@ -38,6 +38,7 @@ func main() {
 	http.HandleFunc("/api/allData", api.GetAllDataHandler)
 	http.HandleFunc("/api/scrapeDailyItems", api.ScrapeDailyItemsHandler)
 	http.HandleFunc("/api/scrapeHistorical", api.ScrapeHistoricalItemsHandler)
+	http.HandleFunc("/api/deleteDailyItems", api.DeleteDailyItems)
 
 	// Start the HTTP server on port 8080
 	http.ListenAndServe(":8081", nil)

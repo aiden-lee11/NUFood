@@ -8,6 +8,13 @@ const SignOutButton = () => {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
+    sessionStorage.removeItem('allItems');
+    sessionStorage.removeItem('availableFavorites');
+    sessionStorage.removeItem('dailyItems');
+    sessionStorage.removeItem('date');
+    sessionStorage.removeItem('userPreferences');
+    sessionStorage.removeItem('auth');
+
     setLoading(true);
     try {
       await signOut(auth);

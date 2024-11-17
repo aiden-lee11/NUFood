@@ -5,16 +5,11 @@ import { ReactNode } from 'react'
 
 const navItemsLeft = [
   { label: 'Home', url: '/' },
-  { label: 'Chose Favorites', url: '/favorites' },
-  { label: 'Current Favorites', url: '/current' },
   { label: 'Daily Items', url: '/daily' },
+  { label: 'All Items', url: '/favorites' },
 ]
 
-const navItemsRight = [
-  { label: 'Login', url: '/login' },
-  { label: 'Sign Out', url: '/signout' },
-]
-
+const loggedIn = sessionStorage.getItem('auth') == 'true';
 
 function MyNavbar({ children }: { children: ReactNode }) {
   return (
@@ -31,11 +26,10 @@ function MyNavbar({ children }: { children: ReactNode }) {
           </NavbarSection>
           <NavbarSpacer />
           <NavbarSection className="max-lg:hidden">
-            {navItemsRight.map(({ label, url }) => (
-              <NavbarItem key={label} href={url}>
-                {label}
-              </NavbarItem>
-            ))}
+            <NavbarItem href="/current">Current Favorites</NavbarItem>
+            <NavbarItem href={loggedIn ? "/signout" : "/login"}>
+              {loggedIn ? "Sign Out" : "Login"}
+            </NavbarItem>
           </NavbarSection>
         </Navbar>
       }
@@ -51,11 +45,9 @@ function MyNavbar({ children }: { children: ReactNode }) {
             </SidebarSection>
             <SidebarSpacer />
             <SidebarSection>
-              {navItemsRight.map(({ label, url }) => (
-                <SidebarItem key={label} href={url}>
-                  {label}
-                </SidebarItem>
-              ))}
+              <SidebarItem href={loggedIn ? "/signout" : "/login"}>
+                {loggedIn ? "Sign Out" : "Login"}
+              </SidebarItem>
             </SidebarSection>
           </SidebarBody>
         </ Sidebar>

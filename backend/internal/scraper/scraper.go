@@ -7,6 +7,7 @@ import (
 	"github.com/gocolly/colly"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -29,7 +30,6 @@ type Location struct {
 type Period struct {
 	Name       string     `json:"name"`
 	Categories []Category `json:"categories"`
-	ID         string     `json:"id"`
 }
 
 type Category struct {
@@ -136,56 +136,130 @@ func ScrapeAndSave(date string) error {
 		}
 	}
 
+	fmt.Println("Scraping and saving successful")
+
 	return nil
 }
 
 func postItemsToAllandDaily(jsonResponse Response, service Service, location string, rescrapeDaily bool) error {
 	categories := jsonResponse.Menu.Periods.Categories
-
 	date := jsonResponse.Menu.Date
 
-	nonIngredientCategories := map[string]bool{
-		"Comfort":                        true,
-		"Comfort 1":                      true,
-		"Comfort 2":                      true,
-		"Grill - Available Upon Request": true,
-		"Bakery-Dessert":                 true,
-		"500 Degrees":                    true,
-		"500 Degrees 1":                  true,
-		"Soup":                           true,
-		"Rice Cooker":                    true,
-		"Kitchen Entree":                 true,
-		"Kitchen Sides":                  true,
-		"Flame":                          true,
-		"Kosher":                         true,
-		"Pure Eats":                      true,
-		"Pure Eat 1":                     true,
-		"Pure Eat 2":                     true,
+	ingredientCategories := []string{
+		// Allison
+		"pantry 1",
+		"gluten free pantry",
+		"beverage",
+		"salad bar 1",
+		"salad bar 2",
+		"flame 1",
+		"flame 2",
+		// Sargent
+		"planet eats (hot)",
+		"planet eats (cold)",
+		"planet eats toppings",
+		"made to order deli",
+		// Elder
+		"deli",
+		"salad bar",
 	}
 
-	ingredients := map[string]bool{
-		"Shredded Cheddar Cheese":   true,
-		"Crushed Red Pepper":        true,
-		"Grated Parmesan Cheese":    true,
-		"Lettuce Leaf":              true,
-		"Sliced Red Onion":          true,
-		"Sliced Dill Pickles":       true,
-		"American Cheese Slice":     true,
-		"Whole Wheat Hamburger Bun": true,
-		"White Hamburger Bun":       true,
-		"Hamburger Patty":           true,
-		"Turkey Burger (No Bun)":    true,
+	ingredients := []string{
+		"shredded cheddar cheese",
+		"crushed red pepper",
+		"grated parmesan cheese",
+		"lettuce leaf",
+		"sliced red onion",
+		"sliced dill pickles",
+		"american cheese slice",
+		"hamburger patty",
+		"turkey burger (no bun)",
+		"egg whites",
+		"butter",
+		"light cream cheese",
+		"2% greek plain yogurt",
+		"low fat strawberry yogurt",
+		"low fat vanilla yogurt",
+		"diced onions",
+		"chopped spinach",
+		"chopped broccoli",
+		"chopped green bell pepper",
+		"sliced mushrooms",
+		"chopped tomatoes",
+		"diced bacon",
+		"turkey sausage link",
+		"diced smoked ham",
+		"oats 'n honey granola",
+		"raisins",
+		"sunflower spread",
+		"grape jelly",
+		"sliced green onions",
+		"dried oregano",
+		"chopped romaine lettuce",
+		"spring mix",
+		"chopped cilantro",
+		"fresh orange & fennel",
+		"charred tomato and green bean",
+		"cucumber",
+		"tomato",
+		"parsley",
+		"kale",
+		"butternut squash",
+		"mixed melon",
+		"roasted sweet potatoes",
+		"zucchini",
+		"cherry tomatoes",
+		"mushrooms",
+		"spinach",
+		"broccoli",
+		"green beans",
+		"carrots",
+		"okra",
+		"bell peppers",
+		"onions",
+		"garlic",
+		"fresh herbs",
+		"lemons",
+		"eggs",
+		"crumbled feta cheese",
+		"yogurt",
+		"sour cream",
+		"chopped bacon",
+		"meatless black bean burger",
+		"long grain wild rice blend",
+		"steamed rice",
+		"wild rice",
+		"avoiding gluten barilla penne",
+		"granola",
+		"soy sauce",
+		"everything bagel seasoning",
+		"sesame seed mix",
+		"pomodoro sauce",
+		"salsa verde",
+		"salsa rojas",
+		"guacamole",
+		"pico de gallo",
+		"olive oil",
+		"sriracha aquafaba aioli",
+		"white hamburger bun",
+	}
+	if !rescrapeDaily {
+		fmt.Println("Not rescraping daily items")
+	} else {
+		fmt.Println("Rescraping daily items")
 	}
 
 	for _, category := range categories {
-		// Skip categories that are not food items
-		if !nonIngredientCategories[category.Name] {
+		cleanedCategory := strings.ToLower(strings.TrimSpace(category.Name))
+		if contains(ingredientCategories, cleanedCategory) {
+			fmt.Println("Skipping category", cleanedCategory)
 			continue
 		}
 
 		for _, item := range category.Items {
-			// Skip items that are ingredients
-			if ingredients[item.Name] {
+			cleanedItem := strings.ToLower(strings.TrimSpace(item.Name))
+
+			if contains(ingredients, cleanedItem) {
 				continue
 			}
 
@@ -196,19 +270,26 @@ func postItemsToAllandDaily(jsonResponse Response, service Service, location str
 			}
 
 			if !rescrapeDaily {
-				fmt.Println("Not rescraping daily items")
 				continue
 			}
 
-			fmt.Println("Rescraping daily items")
 			menuItem := db.DailyItem{item.Name, item.Description, date, location, service.TimeOfDay}
 			err = db.InsertDailyItem(menuItem)
 			if err != nil {
 				log.Printf("Error saving item %s: %v", item.Name, err)
 			}
-
 		}
 	}
 
 	return nil
+}
+
+// contains checks if a string is present in a slice
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

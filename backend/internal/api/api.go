@@ -19,6 +19,26 @@ func setCorsHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }
 
+func DeleteDailyItems(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	setCorsHeaders(w, r)
+
+	// Handle preflight OPTIONS request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	err := db.DeleteDailyItems()
+	if err != nil {
+		http.Error(w, "Error deleting daily items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return success code
+	w.WriteHeader(http.StatusOK)
+}
+
 func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set CORS headers
@@ -141,7 +161,9 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch available favorites for the user
 	availableFavorites, err := db.GetAvailableFavorites(userID)
-	if err != nil && err != db.NoUserPreferencesInDB {
+	if err == db.NoUserPreferencesInDB {
+		availableFavorites = []db.DailyItem{}
+	} else if err != nil {
 		http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -162,7 +184,9 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch user preferences
 	userPreferences, err := db.GetUserPreferences(userID)
-	if err != nil {
+	if err == db.NoUserPreferencesInDB {
+		userPreferences = []db.AllDataItem{}
+	} else if err != nil {
 		http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
