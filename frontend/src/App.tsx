@@ -1,25 +1,23 @@
 // App.tsx
 import { Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import Favorites from './pages/PickFavorites';
 import MyNavbar from './components/myNavbar';
-import DisplayFavorites from './pages/CurrentFavorites';
 import DailyItems from './pages/DailyItems';
 import Login from './firebase/login';
 import SignOutButton from './firebase/signout';
-import Scrape from './pages/HiddenScrape';
+import AllItems from './pages/AllItems';
+import Preferences from './pages/Preferences';
+import AvailableFavorites from './pages/AvailableFavorites';
 
 function App() {
   return (
     <MyNavbar>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<DailyItems />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signout" element={<SignOutButton />} />
-        <Route path="/favorites" element={<Favorites />} />
-        <Route path="/current" element={<DisplayFavorites />} />
-        <Route path="/daily" element={<DailyItems />} />
-        <Route path="/scrape" element={<Scrape />} />
+        <Route path="/preferences" element={<Preferences />} />
+        <Route path="/all" element={<AllItems />} />
+        <Route path="/available" element={<AvailableFavorites />} />
       </Routes>
     </MyNavbar>
   );

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { fetchAllData } from '../util/data';
+import { fetchAllData, postUserPreferences } from '../util/data';
 
 interface FavoriteItem {
   Name: string;
 }
 
-const FavoritesPage: React.FC = () => {
+const Preferences: React.FC = () => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [user, authLoading] = useAuthState(auth);
   const userId = user?.uid || '';
@@ -18,6 +18,18 @@ const FavoritesPage: React.FC = () => {
   const fetchFavorites = async () => {
     const data = await fetchAllData(userId);
     setFavorites(data.userPreferences.map((item: FavoriteItem) => item));
+  };
+
+  const handleItemClick = (item: FavoriteItem) => {
+    let tempPreferences = favorites;
+    const formattedItemName = item.Name.toLowerCase().trim();
+    if (favorites.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
+      tempPreferences = favorites.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
+    } else {
+      tempPreferences = [...favorites, item];
+    }
+    setFavorites(tempPreferences);
+    postUserPreferences(tempPreferences, userId);
   };
 
   useEffect(() => {
@@ -40,8 +52,18 @@ const FavoritesPage: React.FC = () => {
       {favorites.length > 0 ? (
         <ul className="space-y-2">
           {favorites.map((item, index) => (
-            <li key={index} className="p-3 rounded-md bg-gray-800 text-white">
-              {item.Name}
+            <li
+              key={index}
+              className="flex justify-between items-center p-3 rounded-md bg-gray-800 text-white transition-transform duration-200 transform hover:translate-y-[-2px] hover:shadow-lg"
+            >
+              <span>{item.Name}</span>
+              <button
+                onClick={() => handleItemClick(item)}
+                className="text-white-500 hover:text-red-700 transition-colors duration-200"
+                aria-label="Remove from favorites"
+              >
+                −
+              </button>
             </li>
           ))}
         </ul>
@@ -52,4 +74,4 @@ const FavoritesPage: React.FC = () => {
   );
 };
 
-export default FavoritesPage;
+export default Preferences;

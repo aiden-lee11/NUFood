@@ -1,6 +1,7 @@
 package api
 
 import (
+	"backend/internal/auth"
 	"backend/internal/db"
 	"backend/internal/scraper"
 	"encoding/json"
@@ -142,6 +143,8 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Will take in a body that contains auth token, if not present return global data
+// If present, additionally return user specific data
 func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
@@ -152,10 +155,19 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get userID from query parameters
-	userID := r.URL.Query().Get("userID")
+	// Get Firebase ID token from header
+	authHeader := r.Header.Get("Authorization")
+
+	token, err := auth.VerifyIDToken(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+
+	// Extract user ID from token claims
+	userID := token.UID
 	if userID == "" {
-		http.Error(w, "Missing userID", http.StatusBadRequest)
+		http.Error(w, "UserID not found in token", http.StatusBadRequest)
 		return
 	}
 

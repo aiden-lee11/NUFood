@@ -34,7 +34,7 @@ export const postUserPreferences = async (preferences: Item[], userID: string) =
 };
 
 // "2024-11-11"
-export const fetchAllData = async (userID: string) => {
+export const fetchAllData = async (userToken: string) => {
   try {
     // Get today's date in "YYYY-MM-DD" format
     const today = new Date();
@@ -54,7 +54,16 @@ export const fetchAllData = async (userID: string) => {
     else {
       console.log("New day... fetching new data");
       // Perform the fetch if the dates do not match
-      const response = await fetch(`${API_URL}/api/allData?userID=${userID}`);
+      const auth = `Bearer ${userToken}`;
+
+      const response = await fetch(`${API_URL}/api/allData`, {
+        headers: {
+          Authorization: auth,
+        },
+      });
+
+      console.log(response);
+
       if (!response.ok) {
         console.error("Error fetching all data:", response.statusText);
         return;

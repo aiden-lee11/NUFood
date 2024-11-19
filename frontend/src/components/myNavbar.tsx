@@ -5,11 +5,11 @@ import { ReactNode } from 'react'
 
 const navItemsLeft = [
   { label: 'Home', url: '/' },
-  { label: 'Daily Items', url: '/daily' },
-  { label: 'All Items', url: '/favorites' },
+  { label: 'My Picks', url: '/available' },
+  { label: 'All Items', url: '/all' },
 ]
 
-const loggedIn = localStorage.getItem('auth') == 'true';
+const loggedIn = localStorage.getItem('t') != null;
 
 function MyNavbar({ children }: { children: ReactNode }) {
   return (
@@ -26,7 +26,7 @@ function MyNavbar({ children }: { children: ReactNode }) {
           </NavbarSection>
           <NavbarSpacer />
           <NavbarSection className="max-lg:hidden">
-            <NavbarItem href="/current">Preferences</NavbarItem>
+            <NavbarItem href="/preferences">Preferences</NavbarItem>
             <NavbarItem href={loggedIn ? "/signout" : "/login"}>
               {loggedIn ? "Sign Out" : "Login"}
             </NavbarItem>
@@ -45,6 +45,7 @@ function MyNavbar({ children }: { children: ReactNode }) {
             </SidebarSection>
             <SidebarSpacer />
             <SidebarSection>
+              <SidebarItem href="/preferences">Preferences</SidebarItem>
               <SidebarItem href={loggedIn ? "/signout" : "/login"}>
                 {loggedIn ? "Sign Out" : "Login"}
               </SidebarItem>

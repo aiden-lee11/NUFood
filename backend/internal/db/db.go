@@ -91,7 +91,6 @@ func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
 		fmt.Println("Error finding favorite item:", result.Error)
 		return []DailyItem{}, result.Error
 	}
-	fmt.Println("result found", result.RowsAffected)
 
 	if result.RowsAffected == 0 {
 		return []DailyItem{}, errors.New("no favorite item found")
@@ -118,7 +117,6 @@ func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
 // InsertItem inserts a new MenuItem into the daily menu, avoiding duplicates by name, date, and location.
 func InsertDailyItem(item DailyItem) error {
 	// Check if the item already exists (by Name, Date, Location, and TimeOfDay)
-	fmt.Println("Inserting item", item.Name, item.Date, item.Location)
 	var existingItem GormDailyItem
 	result := DB.Where("name = ? AND date = ? AND location = ? AND time_of_day = ?", item.Name, item.Date, item.Location, item.TimeOfDay).First(&existingItem)
 
@@ -165,6 +163,7 @@ func ReturnDateOfDailyItems() (date string, err error) {
 	}
 
 	date = dailyItems[0].Date
+	log.Println("Date of daily items:", date)
 
 	return date, nil
 }
@@ -172,7 +171,7 @@ func ReturnDateOfDailyItems() (date string, err error) {
 // InsertShortenedItem inserts unique menu item names into allData.
 func InsertAllDataItem(item AllDataItem) error {
 	// Check if the shortened item already exists
-	fmt.Println("Inserting item", item.Name)
+	log.Println("Inserting item", item.Name)
 	var existingItem GormAllDataItem
 	result := DB.Where("name = ?", item.Name).First(&existingItem)
 
@@ -222,14 +221,13 @@ func SaveUserPreferences(userID string, favorites []AllDataItem) error {
 func GetAvailableFavorites(userID string) ([]DailyItem, error) {
 	var favorites []DailyItem
 	userPreferences, err := GetUserPreferences(userID)
-	fmt.Println(userPreferences)
+	log.Println("User preferences:", userPreferences)
 
 	if err != nil {
 		return nil, err
 	}
 
 	for _, favorite := range userPreferences {
-		fmt.Println("Finding favorite item", favorite.Name)
 		result, err := FindFavoriteItemInDailyItems(favorite.Name)
 		if err != nil {
 			// Skip items that are not found
@@ -238,6 +236,7 @@ func GetAvailableFavorites(userID string) ([]DailyItem, error) {
 		favorites = append(favorites, result...)
 	}
 
+	log.Println("Available favorites:", favorites)
 	return favorites, nil
 }
 
@@ -258,6 +257,7 @@ func GetUserPreferences(userID string) ([]AllDataItem, error) {
 	}
 
 	// Return the deserialized maps as part of the user preferences
+	log.Println("User preferences:", favorites)
 	return favorites, nil
 }
 

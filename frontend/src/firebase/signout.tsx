@@ -8,12 +8,12 @@ const SignOutButton = () => {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    sessionStorage.removeItem('allItems');
-    sessionStorage.removeItem('availableFavorites');
-    sessionStorage.removeItem('dailyItems');
-    sessionStorage.removeItem('date');
+    // Remove user specific data from session storage
     sessionStorage.removeItem('userPreferences');
-    localStorage.removeItem('auth');
+    sessionStorage.removeItem('availableFavorites');
+
+    // Remove user specific data from local storage
+    localStorage.removeItem('t');
 
     setLoading(true);
     try {

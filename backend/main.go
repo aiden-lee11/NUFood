@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/internal/api"
+	"backend/internal/auth"
 	"backend/internal/db"
 	"fmt"
 	"github.com/joho/godotenv"
@@ -18,6 +19,10 @@ func main() {
 		if env_err != nil {
 			log.Printf("Error loading .env file: %v", env_err)
 		}
+	}
+
+	if err := auth.InitFirebase(); err != nil {
+		log.Fatalf("Error initializing Firebase: %v", err)
 	}
 
 	POSTGRES_URL := os.Getenv("POSTGRES_URL")

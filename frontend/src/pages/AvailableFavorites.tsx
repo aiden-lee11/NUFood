@@ -14,7 +14,7 @@ type DailyItem = {
   TimeOfDay: string;
 };
 
-const Home: React.FC = () => {
+const AvailableFavorites: React.FC = () => {
   const [groupedItems, setGroupedItems] = useState<Record<string, DailyItem[]>>({}); // New state for grouped items
   const [locations, setLocations] = useState<string[]>([]); // New state for locations
 
@@ -129,4 +129,4 @@ const Home: React.FC = () => {
   );
 };
 
-export default Home;
+export default AvailableFavorites;
