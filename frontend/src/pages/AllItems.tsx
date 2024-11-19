@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import clsx from 'clsx';
-import { useNavigate } from 'react-router-dom';
-import { fetchAllData, postUserPreferences } from '../util/data';
+import { fetchAllData, fetchGeneralData, postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
+import AuthPopup from '../components/AuthPopup';
 
 interface Item {
   Name: string; // Assuming your items have a 'Name' property
@@ -18,18 +18,15 @@ const AllItems: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const navigate = useNavigate();
+  const [showPopup, setShowPopup] = useState(false); // Popup visibility state
 
-  // Can also grab user from this if needed 
   const { authLoading, token } = useAuth();
 
-  // Fuse.js options for fuzzy search
   const fuse = new Fuse(allItems, {
     keys: ['Name'],
     threshold: 0.5,
   });
 
-  // Filter items using Fuse.js whenever searchQuery changes
   useEffect(() => {
     if (searchQuery) {
       const result = fuse.search(searchQuery).map(({ item }) => item);
@@ -39,21 +36,15 @@ const AllItems: React.FC = () => {
     }
   }, [searchQuery, allItems]);
 
-  // Scroll to top smoothly
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Navigate to the next page and scroll to the top
   const goToNextPage = () => {
     setCurrentPage((prevPage) => prevPage + 1);
     scrollToTop();
   };
 
-  // Navigate to the previous page and scroll to the top
   const goToPreviousPage = () => {
     if (currentPage > 0) {
       setCurrentPage((prevPage) => prevPage - 1);
@@ -62,36 +53,48 @@ const AllItems: React.FC = () => {
   };
 
   const handleItemClick = (item: Item) => {
-    let tempPreferences = userPreferences;
     const formattedItemName = item.Name.toLowerCase().trim();
 
-    if (userPreferences.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
-      tempPreferences = userPreferences.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
-      setUserPreferences(tempPreferences);
-    } else {
-      tempPreferences = [...userPreferences, item];
-      setUserPreferences(tempPreferences);
+    if (!token) {
+      setShowPopup(true); // Show popup if user is not authenticated
+      return; // Exit function to prevent further execution
     }
 
+    let tempPreferences = userPreferences;
+
+    if (userPreferences.some((i) => i.Name.toLowerCase().trim() === formattedItemName)) {
+      tempPreferences = userPreferences.filter((i) => i.Name.toLowerCase().trim() !== formattedItemName);
+    } else {
+      tempPreferences = [...userPreferences, item];
+    }
+
+    setUserPreferences(tempPreferences);
     postUserPreferences(tempPreferences, token as string);
   };
 
   useEffect(() => {
-    if (!authLoading && token) {
-      fetchAllData(token).then((data) => {
-        if (data) {
-          setAllItems(data.allItems);
-          setUserPreferences(data.userPreferences.map((item: Item) => item));
+    const fetchData = async () => {
+      try {
+        if (!authLoading && token) {
+          const data = await fetchAllData(token);
+          if (data) {
+            setAllItems(data.allItems);
+            setUserPreferences(data.userPreferences.map((item: Item) => item));
+          }
+        } else if (!authLoading && !token) {
+          const data = await fetchGeneralData();
+          if (data) {
+            setAllItems(data.allItems);
+          }
         }
-      });
-    }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
   }, [authLoading, token]);
 
-  if (!token && !authLoading) {
-    navigate('/login');
-  }
-
-  // Calculate items to display based on the current page
   const startIndex = currentPage * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedItems = filteredItems.slice(startIndex, endIndex);
@@ -120,8 +123,7 @@ const AllItems: React.FC = () => {
                   : "bg-gray-800 text-white"
               )}
             >
-              {item.Name}{" "}
-              {userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
+              {item.Name} {userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
             </button>
           </li>
         ))}
@@ -129,22 +131,22 @@ const AllItems: React.FC = () => {
 
       <div className="flex justify-between items-center">
         {currentPage > 0 && (
-          <button
-            onClick={goToPreviousPage}
-            className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-          >
+          <button onClick={goToPreviousPage} className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700">
             Previous Page
           </button>
         )}
         {endIndex < filteredItems.length && (
-          <button
-            onClick={goToNextPage}
-            className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-          >
+          <button onClick={goToNextPage} className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700">
             Next Page
           </button>
         )}
       </div>
+
+      {showPopup && (
+        <AuthPopup
+          onClose={() => setShowPopup(false)}
+        />
+      )}
     </div>
   );
 };

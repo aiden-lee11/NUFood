@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../firebase';
-import { onAuthStateChanged, getIdToken } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 
 export const useAuthToken = () => {
@@ -33,7 +33,6 @@ export const useAuthToken = () => {
         return () => tokenUnsubscribe();
       } else {
         setToken(null);
-        navigate('/login'); // Redirect to login if user is not authenticated
       }
     });
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../firebase';
-import { fetchAllData, postUserPreferences } from '../util/data';
-import { useNavigate } from 'react-router-dom';
+import { fetchAllData, fetchGeneralData, postUserPreferences } from '../util/data';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import Preferences from '../components/preferences'
 import LocationItemGrid from '../components/locationGrid'
 import { Button } from '../components/button';
+import { useAuth } from '../context/AuthProvider';
+import AuthPopup from '../components/AuthPopup';
+import { getCurrentTimeOfDay } from '../util/helper';
 
 interface DailyItem {
   Name: string;
@@ -31,10 +31,10 @@ const DailyItems: React.FC = () => {
   const [visibleLocations, setVisibleLocations] = useState<string[]>(locations);
   const [visibleTimes, setVisibleTimes] = useState<string[]>(timesOfDay);
   const [showPreferences, setShowPreferences] = useState(false); // Toggle for preferences visibility
+  const [showPopup, setShowPopup] = useState(false); // Popup visibility state
 
-  const [user, authLoading] = useAuthState(auth);
-  const userId = user?.uid || '';
-  const navigate = useNavigate();
+  const { authLoading, token } = useAuth();
+
   const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
 
   useEffect(() => {
@@ -47,6 +47,11 @@ const DailyItems: React.FC = () => {
   }, [searchQuery, dailyItems]);
 
   const handleItemClick = (item: Item) => {
+    if (!token) {
+      setShowPopup(true); // Show popup if user is not authenticated
+      return; // Exit function to prevent further execution
+    }
+
     let tempPreferences = favorites;
     const formattedItemName = item.Name.toLowerCase().trim();
     if (favorites.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
@@ -55,7 +60,7 @@ const DailyItems: React.FC = () => {
       tempPreferences = [...favorites, item];
     }
     setFavorites(tempPreferences);
-    postUserPreferences(tempPreferences, userId);
+    postUserPreferences(tempPreferences, token as string);
   };
 
   const toggleLocationVisibility = (location: string) => {
@@ -71,19 +76,35 @@ const DailyItems: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!authLoading && userId) {
-      fetchAllData(userId).then((data) => {
-        if (data) {
-          setFavorites(data.userPreferences.map((item: Item) => item));
-          const uniqueItems = Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Name)))
-            .map(name => data.dailyItems.find((item: DailyItem) => item.Name === name));
-          setDailyItems(uniqueItems);
+    const fetchData = async () => {
+      try {
+        if (!authLoading && token) {
+          const data = await fetchAllData(token);
+          if (data) {
+            setDailyItems(data.dailyItems);
+            setFavorites(data.userPreferences.map((item: Item) => item));
+          }
+        } else if (!authLoading && !token) {
+          const data = await fetchGeneralData();
+          if (data) {
+            setDailyItems(data.dailyItems);
+          }
         }
-      });
-    } else if (!userId && !authLoading) {
-      navigate('/login', { replace: true });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, [authLoading, token]);
+
+  useEffect(() => {
+    // Set the current time of day as the only visible time, if no dining halls open -> set all visible
+    const currentTime = getCurrentTimeOfDay();
+    if (currentTime) {
+      setVisibleTimes([getCurrentTimeOfDay()]);
     }
-  }, [authLoading, userId, navigate]);
+  }, []);
 
   return (
     <div className="p-6 min-h-screen bg-transparent">
@@ -120,6 +141,13 @@ const DailyItems: React.FC = () => {
         favorites={favorites}
         handleItemClick={handleItemClick}
       />
+
+      {showPopup && (
+        <AuthPopup
+          onClose={() => setShowPopup(false)}
+        />
+      )}
+
     </div>
   );
 };

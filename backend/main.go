@@ -41,6 +41,7 @@ func main() {
 	// Define the route for getting favorites
 	http.HandleFunc("/api/userPreferences", api.SetUserPreferences)
 	http.HandleFunc("/api/allData", api.GetAllDataHandler)
+	http.HandleFunc("/api/generalData", api.GetGeneralDataHandler)
 	http.HandleFunc("/api/scrapeDailyItems", api.ScrapeDailyItemsHandler)
 	http.HandleFunc("/api/scrapeHistorical", api.ScrapeHistoricalItemsHandler)
 	http.HandleFunc("/api/deleteDailyItems", api.DeleteDailyItems)

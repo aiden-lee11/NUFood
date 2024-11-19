@@ -84,12 +84,25 @@ func ScrapeHistoricalItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 
-	// Set CORS headers
-	setCorsHeaders(w, r)
-
-	// Handle preflight OPTIONS request (browser sends an OPTIONS request before a GET/POST request to check for CORS)
+	// Handle preflight OPTIONS request
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Get Firebase ID token from header
+	authHeader := r.Header.Get("Authorization")
+
+	token, err := auth.VerifyIDToken(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+
+	// Extract user ID from token claims
+	userID := token.UID
+	if userID == "" {
+		http.Error(w, "UserID not found in token", http.StatusBadRequest)
 		return
 	}
 
@@ -107,14 +120,6 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(body, &favorites); err != nil {
 
 		http.Error(w, "Error parsing JSON: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Get userID from query parameters
-	userID := r.URL.Query().Get("userID")
-
-	if userID == "" {
-		http.Error(w, "Missing userID", http.StatusBadRequest)
 		return
 	}
 
@@ -143,8 +148,6 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Will take in a body that contains auth token, if not present return global data
-// If present, additionally return user specific data
 func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
@@ -216,6 +219,52 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		"date":               date,
 		"allItems":           allItems,
 		"userPreferences":    userPreferences,
+	}
+
+	// Set the response header to indicate JSON content
+	w.Header().Set("Content-Type", "application/json")
+
+	// Return the combined result as JSON
+	if err := json.NewEncoder(w).Encode(combinedData); err != nil {
+		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	setCorsHeaders(w, r)
+
+	// Handle preflight OPTIONS request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Fetch all daily items
+	dailyItems, err := db.GetAllDailyItems()
+	if err != nil {
+		http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch all daily items
+	allItems, err := db.GetAllDataItems()
+	if err != nil {
+		http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	date, err := db.ReturnDateOfDailyItems()
+	if err != nil {
+		http.Error(w, "Error fetching date of daily items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Combine all data into a single JSON structure
+	combinedData := map[string]interface{}{
+		"dailyItems": dailyItems,
+		"date":       date,
+		"allItems":   allItems,
 	}
 
 	// Set the response header to indicate JSON content

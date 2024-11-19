@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Tab } from "@headlessui/react";
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../firebase';
+import { useAuth } from "../context/AuthProvider";
 // grab router for navigation
 import { useNavigate } from 'react-router-dom';
 import { fetchAllData } from "../util/data";
@@ -19,21 +18,24 @@ const AvailableFavorites: React.FC = () => {
   const [locations, setLocations] = useState<string[]>([]); // New state for locations
 
   const [noItemsMessage, setNoItemsMessage] = useState<string | null>(null); // New state for message
-  const [user, authLoading] = useAuthState(auth); // authLoading shows whether Firebase is loading
-  const userId = user?.uid || '';
+  const { user, authLoading, token } = useAuth()
   const userName = user?.displayName || '';
   const navigate = useNavigate();
 
   // Fetch dailyItems based on the userID
   const getFavoriteDailyItems = async () => {
     try {
-      if (!userId) {
-        console.error("User ID not found. Redirecting to login.");
-        // Redirect to login page if no user is found
-        navigate('/login');
+      if (!token) {
+        const userConfirmed = window.confirm(
+          "You're not signed in to access this page. Would you like to login?"
+        );
+
+        if (userConfirmed) {
+          navigate('/login');
+        }
       };  // Ensure we have a valid userId before fetching
 
-      const data = await fetchAllData(userId);
+      const data = await fetchAllData(token);
       const availableFavorites = data.availableFavorites;
 
       if (!availableFavorites || availableFavorites.length === 0) {
@@ -65,17 +67,11 @@ const AvailableFavorites: React.FC = () => {
 
 
   useEffect(() => {
-    // Only fetch dailyItems if Firebase auth is not loading and we have a valid user
-    if (!authLoading && userId) {
+    if (!authLoading) {
       getFavoriteDailyItems();
     }
-  }, [authLoading, userId]);  // Re-run when authLoading changes or we get a new userId
+  }, [authLoading]);  // Re-run when authLoading changes or we get a new userId
 
-  if (!userId) {
-    console.error("User ID not found. Redirecting to login.");
-    // Redirect to login page if no user is found
-    navigate('/login');
-  }
 
   return (
     <div className="container mx-auto p-6">

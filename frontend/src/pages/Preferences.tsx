@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../firebase';
-import { useNavigate } from 'react-router-dom';
 import { fetchAllData, postUserPreferences } from '../util/data';
+import { useAuth } from '../context/AuthProvider';
 
 interface FavoriteItem {
   Name: string;
@@ -10,15 +8,9 @@ interface FavoriteItem {
 
 const Preferences: React.FC = () => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
-  const [user, authLoading] = useAuthState(auth);
-  const userId = user?.uid || '';
-  const navigate = useNavigate();
 
-  // Fetch user favorites based on userID
-  const fetchFavorites = async () => {
-    const data = await fetchAllData(userId);
-    setFavorites(data.userPreferences.map((item: FavoriteItem) => item));
-  };
+  const { authLoading, token } = useAuth();
+
 
   const handleItemClick = (item: FavoriteItem) => {
     let tempPreferences = favorites;
@@ -29,21 +21,26 @@ const Preferences: React.FC = () => {
       tempPreferences = [...favorites, item];
     }
     setFavorites(tempPreferences);
-    postUserPreferences(tempPreferences, userId);
+    postUserPreferences(tempPreferences, token as string);
   };
 
   useEffect(() => {
-    if (!authLoading && userId) {
-      fetchFavorites();
-    }
-  }, [authLoading, userId]);
+    // Define the async function inside useEffect
+    const fetchFavorites = async () => {
+      try {
+        if (!authLoading && token) {
+          // Fetch user favorites based on userID
+          const data = await fetchAllData(token as string);
+          setFavorites(data.userPreferences.map((item: FavoriteItem) => item));
+        }
+      } catch (error) {
+        console.error('Error fetching user favorites:', error);
+      }
+    };
 
-
-  if (!userId) {
-    console.error("User ID not found. Redirecting to login.");
-    // Redirect to login page if no user is found
-    navigate('/login');
-  }
+    // Call the async function
+    fetchFavorites();
+  }, [authLoading, token]);
 
   return (
     <div className="p-6 min-h-screen bg-transparent">

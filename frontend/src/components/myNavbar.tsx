@@ -26,7 +26,7 @@ function MyNavbar({ children }: { children: ReactNode }) {
           </NavbarSection>
           <NavbarSpacer />
           <NavbarSection className="max-lg:hidden">
-            <NavbarItem href="/preferences">Preferences</NavbarItem>
+            {loggedIn ? <NavbarItem href="/preferences">Preferences</NavbarItem> : null}
             <NavbarItem href={loggedIn ? "/signout" : "/login"}>
               {loggedIn ? "Sign Out" : "Login"}
             </NavbarItem>
