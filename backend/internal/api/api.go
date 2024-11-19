@@ -83,6 +83,8 @@ func ScrapeHistoricalItemsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	setCorsHeaders(w, r)
 
 	// Handle preflight OPTIONS request
 	if r.Method == http.MethodOptions {

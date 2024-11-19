@@ -13,7 +13,7 @@ type DailyItem = {
   TimeOfDay: string;
 };
 
-const AvailableFavorites: React.FC = () => {
+const MyPicks: React.FC = () => {
   const [groupedItems, setGroupedItems] = useState<Record<string, DailyItem[]>>({}); // New state for grouped items
   const [locations, setLocations] = useState<string[]>([]); // New state for locations
 
@@ -33,6 +33,7 @@ const AvailableFavorites: React.FC = () => {
         if (userConfirmed) {
           navigate('/login');
         }
+        return;
       };  // Ensure we have a valid userId before fetching
 
       const data = await fetchAllData(token);
@@ -125,4 +126,4 @@ const AvailableFavorites: React.FC = () => {
   );
 };
 
-export default AvailableFavorites;
+export default MyPicks;

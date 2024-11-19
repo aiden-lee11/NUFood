@@ -6,7 +6,7 @@ import Login from './firebase/login';
 import SignOutButton from './firebase/signout';
 import AllItems from './pages/AllItems';
 import Preferences from './pages/Preferences';
-import AvailableFavorites from './pages/AvailableFavorites';
+import MyPicks from './pages/MyPicks';
 
 function App() {
   return (
@@ -17,7 +17,7 @@ function App() {
         <Route path="/signout" element={<SignOutButton />} />
         <Route path="/preferences" element={<Preferences />} />
         <Route path="/all" element={<AllItems />} />
-        <Route path="/available" element={<AvailableFavorites />} />
+        <Route path="/mypicks" element={<MyPicks />} />
       </Routes>
     </MyNavbar>
   );

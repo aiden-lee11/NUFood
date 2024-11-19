@@ -40,14 +40,24 @@ const getStoredData = (keys: string[]) => {
   const today = new Date().toISOString().split("T")[0];
   const storedDate = sessionStorage.getItem("date");
 
-  if (storedDate === today) {
-    console.log("Data already fetched today");
-    return keys.reduce((acc, key) => {
-      acc[key] = JSON.parse(sessionStorage.getItem(key) || "[]");
-      return acc;
-    }, {} as Record<string, any>);
+  if (storedDate !== today) {
+    return null;
   }
-  return null;
+
+  console.log("Data already fetched today");
+
+  // Check if all keys are present
+  for (const key of keys) {
+    if (!sessionStorage.getItem(key)) {
+      return null;
+    }
+  }
+
+  // If all keys are present, retrieve and parse their values
+  return keys.reduce((acc, key) => {
+    acc[key] = JSON.parse(sessionStorage.getItem(key) as string);
+    return acc;
+  }, {} as Record<string, any>);
 };
 
 // Helper function to fetch data and store it in sessionStorage
