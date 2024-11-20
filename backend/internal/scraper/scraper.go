@@ -90,12 +90,13 @@ func ScrapeAndSave(date string) error {
 	if rescrapeDaily {
 		db.DeleteDailyItems()
 	}
-	// Create an HTTP client with a 30-second timeout
+
 	client := &http.Client{
-		Timeout: 30 * time.Second, // Set timeout to 30 seconds
+		Timeout: 30 * time.Second,
 	}
 
-	// Set the HTTP client with timeout to the collector
+	// Maximum retries for failed visits
+	const maxRetries = 3
 
 	for _, location := range locations {
 		for _, service := range location.Services {
@@ -103,41 +104,60 @@ func ScrapeAndSave(date string) error {
 			c.WithTransport(client.Transport)
 
 			locationName := location.Name
-
-			c.OnRequest(func(r *colly.Request) {
-				r.Ctx.Put("locationName", locationName)
-			})
-
-			c.OnResponse(func(r *colly.Response) {
-				locName := r.Ctx.Get("locationName")
-				var jsonResponse Response
-				err := json.Unmarshal(r.Body, &jsonResponse)
-				if err != nil {
-					log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
-					return
-				}
-
-				err = postItemsToAllandDaily(jsonResponse, service, locName, rescrapeDaily)
-				if err != nil {
-					log.Printf("Error posting items for %s: %v", locName, err)
-				}
-
-			})
-
-			c.OnError(func(r *colly.Response, err error) {
-				log.Printf("Error for %s: %v", location.Name, err)
-			})
-
 			url := baseURL + location.Hash + "/periods/" + service.Hash + "?platform=0&date=" + date
-			if err := c.Visit(url); err != nil {
-				log.Printf("Failed to visit URL %s: %v", url, err)
-				return err // Return the error to the caller
+
+			// Retry logic wrapped around the visit
+			retryCount := 0
+			for {
+				log.Printf("Grabbing %s's %s time. For the %d time.", locationName, service.TimeOfDay, retryCount+1)
+				err := visitWithRetries(c, url, locationName, service, rescrapeDaily)
+				if err != nil {
+					retryCount++
+					if retryCount > maxRetries {
+						log.Printf("Max retries exceeded for URL: %s", url)
+						break
+					}
+					log.Printf("Retrying (%d/%d) for URL: %s", retryCount, maxRetries, url)
+					continue
+				}
+				break // Exit loop if visit succeeds
 			}
 		}
 	}
 
 	fmt.Println("Scraping and saving successful")
+	return nil
+}
 
+func visitWithRetries(c *colly.Collector, url, locationName string, service Service, rescrapeDaily bool) error {
+	c.OnRequest(func(r *colly.Request) {
+		r.Ctx.Put("locationName", locationName)
+	})
+
+	c.OnResponse(func(r *colly.Response) {
+		locName := r.Ctx.Get("locationName")
+		var jsonResponse Response
+		err := json.Unmarshal(r.Body, &jsonResponse)
+		if err != nil {
+			log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
+			return
+		}
+
+		err = postItemsToAllandDaily(jsonResponse, service, locName, rescrapeDaily)
+		if err != nil {
+			log.Printf("Error posting items for %s: %v", locName, err)
+		}
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		log.Printf("Error for %s: %v", locationName, err)
+	})
+
+	err := c.Visit(url)
+	if err != nil {
+		log.Printf("Visit failed for URL %s: %v", url, err)
+		return err
+	}
 	return nil
 }
 
