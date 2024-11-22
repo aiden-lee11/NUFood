@@ -25,7 +25,7 @@ const Preferences: React.FC<PreferencesProps> = ({
     <>
       {/* Preferences Box */}
       {showPreferences && (
-        <div className="p-4 mb-4 bg-gray-100 dark:bg-gray-800 rounded-md space-y-4 transition-colors duration-300">
+        <div className="p-4 mb-4 bg-gray-100 dark:bg-zinc-900 rounded-md space-y-4 transition-colors duration-300">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Preferences</h2>
 
           {/* Location Checkboxes */}

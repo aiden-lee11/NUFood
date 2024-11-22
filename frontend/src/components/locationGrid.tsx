@@ -31,14 +31,14 @@ const LocationItemGrid: React.FC<LocationProps> = ({
   handleItemClick,
 }) => {
   return (
-    <div className="min-h-screen p-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen p-6 bg-gray-100 dark:bg-zinc-900 transition-colors duration-300">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {locations
           .filter((location) => visibleLocations.includes(location))
           .map((location) => (
             <div
               key={location}
-              className="p-6 rounded-md shadow-lg transition-all duration-300 bg-white dark:bg-gray-800"
+              className="p-6 rounded-md shadow-lg transition-all duration-300 bg-white dark:bg-zinc-900"
             >
               <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">{location}</h2>
               {timesOfDay
@@ -60,13 +60,13 @@ const LocationItemGrid: React.FC<LocationProps> = ({
                               <button
                                 onClick={() => handleItemClick(item)}
                                 className={clsx(
-                                  'w-full text-left p-3 rounded-md transition-all duration-200 transform hover:scale-105 hover:shadow-md',
+                                  'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none border',
                                   favorites.some((fav) => fav.Name === item.Name)
-                                    ? "bg-gray-300 dark:bg-gray-700 text-black dark:text-white"
-                                    : "bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
+                                    ? 'bg-gray-300 dark:bg-gray-700 text-black dark:text-white border-gray-400 dark:border-gray-600'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white border-gray-300 dark:border-gray-700'
                                 )}
                               >
-                                {item.Name} {favorites.some((fav) => fav.Name === item.Name) ? '★' : '☆'}
+                                {item.Name} {favorites.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
                               </button>
                             </li>
                           ))}

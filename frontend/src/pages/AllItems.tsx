@@ -100,7 +100,7 @@ const AllItems: React.FC = () => {
   const paginatedItems = filteredItems.slice(startIndex, endIndex);
 
   return (
-    <div className="p-6 min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-200">
+    <div className="p-6 min-h-screen bg-white text-black dark:bg-zinc-900 dark:text-white transition-colors duration-200">
       <h1 className="text-2xl font-bold mb-4">Select Your Favorite Items</h1>
 
       <Input
@@ -117,7 +117,7 @@ const AllItems: React.FC = () => {
             <button
               onClick={() => handleItemClick(item)}
               className={clsx(
-                "w-full text-left p-3 rounded-md transition-colors duration-200",
+                'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none ',
                 userPreferences.some((fav) => fav.Name === item.Name)
                   ? "bg-gray-300 dark:bg-gray-700 text-black dark:text-white"
                   : "bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
