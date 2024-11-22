@@ -4,7 +4,6 @@ import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import Preferences from '../components/preferences'
 import LocationItemGrid from '../components/locationGrid'
-import { Button } from '../components/button';
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
 import { getCurrentTimeOfDay } from '../util/helper';
