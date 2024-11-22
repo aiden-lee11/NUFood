@@ -25,12 +25,12 @@ const Preferences: React.FC<PreferencesProps> = ({
     <>
       {/* Preferences Box */}
       {showPreferences && (
-        <div className="p-4 mb-4 bg-gray-800 rounded-md space-y-4">
-          <h2 className="text-lg font-semibold text-white">Preferences</h2>
+        <div className="p-4 mb-4 bg-gray-100 dark:bg-gray-800 rounded-md space-y-4 transition-colors duration-300">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Preferences</h2>
 
           {/* Location Checkboxes */}
           <div>
-            <h3 className="text-md font-medium text-gray-300 mb-2">Locations</h3>
+            <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Locations</h3>
             <CheckboxGroup>
               <div className="grid grid-cols-3 gap-2">
                 {locations.map((location) => (
@@ -41,7 +41,7 @@ const Preferences: React.FC<PreferencesProps> = ({
                       checked={visibleLocations.includes(location)}
                       onChange={() => toggleLocationVisibility(location)}
                     />
-                    <label className="text-white ml-2">{location}</label>
+                    <label className="ml-2 text-gray-900 dark:text-white">{location}</label>
                   </CheckboxField>
                 ))}
               </div>
@@ -50,7 +50,7 @@ const Preferences: React.FC<PreferencesProps> = ({
 
           {/* Time of Day Checkboxes */}
           <div>
-            <h3 className="text-md font-medium text-gray-300 mb-2">Times of Day</h3>
+            <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Times of Day</h3>
             <CheckboxGroup>
               <div className="flex space-x-4">
                 {timesOfDay.map((time) => (
@@ -61,7 +61,7 @@ const Preferences: React.FC<PreferencesProps> = ({
                       checked={visibleTimes.includes(time)}
                       onChange={() => toggleTimeVisibility(time)}
                     />
-                    <label className="text-white ml-2">{time}</label>
+                    <label className="ml-2 text-gray-900 dark:text-white">{time}</label>
                   </CheckboxField>
                 ))}
               </div>
@@ -71,6 +71,6 @@ const Preferences: React.FC<PreferencesProps> = ({
       )}
     </>
   );
-}
+};
 
 export default Preferences;

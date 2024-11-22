@@ -108,15 +108,21 @@ const DailyItems: React.FC = () => {
 
   return (
     <div className="p-6 min-h-screen bg-transparent">
-      <h1 className="text-2xl font-bold mb-4 text-white">Daily Items For Today</h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+        Daily Items For Today
+      </h1>
 
       {/* Preferences Toggle */}
-      <Button
+      <button
         onClick={() => setShowPreferences(!showPreferences)}
-        className="bg-blue-500 text-white p-2 rounded-md mb-4"
+        className="p-2 rounded-md mb-4 
+             bg-white-100 text-black 
+             dark:bg-black-700 dark:text-white 
+             border border-gray-300 dark:border-gray-700
+             transition-colors duration-200"
       >
         {showPreferences ? "Hide Preferences" : "Show Preferences"}
-      </Button>
+      </button>
 
       {/* Preferences Box */}
       {showPreferences && (Preferences({ showPreferences, locations, visibleLocations, toggleLocationVisibility, timesOfDay, visibleTimes, toggleTimeVisibility })
@@ -128,7 +134,9 @@ const DailyItems: React.FC = () => {
         placeholder="Search for an item..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="mb-4 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent bg-gray-800 text-white"
+        className="mb-4 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent 
+        bg-gray-100 text-gray-900 border-gray-300 focus:ring-gray-500 
+        dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:focus:ring-gray-400"
       />
 
       {/* LocationItem Grid */}

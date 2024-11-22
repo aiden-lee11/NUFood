@@ -100,15 +100,15 @@ const AllItems: React.FC = () => {
   const paginatedItems = filteredItems.slice(startIndex, endIndex);
 
   return (
-    <div className="p-6 min-h-screen bg-transparent">
-      <h1 className="text-2xl font-bold mb-4 text-white">Select Your Favorite Items</h1>
+    <div className="p-6 min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-200">
+      <h1 className="text-2xl font-bold mb-4">Select Your Favorite Items</h1>
 
       <Input
         type="text"
         placeholder="Search for an item..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="mb-4 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent bg-gray-800 text-white"
+        className="mb-4 w-full p-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-400 bg-white dark:bg-gray-800 text-black dark:text-white transition-colors duration-200"
       />
 
       <ul className="space-y-2 mb-6">
@@ -119,8 +119,8 @@ const AllItems: React.FC = () => {
               className={clsx(
                 "w-full text-left p-3 rounded-md transition-colors duration-200",
                 userPreferences.some((fav) => fav.Name === item.Name)
-                  ? "bg-gray-700 text-white"
-                  : "bg-gray-800 text-white"
+                  ? "bg-gray-300 dark:bg-gray-700 text-black dark:text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
               )}
             >
               {item.Name} {userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
@@ -131,21 +131,25 @@ const AllItems: React.FC = () => {
 
       <div className="flex justify-between items-center">
         {currentPage > 0 && (
-          <button onClick={goToPreviousPage} className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700">
+          <button
+            onClick={goToPreviousPage}
+            className="p-2 bg-gray-200 dark:bg-gray-800 text-black dark:text-white rounded-md hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors duration-200"
+          >
             Previous Page
           </button>
         )}
         {endIndex < filteredItems.length && (
-          <button onClick={goToNextPage} className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700">
+          <button
+            onClick={goToNextPage}
+            className="p-2 bg-gray-200 dark:bg-gray-800 text-black dark:text-white rounded-md hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors duration-200"
+          >
             Next Page
           </button>
         )}
       </div>
 
       {showPopup && (
-        <AuthPopup
-          onClose={() => setShowPopup(false)}
-        />
+        <AuthPopup onClose={() => setShowPopup(false)} />
       )}
     </div>
   );
