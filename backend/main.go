@@ -14,7 +14,7 @@ import (
 // Main function takes in flags for if the user wants to scrape, if the user wants to run the Tinder app, and if the user wants to get the favorites.
 func main() {
 	// Load .env file only if not in production
-	if os.Getenv("RENDER") != "true" {
+	if os.Getenv("RENDER") != "true" && os.Getenv("RAILWAY") != "true" {
 		env_err := godotenv.Load()
 		if env_err != nil {
 			log.Printf("Error loading .env file: %v", env_err)
