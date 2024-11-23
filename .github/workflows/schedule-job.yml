@@ -2,7 +2,7 @@ name: Daily Data Scrape
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Runs at 6am UTC every day
+    - cron: '0 12 * * *'  
 
 jobs:
   run-curl:
