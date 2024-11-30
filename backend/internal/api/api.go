@@ -13,7 +13,7 @@ import (
 
 func setCorsHeaders(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
-	if origin == "http://localhost:5173" || origin == "https://nu-food-finder.vercel.app" {
+	if origin == "http://localhost:5173" || origin == "https://www.nufood.me" {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
