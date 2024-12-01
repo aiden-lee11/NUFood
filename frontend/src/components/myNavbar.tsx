@@ -5,7 +5,7 @@ import { ReactNode } from 'react'
 
 const navItemsLeft = [
   { label: 'Home', url: '/' },
-  { label: 'My Picks', url: '/mypicks' },
+  // { label: 'My Picks', url: '/mypicks' },
   { label: 'All Items', url: '/all' },
 ]
 

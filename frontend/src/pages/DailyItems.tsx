@@ -12,6 +12,7 @@ interface DailyItem {
   Name: string;
   Description: string;
   Location: string;
+  StationName: string;
   Date: string;
   TimeOfDay: string;
 }
@@ -21,10 +22,11 @@ interface Item {
 }
 
 const DailyItems: React.FC = () => {
-  const locations = ["Elder", "Sargent", "Allison", "Plex East", "Plex West"];
+  const [locations, setLocations] = useState(["Elder", "Sargent", "Allison", "Plex East", "Plex West"]);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
   const [favorites, setFavorites] = useState<Item[]>([]);
+  const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<DailyItem[]>([]);
   const [visibleLocations, setVisibleLocations] = useState<string[]>(locations);
@@ -79,9 +81,12 @@ const DailyItems: React.FC = () => {
       try {
         if (!authLoading && token) {
           const data = await fetchAllData(token);
+          console.log(data.dailyItems)
           if (data) {
             setDailyItems(data.dailyItems);
             setFavorites(data.userPreferences.map((item: Item) => item));
+            setAvailableFavorites(data.availableFavorites);
+            setLocations(Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Location))));
           }
         } else if (!authLoading && !token) {
           const data = await fetchGeneralData();
@@ -145,6 +150,7 @@ const DailyItems: React.FC = () => {
         timesOfDay={timesOfDay}
         visibleTimes={visibleTimes}
         filteredItems={filteredItems}
+        availableFavorites={availableFavorites}
         favorites={favorites}
         handleItemClick={handleItemClick}
       />

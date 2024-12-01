@@ -1,10 +1,13 @@
-import React from 'react';
-import clsx from 'clsx';
+import React from "react";
+import DailyItemAccordion from "./DailyItemAccordion"; // Import the DailyItemAccordion component
 
 interface Item {
   Name: string;
   Location: string;
   TimeOfDay: string;
+  StationName: string;
+  Description: string;
+  Date: string;
 }
 
 interface FavoriteItem {
@@ -18,6 +21,7 @@ interface LocationProps {
   visibleTimes: string[];
   filteredItems: Item[];
   favorites: FavoriteItem[];
+  availableFavorites: Item[];
   handleItemClick: (item: Item) => void;
 }
 
@@ -27,6 +31,7 @@ const LocationItemGrid: React.FC<LocationProps> = ({
   timesOfDay,
   visibleTimes,
   filteredItems,
+  availableFavorites,
   favorites,
   handleItemClick,
 }) => {
@@ -48,29 +53,24 @@ const LocationItemGrid: React.FC<LocationProps> = ({
                     (item) => item.Location === location && item.TimeOfDay === timeOfDay
                   );
 
+                  const filteredAvailableFavorites = availableFavorites.filter(
+                    (favorite) =>
+                      favorite.Location === location && favorite.TimeOfDay === timeOfDay
+                  );
+
                   return (
                     itemsByTimeOfDay.length > 0 && (
                       <div key={timeOfDay} className="mb-4">
                         <h3 className="text-lg font-semibold mb-3 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-1">
                           {timeOfDay}
                         </h3>
-                        <ul className="space-y-2">
-                          {itemsByTimeOfDay.map((item, index) => (
-                            <li key={`${item.Name}-${index}`}>
-                              <button
-                                onClick={() => handleItemClick(item)}
-                                className={clsx(
-                                  'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none border',
-                                  favorites.some((fav) => fav.Name === item.Name)
-                                    ? 'bg-gray-300 dark:bg-gray-700 text-black dark:text-white border-gray-400 dark:border-gray-600'
-                                    : 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white border-gray-300 dark:border-gray-700'
-                                )}
-                              >
-                                {item.Name} {favorites.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
+                        {/* Pass filtered availableFavorites */}
+                        <DailyItemAccordion
+                          items={itemsByTimeOfDay} // Pass filtered items for the time of day
+                          availableFavorites={filteredAvailableFavorites} // Pass filtered favorites
+                          favorites={favorites} // Pass favorites
+                          handleItemClick={handleItemClick} // Pass click handler
+                        />
                       </div>
                     )
                   );
