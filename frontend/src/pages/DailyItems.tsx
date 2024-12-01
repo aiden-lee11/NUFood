@@ -85,7 +85,7 @@ const DailyItems: React.FC = () => {
           if (data) {
             setDailyItems(data.dailyItems);
             setFavorites(data.userPreferences.map((item: Item) => item));
-            setAvailableFavorites(data.availableFavorites);
+            setAvailableFavorites(data.availableFavorites ?? []);
             setLocations(Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Location))));
           }
         } else if (!authLoading && !token) {
