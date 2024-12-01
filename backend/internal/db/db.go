@@ -28,6 +28,7 @@ type DailyItem struct {
 	Description string `json:"desc"`
 	Date        string // The date this item is available
 	Location    string // The dining hall location
+	StationName string // The station name
 	TimeOfDay   string // The time of day this item is available
 }
 
@@ -133,6 +134,7 @@ func InsertDailyItem(item DailyItem) error {
 	}
 
 	log.Printf("Item '%s' inserted successfully", item.Name)
+	log.Printf("Item had %s as a station name", item.StationName)
 	return nil
 }
 

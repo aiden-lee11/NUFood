@@ -203,7 +203,9 @@ func visitWithRetries(c *colly.Collector, url, locationName string, service Serv
 			return
 		}
 
-		err = postItemsToAllandDaily(jsonResponse, service, locName, rescrapeDaily)
+		menu := jsonResponse.Menu
+
+		err = postItemsToAllandDaily(menu, service, locName, rescrapeDaily)
 		if err != nil {
 			log.Printf("Error posting items for %s: %v", locName, err)
 		}
@@ -221,9 +223,9 @@ func visitWithRetries(c *colly.Collector, url, locationName string, service Serv
 	return nil
 }
 
-func postItemsToAllandDaily(jsonResponse Response, service Service, location string, rescrapeDaily bool) error {
-	categories := jsonResponse.Menu.Periods.Categories
-	date := jsonResponse.Menu.Date
+func postItemsToAllandDaily(menu Menu, service Service, location string, rescrapeDaily bool) error {
+	categories := menu.Periods.Categories
+	date := menu.Date
 
 	ingredientCategories := []string{
 		// Allison
@@ -336,6 +338,8 @@ func postItemsToAllandDaily(jsonResponse Response, service Service, location str
 			continue
 		}
 
+		station_name := category.Name
+
 		for _, item := range category.Items {
 			cleanedItem := strings.ToLower(strings.TrimSpace(item.Name))
 
@@ -353,7 +357,8 @@ func postItemsToAllandDaily(jsonResponse Response, service Service, location str
 				continue
 			}
 
-			menuItem := db.DailyItem{item.Name, item.Description, date, location, service.TimeOfDay}
+			menuItem := db.DailyItem{item.Name, item.Description, date, location, station_name, service.TimeOfDay}
+			// fmt.Printf("Inserting item %s for %s with station %s on %s\n", item.Name, station_name, location, date)
 			err = db.InsertDailyItem(menuItem)
 			if err != nil {
 				log.Printf("Error saving item %s: %v", item.Name, err)
