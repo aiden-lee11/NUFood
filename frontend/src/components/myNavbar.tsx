@@ -2,6 +2,7 @@ import { Navbar, NavbarDivider, NavbarItem, NavbarSection, NavbarSpacer } from '
 import { Sidebar, SidebarBody, SidebarItem, SidebarSection, SidebarSpacer } from './sidebar'
 import { StackedLayout } from './stacked-layout'
 import { ReactNode } from 'react'
+import { useAuth } from '../context/AuthProvider'
 
 const navItemsLeft = [
   { label: 'Home', url: '/' },
@@ -9,9 +10,11 @@ const navItemsLeft = [
   { label: 'All Items', url: '/all' },
 ]
 
-const loggedIn = localStorage.getItem('t') != null;
-
 function MyNavbar({ children }: { children: ReactNode }) {
+
+  const { token } = useAuth()
+
+  const loggedIn = !!token
   return (
     <StackedLayout
       navbar={

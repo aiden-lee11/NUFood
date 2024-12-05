@@ -36,6 +36,7 @@ const DailyItems: React.FC = () => {
 
   const { authLoading, token } = useAuth();
 
+
   const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
 
   useEffect(() => {
@@ -54,13 +55,23 @@ const DailyItems: React.FC = () => {
     }
 
     let tempPreferences = favorites;
+    let tempAvailable = availableFavorites;
     const formattedItemName = item.Name.toLowerCase().trim();
     if (favorites.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
       tempPreferences = favorites.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
     } else {
       tempPreferences = [...favorites, item];
     }
+
+    if (availableFavorites.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
+      tempAvailable = availableFavorites.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
+    } else {
+      tempAvailable = [...availableFavorites, dailyItems.find(i => i.Name.toLowerCase().trim() === formattedItemName) as DailyItem];
+    }
+
+
     setFavorites(tempPreferences);
+    setAvailableFavorites(tempAvailable);
     postUserPreferences(tempPreferences, token as string);
   };
 
@@ -80,6 +91,7 @@ const DailyItems: React.FC = () => {
     const fetchData = async () => {
       try {
         if (!authLoading && token) {
+          console.log("Fetching data with token:", token);
           const data = await fetchAllData(token);
           console.log(data.dailyItems)
           if (data) {
