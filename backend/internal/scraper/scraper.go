@@ -244,6 +244,7 @@ func postItemsToAllandDaily(menu Menu, service Service, location string, rescrap
 		// Elder
 		"deli",
 		"salad bar",
+		"my pantry",
 	}
 
 	ingredients := []string{

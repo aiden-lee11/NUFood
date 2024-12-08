@@ -36,7 +36,6 @@ const DailyItems: React.FC = () => {
 
   const { authLoading, token } = useAuth();
 
-
   const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
 
   useEffect(() => {
@@ -91,9 +90,7 @@ const DailyItems: React.FC = () => {
     const fetchData = async () => {
       try {
         if (!authLoading && token) {
-          console.log("Fetching data with token:", token);
           const data = await fetchAllData(token);
-          console.log(data.dailyItems)
           if (data) {
             setDailyItems(data.dailyItems);
             setFavorites(data.userPreferences.map((item: Item) => item));

@@ -22,7 +22,6 @@ export const postUserPreferences = async (preferences: Item[], userToken: string
     }
 
     const result = await response.json();
-    console.log('Success:', result);
 
     // Update sessionStorage with the new userPreferences
     sessionStorage.setItem("userPreferences", JSON.stringify(preferences));
