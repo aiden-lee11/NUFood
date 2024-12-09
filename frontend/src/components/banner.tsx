@@ -7,18 +7,19 @@ const Banner: React.FC = () => {
     setIsVisible(false);
   };
 
-  if (!isVisible) {
+  const noShow = ["/login", "/signout", "/preferences"]
+  if (!isVisible || noShow.includes(window.location.pathname)) {
     return null;
   }
 
   return (
-    <div className="w-1/2 mx-auto text-center h-[30px] bg-white-100 dark:bg-blue">
-      <span className="text-black font-bold dark:bg-blue dark:text-white text-lg">
-        Click on an item to add it to your favorites!
+    <div className="w-full mx-auto text-center h-[30px] bg-white-100 dark:bg-zinc-900 ">
+      <span className="text-black font-bold dark:bg-blue dark:text-white text-md">
+        Click an item to favorite it!
       </span>
       <button
         onClick={handleClose}
-        className="text-black dark:text-white font-bold dark:bg-blue text-md focus:outline-none mx-2"
+        className="text-black dark:text-white font-bold dark:bg-zing-900 text-sm focus:outline-none mx-2"
         aria-label="Close banner"
         style={{ backgroundColor: 'transparent' }}
       >
