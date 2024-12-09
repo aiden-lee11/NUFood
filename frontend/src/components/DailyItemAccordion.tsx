@@ -51,7 +51,7 @@ const DailyItemAccordion: React.FC<Props> = ({
   );
 
   // Function to handle the accordion toggle
-  const handleAccordionChange = (stationName: string) => (isExpanded: boolean) => {
+  const handleAccordionChange = (stationName: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedState((prev) => ({
       ...prev,
       [stationName]: isExpanded,
