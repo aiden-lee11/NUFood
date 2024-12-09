@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Accordion from "@mui/material/Accordion";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import AccordionDetails from "@mui/material/AccordionDetails";
@@ -42,8 +42,16 @@ const DailyItemAccordion: React.FC<Props> = ({
     return acc;
   }, {});
 
-  // State to keep track of expanded stations
-  const [expandedState, setExpandedState] = React.useState<Record<string, boolean>>({});
+  // State to keep track of expanded stations within a location
+  const [expandedState, setExpandedState] = React.useState<string[]>(
+    Object.keys(itemsByStation).reduce<string[]>((acc, stationName) => {
+      if (expandFolders) {
+        acc.push(stationName);
+      }
+      return acc;
+    }, [])
+  );
+
 
   // Filter favorites that belong to the location
   const myFavorites = availableFavorites.filter((favorite) =>
@@ -52,12 +60,25 @@ const DailyItemAccordion: React.FC<Props> = ({
 
   // Function to handle the accordion toggle
   const handleAccordionChange = (stationName: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
-    setExpandedState((prev) => ({
-      ...prev,
-      [stationName]: isExpanded,
-    }));
+    if (expandedState.includes(stationName) && !isExpanded) {
+      setExpandedState((prev) => prev.filter((station) => station !== stationName));
+    } else {
+      setExpandedState((prev) => [...prev, stationName]);
+    }
   };
-  const expandedStations = ["My Favorites", "Comfort", "Comfort 1", "Comfort 2", "Rooted", "Rooted 1", "Rooted 2", "Pure Eats", "Pure Eats 1", "Pure Eats 2", "Kitchen Entree", "Kitchen Sides"]
+
+  // useEffect to expand all stations if expandFolders is changed to true
+  useEffect(() => {
+    if (expandFolders) {
+      setExpandedState(Object.keys(itemsByStation));
+    }
+  }
+    , [expandFolders]);
+
+
+
+
+  const defaultExpandedStations = ["My Favorites", "Comfort", "Comfort 1", "Comfort 2", "Rooted", "Rooted 1", "Rooted 2", "Pure Eats", "Pure Eats 1", "Pure Eats 2", "Kitchen Entree", "Kitchen Sides"]
 
   return (
     <div>
@@ -92,7 +113,7 @@ const DailyItemAccordion: React.FC<Props> = ({
       )}
 
       {/* Default Expanded Accordions */}
-      {expandedStations
+      {defaultExpandedStations
         .filter((stationName) => itemsByStation[stationName])
         .map((stationName) => (
           <Accordion key={stationName} defaultExpanded={true}>
@@ -128,11 +149,11 @@ const DailyItemAccordion: React.FC<Props> = ({
 
 
       {Object.entries(itemsByStation)
-        .filter(([stationName]) => !expandedStations.includes(stationName))
+        .filter(([stationName]) => !defaultExpandedStations.includes(stationName))
         .map(([stationName, stationItems]) => (
           <Accordion
             key={stationName}
-            expanded={expandFolders || expandedState[stationName] || false}
+            expanded={expandedState.includes(stationName)}
             onChange={handleAccordionChange(stationName)}
           >
             <AccordionSummary
