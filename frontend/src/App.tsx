@@ -8,6 +8,8 @@ import AllItems from './pages/AllItems';
 import Preferences from './pages/Preferences';
 import MyPicks from './pages/MyPicks';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import ReactGA from 'react-ga4';
+import Banner from './components/banner';
 
 const theme = createTheme({
   colorSchemes: {
@@ -15,18 +17,22 @@ const theme = createTheme({
   },
 });
 
+ReactGA.initialize(import.meta.env.VITE_GA_MEASUREMENT_ID);
+ReactGA.send({ hitType: 'pageview', page: '/' });
+
 function App() {
   return (
     // TODO color scheme the theme to the projects colors and not mui defaults
     <ThemeProvider theme={theme}>
       <MyNavbar>
+        <Banner />
         <Routes>
           <Route path="/" element={<DailyItems />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signout" element={<SignOutButton />} />
           <Route path="/preferences" element={<Preferences />} />
           <Route path="/all" element={<AllItems />} />
-          <Route path="/mypicks" element={<MyPicks />} />
+          // <Route path="/mypicks" element={<MyPicks />} />
         </Routes>
       </MyNavbar>
     </ThemeProvider>

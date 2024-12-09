@@ -6,7 +6,6 @@ import { useAuth } from '../context/AuthProvider'
 
 const navItemsLeft = [
   { label: 'Home', url: '/' },
-  // { label: 'My Picks', url: '/mypicks' },
   { label: 'All Items', url: '/all' },
 ]
 

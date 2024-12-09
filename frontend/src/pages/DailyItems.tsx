@@ -33,6 +33,7 @@ const DailyItems: React.FC = () => {
   const [visibleTimes, setVisibleTimes] = useState<string[]>(timesOfDay);
   const [showPreferences, setShowPreferences] = useState(false); // Toggle for preferences visibility
   const [showPopup, setShowPopup] = useState(false); // Popup visibility state
+  const [expandFolders, setExpandFolders] = useState(false); // New state for collapsing all preferences
 
   const { authLoading, token } = useAuth();
 
@@ -74,17 +75,15 @@ const DailyItems: React.FC = () => {
     postUserPreferences(tempPreferences, token as string);
   };
 
-  const toggleLocationVisibility = (location: string) => {
-    setVisibleLocations(prev =>
-      prev.includes(location) ? prev.filter(loc => loc !== location) : [...prev, location]
-    );
-  };
-
-  const toggleTimeVisibility = (time: string) => {
-    setVisibleTimes(prev =>
-      prev.includes(time) ? prev.filter(t => t !== time) : [...prev, time]
-    );
-  };
+  const togglePreferencesItem = (preferenceType: string, preference: string | boolean) => {
+    if (preferenceType === 'location') {
+      setVisibleLocations(prev => prev.includes(preference as string) ? prev.filter(loc => loc !== preference) : [...prev, preference as string]);
+    } else if (preferenceType === 'time') {
+      setVisibleTimes(prev => prev.includes(preference as string) ? prev.filter(t => t !== preference) : [...prev, preference as string]);
+    } else if (preferenceType === 'expandFolders') {
+      setExpandFolders(preference as boolean);
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -122,7 +121,7 @@ const DailyItems: React.FC = () => {
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-        Daily Items For Today
+        Daily Items
       </h1>
 
       {/* Preferences Toggle */}
@@ -138,7 +137,7 @@ const DailyItems: React.FC = () => {
       </button>
 
       {/* Preferences Box */}
-      {showPreferences && (Preferences({ showPreferences, locations, visibleLocations, toggleLocationVisibility, timesOfDay, visibleTimes, toggleTimeVisibility })
+      {showPreferences && (Preferences({ showPreferences, locations, visibleLocations, timesOfDay, visibleTimes, expandFolders, togglePreferencesItem })
       )}
 
       {/* Search Input */}
@@ -153,6 +152,7 @@ const DailyItems: React.FC = () => {
       />
 
       {/* LocationItem Grid */}
+
       <LocationItemGrid
         locations={locations}
         visibleLocations={visibleLocations}
@@ -161,6 +161,7 @@ const DailyItems: React.FC = () => {
         filteredItems={filteredItems}
         availableFavorites={availableFavorites}
         favorites={favorites}
+        expandFolders={expandFolders}
         handleItemClick={handleItemClick}
       />
 

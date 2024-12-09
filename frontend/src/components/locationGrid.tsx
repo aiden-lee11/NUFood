@@ -22,6 +22,7 @@ interface LocationProps {
   filteredItems: Item[];
   favorites: FavoriteItem[];
   availableFavorites: Item[];
+  expandFolders: boolean;
   handleItemClick: (item: Item) => void;
 }
 
@@ -33,8 +34,10 @@ const LocationItemGrid: React.FC<LocationProps> = ({
   filteredItems,
   availableFavorites,
   favorites,
+  expandFolders,
   handleItemClick,
 }) => {
+
   return (
     <div className="min-h-screen p-6 bg-gray-100 dark:bg-zinc-900 transition-colors duration-300">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -70,6 +73,7 @@ const LocationItemGrid: React.FC<LocationProps> = ({
                           availableFavorites={filteredAvailableFavorites} // Pass filtered favorites
                           favorites={favorites} // Pass favorites
                           handleItemClick={handleItemClick} // Pass click handler
+                          expandFolders={expandFolders}
                         />
                       </div>
                     )
