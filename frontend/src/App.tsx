@@ -6,7 +6,6 @@ import Login from './firebase/login';
 import SignOutButton from './firebase/signout';
 import AllItems from './pages/AllItems';
 import Preferences from './pages/Preferences';
-import MyPicks from './pages/MyPicks';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import ReactGA from 'react-ga4';
 import Banner from './components/banner';
@@ -32,7 +31,6 @@ function App() {
           <Route path="/signout" element={<SignOutButton />} />
           <Route path="/preferences" element={<Preferences />} />
           <Route path="/all" element={<AllItems />} />
-          // <Route path="/mypicks" element={<MyPicks />} />
         </Routes>
       </MyNavbar>
     </ThemeProvider>

@@ -92,14 +92,15 @@ const DailyItems: React.FC = () => {
           const data = await fetchAllData(token);
           if (data) {
             setDailyItems(data.dailyItems);
+            setLocations(Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Location))));
             setFavorites(data.userPreferences.map((item: Item) => item));
             setAvailableFavorites(data.availableFavorites ?? []);
-            setLocations(Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Location))));
           }
         } else if (!authLoading && !token) {
           const data = await fetchGeneralData();
           if (data) {
             setDailyItems(data.dailyItems);
+            setLocations(Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Location))));
           }
         }
       } catch (error) {
