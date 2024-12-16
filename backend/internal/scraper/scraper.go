@@ -2,143 +2,76 @@ package scraper
 
 import (
 	"backend/internal/db"
+	"backend/internal/models"
 	"encoding/json"
 	"fmt"
 	"github.com/gocolly/colly"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 )
 
-// Internal Structs
-type Location struct {
-	Name       string
-	Hash       string
-	Services   []Service
-	DailyItems []DailyItem
+type DiningHallScraper struct {
+	Client *http.Client
+	Config ScrapeConfig
 }
 
-type Service struct {
-	TimeOfDay string
-	Hash      string
+type ScrapeConfig struct {
+	Locations []models.Location
+	BaseURL   string
 }
 
-// API Data
-type Response struct {
-	Menu Menu `json:"menu"`
-	// Status string `json:"status"`
-	// request_time float `json:"request_time"`
-	// records int `json:"records"`
-	// allergen_filter boolean `json:"allergen_filter"`
+var DefaultConfig = ScrapeConfig{
+	Locations: []models.Location{
+		{
+			Name: "Allison",
+			Hash: "5b33ae291178e909d807593d",
+			Services: []models.Service{
+				{TimeOfDay: "Breakfast", Hash: "66e1fc2de45d43074be3a0e5"},
+				{TimeOfDay: "Lunch", Hash: "66e1fc2de45d43074be3a0fb"},
+				{TimeOfDay: "Dinner", Hash: "66e1fc2de45d43074be3a111"},
+			},
+		},
+		{
+			Name: "Sargent",
+			Hash: "5b33ae291178e909d807593e",
+			Services: []models.Service{
+				{TimeOfDay: "Breakfast", Hash: "66e97bac351d530685467360"},
+				{TimeOfDay: "Lunch", Hash: "66e97bac351d53068546737e"},
+				{TimeOfDay: "Dinner", Hash: "66e97bac351d53068546736f"},
+			},
+		},
+		{
+			Name: "Plex West",
+			Hash: "5bae7de3f3eeb60c7d3854ba",
+			Services: []models.Service{
+				{TimeOfDay: "Breakfast", Hash: "66e99466351d5306ad498440"},
+				{TimeOfDay: "Lunch", Hash: "66e99466351d5306ad498450"},
+				{TimeOfDay: "Dinner", Hash: "66e99466351d5306ad49845b"},
+			},
+		},
+		{
+			Name: "Plex East",
+			Hash: "5bae7ee9f3eeb60cb4f8f3af",
+			Services: []models.Service{
+				{TimeOfDay: "Lunch", Hash: "66e99466351d5306ad498467"},
+				{TimeOfDay: "Dinner", Hash: "66e99466351d5306ad498461"},
+			},
+		},
+		{
+			Name: "Elder",
+			Hash: "5d113c924198d409c34fdf5c",
+			Services: []models.Service{
+				{TimeOfDay: "Breakfast", Hash: "66e43426c625af07233bfef2"},
+				{TimeOfDay: "Lunch", Hash: "66e43426c625af07233bff01"},
+				{TimeOfDay: "Dinner", Hash: "66e85380351d5306adcbcbcd"},
+			},
+		},
+	},
+	BaseURL: "https://api.dineoncampus.com/v1/location/",
 }
 
-type Menu struct {
-	// id int `json:"id"`
-	// date string `json:"date"`
-	// name string `json:"name"`
-	// from_date string `json:"from_date"`
-	// to_date string `json:"to_date"`
-	Periods Periods
-	Date    string `json:"date"`
-}
-
-type Periods struct {
-	// name string `json:"name"`
-	// id string `json:"id"`
-	// sort_order int `json:"sort_order"`
-	Categories []Category `json:"categories"`
-}
-
-type Category struct {
-	// id string `json:"id"`
-	Name string `json:"name"`
-	// sort_order int `json:"sort_order"`
-	Items []DailyItem `json:"items"`
-}
-
-type Item struct {
-	// id string `json:"id"`
-	// name string `json:"name"`
-	// mrn int `json:"mrn"`
-	// rev string `json:"rev"`
-	// mrn_full string `json:"mrn_full"`
-	Description string `json:"desc"`
-	// webtrition_id string `json:"webtrition_id"`
-	// sort_order int `json:"sort_order"`
-	// portion string `json:"portion"`
-	// qty string `json:"qty"`
-	// ingredients string `json:"ingredients"`
-	// nutrients []Nutrient `json:"nutrients"`
-	// filters []Filter `json:"filters"`
-}
-
-type Nutrient struct {
-	// id string `json:"id"`
-	// name string `json:"name"`
-	// value string `json:"value"`
-	// uom string `json:"uom"`
-	// value_numeric string `json:"value_numeric"`
-}
-
-type Filter struct {
-	// id string `json:"id"`
-	// name string `json:"name"`
-	// type string `json:"type"`
-	// icon boolean `json:"icon"`
-	// remote_file_name string `json:"remote_file_name"`
-	// sector_icon_id string `json:"sector_icon_id"`
-	// custom_icon string `json:"custom_icon"`
-}
-
-// Item Struct for only data that I want to save
-type DailyItem struct {
-	// id string `json:"id"`
-	// name string `json:"name"`
-	// mrn int `json:"mrn"`
-	// rev string `json:"rev"`
-	// mrn_full string `json:"mrn_full"`
-	Description string `json:"desc"`
-	// webtrition_id string `json:"webtrition_id"`
-	// sort_order int `json:"sort_order"`
-	// portion string `json:"portion"`
-	// qty string `json:"qty"`
-	// ingredients string `json:"ingredients"`
-	// nutrients []Nutrient `json:"nutrients"`
-
-	Name     string
-	Date     string
-	Location string
-}
-
-func ScrapeAndSave(date string) error {
-	locations := []Location{
-		{Name: "Allison", Hash: "5b33ae291178e909d807593d", Services: []Service{
-			{"Breakfast", "66e1fc2de45d43074be3a0e5"},
-			{"Lunch", "66e1fc2de45d43074be3a0fb"},
-			{"Dinner", "66e1fc2de45d43074be3a111"},
-		}},
-		{Name: "Sargent", Hash: "5b33ae291178e909d807593e", Services: []Service{
-			{"Breakfast", "66e97bac351d530685467360"},
-			{"Lunch", "66e97bac351d53068546737e"},
-			{"Dinner", "66e97bac351d53068546736f"},
-		}},
-		{Name: "Plex West", Hash: "5bae7de3f3eeb60c7d3854ba", Services: []Service{
-			{"Breakfast", "66e99466351d5306ad498440"},
-			{"Lunch", "66e99466351d5306ad498450"},
-			{"Dinner", "66e99466351d5306ad49845b"},
-		}},
-		{Name: "Plex East", Hash: "5bae7ee9f3eeb60cb4f8f3af", Services: []Service{
-			{"Lunch", "66e99466351d5306ad498467"},
-			{"Dinner", "66e99466351d5306ad498461"},
-		}},
-		{Name: "Elder", Hash: "5d113c924198d409c34fdf5c", Services: []Service{
-			{"Breakfast", "66e43426c625af07233bfef2"},
-			{"Lunch", "66e43426c625af07233bff01"},
-			{"Dinner", "66e85380351d5306adcbcbcd"},
-		}},
-	}
-	baseURL := "https://api.dineoncampus.com/v1/location/"
+func (d *DiningHallScraper) ScrapeAndSaveFood(date string) error {
 
 	// Check if we need to rescrape the daily items
 	previousDate, err := db.ReturnDateOfDailyItems()
@@ -146,41 +79,29 @@ func ScrapeAndSave(date string) error {
 		log.Printf("Error getting date of daily items: %v", err)
 		return err
 	}
+
 	rescrapeDaily := date != previousDate
 	if rescrapeDaily {
 		db.DeleteDailyItems()
 	}
 
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
 	// Maximum retries for failed visits
 	const maxRetries = 3
 
-	for _, location := range locations {
+	for _, location := range d.Config.Locations {
 		for _, service := range location.Services {
 			c := colly.NewCollector()
-			c.WithTransport(client.Transport)
+			c.WithTransport(d.Client.Transport)
 
 			locationName := location.Name
-			url := baseURL + location.Hash + "/periods/" + service.Hash + "?platform=0&date=" + date
+			url := d.Config.BaseURL + location.Hash + "/periods/" + service.Hash + "?platform=0&date=" + date
 
-			// Retry logic wrapped around the visit
-			retryCount := 0
-			for {
-				log.Printf("Grabbing %s's %s time. For the %d time.", locationName, service.TimeOfDay, retryCount+1)
-				err := visitWithRetries(c, url, locationName, service, rescrapeDaily)
-				if err != nil {
-					retryCount++
-					if retryCount > maxRetries {
-						log.Printf("Max retries exceeded for URL: %s", url)
-						break
-					}
-					log.Printf("Retrying (%d/%d) for URL: %s", retryCount, maxRetries, url)
-					continue
-				}
-				break // Exit loop if visit succeeds
+			err := RetryRequest(url, maxRetries, func() error {
+				return visitWithRetries(c, url, locationName, service.TimeOfDay, rescrapeDaily)
+			})
+
+			if err != nil {
+				log.Printf("All retries failed for URL: %s", url)
 			}
 		}
 	}
@@ -189,14 +110,14 @@ func ScrapeAndSave(date string) error {
 	return nil
 }
 
-func visitWithRetries(c *colly.Collector, url, locationName string, service Service, rescrapeDaily bool) error {
+func visitWithRetries(c *colly.Collector, url, locationName, timeOfDay string, rescrapeDaily bool) error {
 	c.OnRequest(func(r *colly.Request) {
 		r.Ctx.Put("locationName", locationName)
 	})
 
 	c.OnResponse(func(r *colly.Response) {
 		locName := r.Ctx.Get("locationName")
-		var jsonResponse Response
+		var jsonResponse models.Response
 		err := json.Unmarshal(r.Body, &jsonResponse)
 		if err != nil {
 			log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
@@ -205,7 +126,7 @@ func visitWithRetries(c *colly.Collector, url, locationName string, service Serv
 
 		menu := jsonResponse.Menu
 
-		err = postItemsToAllandDaily(menu, service, locName, rescrapeDaily)
+		err = postItemsToAllandDaily(menu, locName, timeOfDay, rescrapeDaily)
 		if err != nil {
 			log.Printf("Error posting items for %s: %v", locName, err)
 		}
@@ -223,109 +144,10 @@ func visitWithRetries(c *colly.Collector, url, locationName string, service Serv
 	return nil
 }
 
-func postItemsToAllandDaily(menu Menu, service Service, location string, rescrapeDaily bool) error {
+func postItemsToAllandDaily(menu models.Menu, location, timeOfDay string, rescrapeDaily bool) error {
 	categories := menu.Periods.Categories
 	date := menu.Date
 
-	ingredientCategories := []string{
-		// Allison
-		"pantry 1",
-		"gluten free pantry",
-		"beverage",
-		"salad bar 1",
-		"salad bar 2",
-		"flame 1",
-		"flame 2",
-		// Sargent
-		"planet eats (hot)",
-		"planet eats (cold)",
-		"planet eats toppings",
-		"made to order deli",
-		// Elder
-		"deli",
-		"salad bar",
-		"my pantry",
-	}
-
-	ingredients := []string{
-		"shredded cheddar cheese",
-		"crushed red pepper",
-		"grated parmesan cheese",
-		"lettuce leaf",
-		"sliced red onion",
-		"sliced dill pickles",
-		"american cheese slice",
-		"hamburger patty",
-		"turkey burger (no bun)",
-		"egg whites",
-		"butter",
-		"light cream cheese",
-		"2% greek plain yogurt",
-		"low fat strawberry yogurt",
-		"low fat vanilla yogurt",
-		"diced onions",
-		"chopped spinach",
-		"chopped broccoli",
-		"chopped green bell pepper",
-		"sliced mushrooms",
-		"chopped tomatoes",
-		"diced bacon",
-		"turkey sausage link",
-		"diced smoked ham",
-		"oats 'n honey granola",
-		"raisins",
-		"sunflower spread",
-		"grape jelly",
-		"sliced green onions",
-		"dried oregano",
-		"chopped romaine lettuce",
-		"spring mix",
-		"chopped cilantro",
-		"fresh orange & fennel",
-		"charred tomato and green bean",
-		"cucumber",
-		"tomato",
-		"parsley",
-		"kale",
-		"butternut squash",
-		"mixed melon",
-		"roasted sweet potatoes",
-		"zucchini",
-		"cherry tomatoes",
-		"mushrooms",
-		"spinach",
-		"broccoli",
-		"green beans",
-		"carrots",
-		"okra",
-		"bell peppers",
-		"onions",
-		"garlic",
-		"fresh herbs",
-		"lemons",
-		"eggs",
-		"crumbled feta cheese",
-		"yogurt",
-		"sour cream",
-		"chopped bacon",
-		"meatless black bean burger",
-		"long grain wild rice blend",
-		"steamed rice",
-		"wild rice",
-		"avoiding gluten barilla penne",
-		"granola",
-		"soy sauce",
-		"everything bagel seasoning",
-		"sesame seed mix",
-		"pomodoro sauce",
-		"salsa verde",
-		"salsa rojas",
-		"guacamole",
-		"pico de gallo",
-		"olive oil",
-		"sriracha aquafaba aioli",
-		"white hamburger bun",
-	}
 	if !rescrapeDaily {
 		fmt.Println("Not rescraping daily items")
 	} else {
@@ -334,7 +156,7 @@ func postItemsToAllandDaily(menu Menu, service Service, location string, rescrap
 
 	for _, category := range categories {
 		cleanedCategory := strings.ToLower(strings.TrimSpace(category.Name))
-		if contains(ingredientCategories, cleanedCategory) {
+		if contains(IngredientCategories, cleanedCategory) {
 			fmt.Println("Skipping category", cleanedCategory)
 			continue
 		}
@@ -344,11 +166,11 @@ func postItemsToAllandDaily(menu Menu, service Service, location string, rescrap
 		for _, item := range category.Items {
 			cleanedItem := strings.ToLower(strings.TrimSpace(item.Name))
 
-			if contains(ingredients, cleanedItem) {
+			if contains(Ingredients, cleanedItem) {
 				continue
 			}
 
-			itemName := db.AllDataItem{item.Name}
+			itemName := db.AllDataItem{Name: item.Name}
 			err := db.InsertAllDataItem(itemName)
 			if err != nil {
 				log.Printf("Error saving item %s: %v", item.Name, err)
@@ -358,7 +180,15 @@ func postItemsToAllandDaily(menu Menu, service Service, location string, rescrap
 				continue
 			}
 
-			menuItem := db.DailyItem{item.Name, item.Description, date, location, station_name, service.TimeOfDay}
+			menuItem := db.DailyItem{
+				Name:        item.Name,
+				Description: item.Description,
+				Date:        date,
+				Location:    location,
+				StationName: station_name,
+				TimeOfDay:   timeOfDay,
+			}
+
 			// fmt.Printf("Inserting item %s for %s with station %s on %s\n", item.Name, station_name, location, date)
 			err = db.InsertDailyItem(menuItem)
 			if err != nil {
@@ -368,14 +198,4 @@ func postItemsToAllandDaily(menu Menu, service Service, location string, rescrap
 	}
 
 	return nil
-}
-
-// contains checks if a string is present in a slice
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }

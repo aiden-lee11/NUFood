@@ -48,7 +48,12 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Scraping daily items")
 	fmt.Println("This is an internal API endpoint")
 
-	err := scraper.ScrapeAndSave(time.Now().Format("2006-01-02"))
+	scraper := &scraper.DiningHallScraper{
+		Client: scraper.NewClient(),
+		Config: scraper.DefaultConfig,
+	}
+
+	err := scraper.ScrapeAndSaveFood(time.Now().Format("2006-01-02"))
 
 	if err != nil {
 		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
@@ -70,7 +75,12 @@ func ScrapeHistoricalItemsHandler(w http.ResponseWriter, r *http.Request) {
 		// Format the date as YYYY-MM-DD
 		formattedDate := pastDay.Format("2006-01-02")
 
-		err := scraper.ScrapeAndSave(formattedDate)
+		scraper := &scraper.DiningHallScraper{
+			Client: scraper.NewClient(),
+			Config: scraper.DefaultConfig,
+		}
+
+		err := scraper.ScrapeAndSaveFood(formattedDate)
 
 		if err != nil {
 			fmt.Println("Error scraping and saving: ", err)
