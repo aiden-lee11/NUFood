@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestScrapeAndSaveFood(t *testing.T) {
+func TestScrapeFood(t *testing.T) {
 	// Define a mock HTTP response
 	mockResponse := models.DiningHallResponse{
 		Menu: models.Menu{
@@ -100,4 +100,143 @@ func TestScrapeAndSaveFood(t *testing.T) {
 		t.Fatalf("Expected all data item name to be 'Pancakes', got %s", allDataItems[0].Name)
 	}
 
+}
+
+func TestScrapeOperationHours(t *testing.T) {
+	// Define a mock HTTP response
+	mockResponse := models.OperationHoursResponseJSON{
+		Locations: []models.LocationOperationInfoJSON{
+			{
+				Name: "Allison Dining Commons",
+				Week: []models.DayOperationInfoJSON{
+					{
+						Day:    0,
+						Date:   "2024-12-08",
+						Status: "open",
+						Hours: []models.HourOperationInfoJSON{
+							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						},
+						Has_special_hours: false,
+						Closed:            false,
+					},
+					{
+						Day:    1,
+						Date:   "2024-12-09",
+						Status: "open",
+						Hours: []models.HourOperationInfoJSON{
+							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						},
+						Has_special_hours: false,
+						Closed:            false,
+					},
+					{
+						Day:    2,
+						Date:   "2024-12-10",
+						Status: "open",
+						Hours: []models.HourOperationInfoJSON{
+							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						},
+						Has_special_hours: false,
+						Closed:            false,
+					},
+					{
+						Day:    3,
+						Date:   "2024-12-11",
+						Status: "open",
+						Hours: []models.HourOperationInfoJSON{
+							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						},
+						Has_special_hours: false,
+						Closed:            false,
+					},
+					{
+						Day:    4,
+						Date:   "2024-12-12",
+						Status: "open",
+						Hours: []models.HourOperationInfoJSON{
+							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						},
+						Has_special_hours: false,
+						Closed:            false,
+					},
+					{
+						Day:    5,
+						Date:   "2024-12-13",
+						Status: "open",
+						Hours: []models.HourOperationInfoJSON{
+							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						},
+						Has_special_hours: false,
+						Closed:            false,
+					},
+					{
+						Day:    6,
+						Date:   "2024-12-14",
+						Status: "closed",
+						Hours: []models.HourOperationInfoJSON{
+							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						},
+						Has_special_hours: false,
+						Closed:            true,
+					},
+				},
+			},
+		},
+	}
+
+	mockResponseBody, err := json.Marshal(mockResponse)
+	if err != nil {
+		t.Fatalf("Error marshalling mock response: %v", err)
+	}
+
+	// Create a mock server
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		query := r.URL.Query()
+
+		fmt.Printf("Mock server received request: Path=%s, Query=%v\n", path, query)
+
+		// Match the expected endpoint pattern
+		if strings.HasPrefix(path, "/weekly_schedule") &&
+			query.Get("site_id") == "5acea5d8f3eeb60b08c5a50d" && query.Get("date") != "" {
+			// Serve the mock response
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(mockResponseBody)
+		} else {
+			// Return 404 for unmatched routes
+			http.NotFound(w, r)
+		}
+	}))
+	defer mockServer.Close()
+
+	testConfig := scraper.ScrapeConfig{
+		BaseURL: mockServer.URL,
+		SiteID:  "5acea5d8f3eeb60b08c5a50d",
+	}
+
+	// Set up the scraper with the mock server URL
+	diningHallScraper := &scraper.DiningHallScraper{
+		Client: mockServer.Client(),
+		Config: testConfig,
+	}
+
+	// Call the ScrapeAndSaveFood method and check results
+	locationOperationHours, err := diningHallScraper.ScrapeOperationHours("2024-12-08T06:00:00.000Z")
+	if err != nil {
+		t.Fatalf("Error in ScrapeAndSaveFood: %v", err)
+	}
+
+	// Check that the correct data was returned
+	if len(locationOperationHours) != 1 {
+		t.Fatalf("Expected 1 location operation, got %d", len(locationOperationHours))
+	}
+
+	if locationOperationHours[0].Name != "Allison Dining Commons" {
+		t.Fatalf("Expected location operation name to be 'Allison Dining Commons', got %s", locationOperationHours[0].Name)
+	}
+
+	if len(locationOperationHours[0].Week) != 7 {
+		t.Fatalf("Expected 7 days of operation, got %d", len(locationOperationHours[0].Week))
+	}
 }

@@ -121,28 +121,39 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDat
 	return dailyItems, allDataItems, nil
 }
 
-func (d *DiningHallScraper) ScrapeOperationHours(date string) error {
+func (d *DiningHallScraper) ScrapeOperationHours(date string) ([]models.LocationOperation, error) {
 	c := colly.NewCollector()
 	c.WithTransport(d.Client.Transport)
 
 	url := fmt.Sprintf("%s/weekly_schedule/?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
 
+	var locationOperations []models.LocationOperation
+
 	err := RetryRequest(url, MAX_RETRIES, func() error {
-		return visitOperationHours(c, url)
+		locationOperationInfo, err := visitOperationHours(c, url)
+		if err != nil {
+			return err
+		}
+
+		locationOperations = append(locationOperations, locationOperationInfo...)
+
+		return nil
 	})
 
 	if err != nil {
 		log.Printf("All retries failed for URL: %s", url)
-		return err
+		return nil, err
 	}
 
 	fmt.Println("Scraping and saving successful")
-	return nil
+	return locationOperations, nil
 }
 
-func visitOperationHours(c *colly.Collector, url string) error {
+func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOperation, error) {
+	var parsedAllOperations []models.LocationOperation
+
 	c.OnResponse(func(r *colly.Response) {
-		var jsonResponse models.OperationHoursResponse
+		var jsonResponse models.OperationHoursResponseJSON
 		err := json.Unmarshal(r.Body, &jsonResponse)
 		if err != nil {
 			log.Printf("Error unmarshalling JSON for operation hours: %v", err)
@@ -151,7 +162,8 @@ func visitOperationHours(c *colly.Collector, url string) error {
 
 		locations := jsonResponse.Locations
 
-		err = postOperationHours(locations)
+		parsedAllOperations, err = parseOperationHours(locations)
+
 		if err != nil {
 			log.Printf("Error for operation hours: %v", err)
 			return
@@ -165,9 +177,9 @@ func visitOperationHours(c *colly.Collector, url string) error {
 	err := c.Visit(url)
 	if err != nil {
 		log.Printf("Visit failed for URL %s: %v", url, err)
-		return err
+		return nil, err
 	}
-	return nil
+	return parsedAllOperations, nil
 }
 
 func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
@@ -263,10 +275,19 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, [
 	return dailyItems, allDataItems, nil
 }
 
-func postOperationHours(locations []models.LocationOperationInfo) error {
+func parseOperationHours(locations []models.LocationOperationInfoJSON) ([]models.LocationOperation, error) {
 	fmt.Printf("Posting operation hours for %d locations\n", len(locations))
+	var locationOperations []models.LocationOperation
+
 	for _, location := range locations {
-		fmt.Printf("Posting operation hours for %v", location)
+		fmt.Printf("Location: %s\n", location.Name)
+		parsedInfo := models.LocationOperation{
+			Name: location.Name,
+			Week: location.Week,
+		}
+
+		locationOperations = append(locationOperations, parsedInfo)
 	}
-	return nil
+
+	return locationOperations, nil
 }

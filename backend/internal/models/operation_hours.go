@@ -1,13 +1,13 @@
 package models
 
-type OperationHoursResponse struct {
-	Status       string                  `json:"status"`
-	Request_time float64                 `json:"request_time"`
-	Records      int                     `json:"records"`
-	Locations    []LocationOperationInfo `json:"the_locations"`
+type OperationHoursResponseJSON struct {
+	Status       string                      `json:"status"`
+	Request_time float64                     `json:"request_time"`
+	Records      int                         `json:"records"`
+	Locations    []LocationOperationInfoJSON `json:"the_locations"`
 }
 
-type LocationOperationInfo struct {
+type LocationOperationInfoJSON struct {
 	ID     string `json:"id"`
 	Active bool   `json:"active"`
 	// HasDeliveryRobots      bool                `json:"has_delivery_robots"`
@@ -35,21 +35,26 @@ type LocationOperationInfo struct {
 	// sort_order             int                 `json:"sort_order"`
 	// is_building           bool                `json:"is_building"`
 	// building_id	   string              `json:"building_id"`
-	Week []DayOperationInfo `json:"week"`
+	Week []DayOperationInfoJSON `json:"week"`
 }
 
-type DayOperationInfo struct {
-	Day               int                 `json:"day"`
-	Date              string              `json:"date"`
-	Status            string              `json:"status"`
-	Hours             []HourOperationInfo `json:"hours"`
-	Has_special_hours bool                `json:"has_special_hours"`
-	Closed            bool                `json:"closed"`
+type DayOperationInfoJSON struct {
+	Day               int                     `json:"day"`
+	Date              string                  `json:"date"`
+	Status            string                  `json:"status"`
+	Hours             []HourOperationInfoJSON `json:"hours"`
+	Has_special_hours bool                    `json:"has_special_hours"`
+	Closed            bool                    `json:"closed"`
 }
 
-type HourOperationInfo struct {
-	Start_hour    string `json:"start_hour"`
-	Start_minutes string `json:"start_minutes"`
-	End_hour      string `json:"end_hour"`
-	End_minutes   string `json:"end_minutes"`
+type HourOperationInfoJSON struct {
+	Start_hour    int `json:"start_hour"`
+	Start_minutes int `json:"start_minutes"`
+	End_hour      int `json:"end_hour"`
+	End_minutes   int `json:"end_minutes"`
+}
+
+type LocationOperation struct {
+	Name string
+	Week []DayOperationInfoJSON
 }
