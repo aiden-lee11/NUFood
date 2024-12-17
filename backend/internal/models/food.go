@@ -14,7 +14,7 @@ type Service struct {
 }
 
 // API Data
-type Response struct {
+type DiningHallResponse struct {
 	Menu Menu `json:"menu"`
 	// Status string `json:"status"`
 	// request_time float `json:"request_time"`
