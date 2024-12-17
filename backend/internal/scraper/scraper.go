@@ -18,6 +18,7 @@ type DiningHallScraper struct {
 
 type ScrapeConfig struct {
 	Locations []models.Location
+	SiteID    string
 	BaseURL   string
 }
 
@@ -68,72 +69,97 @@ var DefaultConfig = ScrapeConfig{
 			},
 		},
 	},
+	SiteID:  "5acea5d8f3eeb60b08c5a50d",
 	BaseURL: "https://api.dineoncampus.com/v1/location/",
 }
 
-func (d *DiningHallScraper) ScrapeAndSaveFood(date string) error {
+// Maximum retries for failed visits
+const MAX_RETRIES = 3
 
+func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDataItem, error) {
 	// Check if we need to rescrape the daily items
-	previousDate, err := db.ReturnDateOfDailyItems()
-	if err != nil && err != db.NoItemsInDB {
-		log.Printf("Error getting date of daily items: %v", err)
-		return err
-	}
+	// previousDate, err := db.ReturnDateOfDailyItems()
+	// if err != nil && err != db.NoItemsInDB {
+	// 	log.Printf("Error getting date of daily items: %v", err)
+	// 	return nil, nil, err
+	// }
 
-	rescrapeDaily := date != previousDate
-	if rescrapeDaily {
-		db.DeleteDailyItems()
-	}
+	// if date != previousDate {
+	// 	db.DeleteDailyItems()
+	// }
 
-	// Maximum retries for failed visits
-	const maxRetries = 3
+	var dailyItems []db.DailyItem
+	var allDataItems []db.AllDataItem
 
 	for _, location := range d.Config.Locations {
 		for _, service := range location.Services {
 			c := colly.NewCollector()
 			c.WithTransport(d.Client.Transport)
 
-			locationName := location.Name
-			url := d.Config.BaseURL + location.Hash + "/periods/" + service.Hash + "?platform=0&date=" + date
+			url := fmt.Sprintf("%s/%s/periods/%s?platform=0&date=%s", d.Config.BaseURL, location.Hash, service.Hash, date)
 
-			err := RetryRequest(url, maxRetries, func() error {
-				return visitWithRetries(c, url, locationName, service.TimeOfDay, rescrapeDaily)
+			err := RetryRequest(url, MAX_RETRIES, func() error {
+				dItems, aItems, err := visitDiningHall(c, url, location.Name, service.TimeOfDay)
+				if err != nil {
+					return err
+				}
+
+				dailyItems = append(dailyItems, dItems...)
+				allDataItems = append(allDataItems, aItems...)
+
+				return nil
 			})
 
 			if err != nil {
 				log.Printf("All retries failed for URL: %s", url)
+				return nil, nil, err
 			}
 		}
+	}
+
+	fmt.Println("Scraping successful")
+	return dailyItems, allDataItems, nil
+}
+
+func (d *DiningHallScraper) ScrapeOperationHours(date string) error {
+	c := colly.NewCollector()
+	c.WithTransport(d.Client.Transport)
+
+	url := fmt.Sprintf("%s/weekly_schedule/?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
+
+	err := RetryRequest(url, MAX_RETRIES, func() error {
+		return visitOperationHours(c, url)
+	})
+
+	if err != nil {
+		log.Printf("All retries failed for URL: %s", url)
+		return err
 	}
 
 	fmt.Println("Scraping and saving successful")
 	return nil
 }
 
-func visitWithRetries(c *colly.Collector, url, locationName, timeOfDay string, rescrapeDaily bool) error {
-	c.OnRequest(func(r *colly.Request) {
-		r.Ctx.Put("locationName", locationName)
-	})
-
+func visitOperationHours(c *colly.Collector, url string) error {
 	c.OnResponse(func(r *colly.Response) {
-		locName := r.Ctx.Get("locationName")
-		var jsonResponse models.Response
+		var jsonResponse models.OperationHoursResponse
 		err := json.Unmarshal(r.Body, &jsonResponse)
 		if err != nil {
-			log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
+			log.Printf("Error unmarshalling JSON for operation hours: %v", err)
 			return
 		}
 
-		menu := jsonResponse.Menu
+		locations := jsonResponse.Locations
 
-		err = postItemsToAllandDaily(menu, locName, timeOfDay, rescrapeDaily)
+		err = postOperationHours(locations)
 		if err != nil {
-			log.Printf("Error posting items for %s: %v", locName, err)
+			log.Printf("Error for operation hours: %v", err)
+			return
 		}
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		log.Printf("Error for %s: %v", locationName, err)
+		log.Printf("Error for operation hours: %v", err)
 	})
 
 	err := c.Visit(url)
@@ -144,15 +170,54 @@ func visitWithRetries(c *colly.Collector, url, locationName, timeOfDay string, r
 	return nil
 }
 
-func postItemsToAllandDaily(menu models.Menu, location, timeOfDay string, rescrapeDaily bool) error {
+func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
+	var dailyItems []db.DailyItem
+	var allDataItems []db.AllDataItem
+
+	c.OnRequest(func(r *colly.Request) {
+		r.Ctx.Put("locationName", locationName)
+	})
+
+	c.OnResponse(func(r *colly.Response) {
+		locName := r.Ctx.Get("locationName")
+		var jsonResponse models.DiningHallResponse
+		err := json.Unmarshal(r.Body, &jsonResponse)
+		if err != nil {
+			log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
+			return
+		}
+
+		menu := jsonResponse.Menu
+
+		parsedDailyItems, parsedAllDataItems, err := parseItems(menu, locName, timeOfDay)
+		if err != nil {
+			log.Printf("Error posting items for %s: %v", locName, err)
+			return
+		}
+
+		dailyItems = append(dailyItems, parsedDailyItems...)
+		allDataItems = append(allDataItems, parsedAllDataItems...)
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		log.Printf("Error for %s: %v", locationName, err)
+		return
+	})
+
+	err := c.Visit(url)
+	if err != nil {
+		log.Printf("Visit failed for URL %s: %v", url, err)
+		return nil, nil, err
+	}
+	return dailyItems, allDataItems, nil
+}
+
+func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
 	categories := menu.Periods.Categories
 	date := menu.Date
 
-	if !rescrapeDaily {
-		fmt.Println("Not rescraping daily items")
-	} else {
-		fmt.Println("Rescraping daily items")
-	}
+	var dailyItems []db.DailyItem
+	var allDataItems []db.AllDataItem
 
 	for _, category := range categories {
 		cleanedCategory := strings.ToLower(strings.TrimSpace(category.Name))
@@ -171,14 +236,11 @@ func postItemsToAllandDaily(menu models.Menu, location, timeOfDay string, rescra
 			}
 
 			itemName := db.AllDataItem{Name: item.Name}
-			err := db.InsertAllDataItem(itemName)
-			if err != nil {
-				log.Printf("Error saving item %s: %v", item.Name, err)
-			}
-
-			if !rescrapeDaily {
-				continue
-			}
+			allDataItems = append(allDataItems, itemName)
+			// err := db.InsertAllDataItem(itemName)
+			// if err != nil {
+			// 	log.Printf("Error saving item %s: %v", item.Name, err)
+			// }
 
 			menuItem := db.DailyItem{
 				Name:        item.Name,
@@ -189,13 +251,22 @@ func postItemsToAllandDaily(menu models.Menu, location, timeOfDay string, rescra
 				TimeOfDay:   timeOfDay,
 			}
 
-			// fmt.Printf("Inserting item %s for %s with station %s on %s\n", item.Name, station_name, location, date)
-			err = db.InsertDailyItem(menuItem)
-			if err != nil {
-				log.Printf("Error saving item %s: %v", item.Name, err)
-			}
+			dailyItems = append(dailyItems, menuItem)
+
+			// err = db.InsertDailyItem(menuItem)
+			// if err != nil {
+			// 	log.Printf("Error saving item %s: %v", item.Name, err)
+			// }
 		}
 	}
 
+	return dailyItems, allDataItems, nil
+}
+
+func postOperationHours(locations []models.LocationOperationInfo) error {
+	fmt.Printf("Posting operation hours for %d locations\n", len(locations))
+	for _, location := range locations {
+		fmt.Printf("Posting operation hours for %v", location)
+	}
 	return nil
 }
