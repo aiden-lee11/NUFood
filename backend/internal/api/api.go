@@ -53,11 +53,48 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		Config: scraper.DefaultConfig,
 	}
 
-	err := scraper.ScrapeFood(time.Now().Format("2006-01-02"))
+	dItems, aItems, err := scraper.ScrapeFood(time.Now().Format("2006-01-02"))
 
 	if err != nil {
 		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
 	}
+
+	if err := db.InsertDailyItems(dItems); err != nil {
+		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	if err := db.InsertAllDataItems(aItems); err != nil {
+		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	// Return success code
+	w.WriteHeader(http.StatusOK)
+}
+
+func ScrapeOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
+
+	// Set CORS headers
+	setCorsHeaders(w, r)
+
+	fmt.Println("Scraping operation hours")
+	fmt.Println("This is an internal API endpoint")
+
+	scraper := &scraper.DiningHallScraper{
+		Client: scraper.NewClient(),
+		Config: scraper.DefaultConfig,
+	}
+	formattedDate := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+	locationOperations, err := scraper.ScrapeOperationHours(formattedDate)
+
+	err = db.InsertLocationOperations(locationOperations)
+	if err != nil {
+		http.Error(w, "Error inserting operation hours: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	if err != nil {
+		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
+	}
+
 	// Return success code
 	w.WriteHeader(http.StatusOK)
 }
@@ -80,7 +117,19 @@ func ScrapeHistoricalItemsHandler(w http.ResponseWriter, r *http.Request) {
 			Config: scraper.DefaultConfig,
 		}
 
-		err := scraper.ScrapeAndSaveFood(formattedDate)
+		dItems, aItems, err := scraper.ScrapeFood(formattedDate)
+
+		if err != nil {
+			http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
+		}
+
+		if err := db.InsertDailyItems(dItems); err != nil {
+			http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
+		}
+
+		if err := db.InsertAllDataItems(aItems); err != nil {
+			http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+		}
 
 		if err != nil {
 			fmt.Println("Error scraping and saving: ", err)
@@ -224,6 +273,12 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	locationOperations, err := db.GetLocationOperations()
+	if err != nil {
+		http.Error(w, "Error fetching location operations: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
 		"availableFavorites": availableFavorites,
@@ -231,6 +286,7 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		"date":               date,
 		"allItems":           allItems,
 		"userPreferences":    userPreferences,
+		"locationOperations": locationOperations,
 	}
 
 	// Set the response header to indicate JSON content
@@ -272,11 +328,18 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	locationOperations, err := db.GetLocationOperations()
+	if err != nil {
+		http.Error(w, "Error fetching location operations: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
-		"dailyItems": dailyItems,
-		"date":       date,
-		"allItems":   allItems,
+		"dailyItems":         dailyItems,
+		"date":               date,
+		"allItems":           allItems,
+		"locationOperations": locationOperations,
 	}
 
 	// Set the response header to indicate JSON content

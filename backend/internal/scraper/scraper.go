@@ -121,6 +121,7 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDat
 	return dailyItems, allDataItems, nil
 }
 
+// Date needs to be in format like the following example 2024-12-08T06:00:00.000Z
 func (d *DiningHallScraper) ScrapeOperationHours(date string) ([]models.LocationOperation, error) {
 	c := colly.NewCollector()
 	c.WithTransport(d.Client.Transport)
