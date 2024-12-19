@@ -53,7 +53,7 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		Config: scraper.DefaultConfig,
 	}
 
-	err := scraper.ScrapeAndSaveFood(time.Now().Format("2006-01-02"))
+	err := scraper.ScrapeFood(time.Now().Format("2006-01-02"))
 
 	if err != nil {
 		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)

@@ -17,7 +17,7 @@ import (
 
 // Necessary to test:
 // func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
-// func InsertDailyItem(item DailyItem) error {
+// func InsertDailyItems(item DailyItem) error {
 // func DeleteDailyItems() error {
 // func ReturnDateOfDailyItems() (date string, err error) {
 // func InsertAllDataItem(item AllDataItem) error {
@@ -248,12 +248,9 @@ func TestDailyItemLifetime(t *testing.T) {
 		},
 	}
 
-	for _, item := range dailyItems {
-		err := db.InsertDailyItem(item)
-		if err != nil {
-			t.Fatalf("Error inserting daily item: %v", err)
-		}
-
+	err := db.InsertDailyItems(dailyItems)
+	if err != nil {
+		t.Fatalf("Error inserting daily items: %v", err)
 	}
 
 	items, err := db.GetAllDailyItems()

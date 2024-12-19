@@ -281,9 +281,10 @@ func parseOperationHours(locations []models.LocationOperationInfoJSON) ([]models
 
 	for _, location := range locations {
 		fmt.Printf("Location: %s\n", location.Name)
+
 		parsedInfo := models.LocationOperation{
 			Name: location.Name,
-			Week: location.Week,
+			Week: convertWeekOperationInfoJSON(location.Week),
 		}
 
 		locationOperations = append(locationOperations, parsedInfo)

@@ -15,7 +15,7 @@ var DB *gorm.DB
 
 type GormDailyItem struct {
 	gorm.Model
-	DailyItem
+	DailyItem `gorm:"unique"`
 }
 
 type GormAllDataItem struct {
@@ -124,25 +124,22 @@ func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
 }
 
 // InsertItem inserts a new MenuItem into the daily menu, avoiding duplicates by name, date, and location.
-func InsertDailyItem(item DailyItem) error {
-	// Check if the item already exists (by Name, Date, Location, and TimeOfDay)
-	var existingItem GormDailyItem
-	result := DB.Where("name = ? AND date = ? AND location = ? AND time_of_day = ?", item.Name, item.Date, item.Location, item.TimeOfDay).First(&existingItem)
+func InsertDailyItems(items []DailyItem) error {
+	var gormItems []GormDailyItem
 
-	if result.Error == nil {
-		log.Printf("Item '%s' already exists for date '%s' and location '%s', skipping insertion", item.Name, item.Date, item.Location)
-		return nil
+	for _, item := range items {
+		appendable := DailyItemToGorm(item)
+		gormItems = append(gormItems, appendable)
 	}
 
-	// Insert the new item into the daily data
-	savable := DailyItemToGorm(item)
-	result = DB.Create(&savable)
+	result := DB.Create(&gormItems)
+
 	if result.Error != nil {
+		log.Println("Error inserting items:", result.Error)
 		return result.Error
 	}
 
-	log.Printf("Item '%s' inserted successfully", item.Name)
-	log.Printf("Item had %s as a station name", item.StationName)
+	log.Println("All items inserted successfully")
 	return nil
 }
 
@@ -179,25 +176,23 @@ func ReturnDateOfDailyItems() (date string, err error) {
 }
 
 // InsertShortenedItem inserts unique menu item names into allData.
-func InsertAllDataItem(item AllDataItem) error {
-	// Check if the shortened item already exists
-	log.Println("Inserting item", item.Name)
-	var existingItem GormAllDataItem
-	result := DB.Where("name = ?", item.Name).First(&existingItem)
+func InsertAllDataItems(item []AllDataItem) error {
 
-	if result.Error == nil {
-		log.Printf("Item '%s' already exists", item.Name)
-		return nil
+	var gormItems []GormAllDataItem
+
+	for _, item := range item {
+		appendable := AllDataItemToGorm(item)
+		gormItems = append(gormItems, appendable)
 	}
 
 	// Insert the unique item into the allData
-	savable := AllDataItemToGorm(item)
-	result = DB.Create(&savable)
+	result := DB.Create(&gormItems)
 	if result.Error != nil {
+		log.Println("Error inserting items:", result.Error)
 		return result.Error
 	}
 
-	log.Printf("Item '%s' inserted successfully", item.Name)
+	log.Println("All items inserted successfully")
 	return nil
 }
 
@@ -314,6 +309,8 @@ func GetAllDailyItems() ([]DailyItem, error) {
 }
 
 func InsertLocationOperations(locationOperations []models.LocationOperation) error {
+	var gormLocationOperations []GormLocationOperation
+
 	for _, locationOperation := range locationOperations {
 		// Serialize the Week field to JSON
 		weekData, err := json.Marshal(locationOperation.Week)
@@ -327,11 +324,13 @@ func InsertLocationOperations(locationOperations []models.LocationOperation) err
 			Week: weekData,
 		}
 
-		// Insert into the database
-		result := DB.Create(&record)
-		if result.Error != nil {
-			return fmt.Errorf("failed to insert LocationOperation: %v", result.Error)
-		}
+		gormLocationOperations = append(gormLocationOperations, record)
+	}
+
+	// Insert into the database
+	result := DB.Create(&gormLocationOperations)
+	if result.Error != nil {
+		return fmt.Errorf("failed to insert LocationOperation: %v", result.Error)
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"backend/internal/models"
 	"fmt"
 	"net/http"
 	"time"
@@ -129,5 +130,35 @@ func contains(slice []string, item string) bool {
 func NewClient() *http.Client {
 	return &http.Client{
 		Timeout: time.Second * 30,
+	}
+}
+
+func convertWeekOperationInfoJSON(day []models.DayOperationInfoJSON) []models.DayOperation {
+	var week []models.DayOperation
+	for _, day := range day {
+		week = append(week, convertDayOperationInfoJSON(day))
+	}
+	return week
+}
+
+func convertDayOperationInfoJSON(day models.DayOperationInfoJSON) models.DayOperation {
+	var hours []models.HourOperation
+	for _, hour := range day.Hours {
+		hours = append(hours, convertHourOperationInfoJSON(hour))
+	}
+	return models.DayOperation{
+		Day:    day.Day,
+		Date:   day.Date,
+		Status: day.Status,
+		Hours:  hours,
+	}
+}
+
+func convertHourOperationInfoJSON(hour models.HourOperationInfoJSON) models.HourOperation {
+	return models.HourOperation{
+		StartHour:    hour.Start_hour,
+		StartMinutes: hour.Start_minutes,
+		EndHour:      hour.End_hour,
+		EndMinutes:   hour.End_minutes,
 	}
 }
