@@ -54,7 +54,23 @@ type HourOperationInfoJSON struct {
 	End_minutes   int `json:"end_minutes"`
 }
 
+// Non JSON response, ie for database
+
 type LocationOperation struct {
 	Name string
-	Week []DayOperationInfoJSON
+	Week []DayOperation
+}
+
+type DayOperation struct {
+	Day    int
+	Date   string
+	Status string
+	Hours  []HourOperation
+}
+
+type HourOperation struct {
+	StartHour    int
+	StartMinutes int
+	EndHour      int
+	EndMinutes   int
 }

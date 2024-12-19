@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/internal/models"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,6 +49,14 @@ type UserPreferencesJSON struct {
 	Favorites []AllDataItem
 }
 
+// Operation Hours Structs
+
+type GormLocationOperation struct {
+	gorm.Model
+	Name string `gorm:"primaryKey"` // Name serves as the unique identifier
+	Week []byte `gorm:"type:jsonb"` // JSON representation of Week (DayOperation array)
+}
+
 // Define NoItemsInDB as a package-level variable
 var NoItemsInDB = errors.New("no daily items found")
 
@@ -65,10 +74,9 @@ func DailyItemToGorm(item DailyItem) GormDailyItem {
 
 // InitDB initializes the SQLite database connection and migrates the schema.
 func InitDB(databasePath string) error {
-	var err error
-	// Open a connection to the SQLite database
-	// Open a connection to the PostgreSQL database
 	fmt.Println("Connecting to database at", databasePath)
+
+	var err error
 
 	DB, err = gorm.Open(postgres.Open(databasePath), &gorm.Config{})
 	if err != nil {
@@ -76,7 +84,7 @@ func InitDB(databasePath string) error {
 	}
 
 	// Auto migrate the schemas
-	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &UserPreferences{})
+	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &UserPreferences{}, &GormLocationOperation{})
 	if err != nil {
 		return err
 	}
@@ -303,4 +311,71 @@ func GetAllDailyItems() ([]DailyItem, error) {
 	}
 
 	return items, nil
+}
+
+func InsertLocationOperations(locationOperations []models.LocationOperation) error {
+	for _, locationOperation := range locationOperations {
+		// Serialize the Week field to JSON
+		weekData, err := json.Marshal(locationOperation.Week)
+		if err != nil {
+			return fmt.Errorf("failed to serialize Week field: %v", err)
+		}
+
+		// Create the record
+		record := GormLocationOperation{
+			Name: locationOperation.Name,
+			Week: weekData,
+		}
+
+		// Insert into the database
+		result := DB.Create(&record)
+		if result.Error != nil {
+			return fmt.Errorf("failed to insert LocationOperation: %v", result.Error)
+		}
+	}
+
+	return nil
+
+}
+
+func GetLocationOperations() ([]models.LocationOperation, error) {
+	var gormLocationOperations []GormLocationOperation
+	result := DB.Find(&gormLocationOperations)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// Check if the gormLocationOperations slice is empty
+	if len(gormLocationOperations) == 0 {
+		return nil, errors.New("no location operations found")
+	}
+
+	// Convert the GormLocationOperation slice to a LocationOperation slice
+	var locationOperations []models.LocationOperation
+	for _, gormLocationOperation := range gormLocationOperations {
+		var week []models.DayOperation
+		err := json.Unmarshal(gormLocationOperation.Week, &week)
+		if err != nil {
+			return nil, fmt.Errorf("failed to deserialize Week field: %v", err)
+		}
+
+		locationOperations = append(locationOperations, models.LocationOperation{
+			Name: gormLocationOperation.Name,
+			Week: week,
+		})
+	}
+
+	return locationOperations, nil
+}
+
+func DeleteLocationOperations() error {
+	// Attempt to delete all items from gorm_location_operations table
+	result := DB.Exec("DELETE FROM gorm_location_operations")
+	if result.Error != nil {
+		fmt.Println("Error deleting location operations:", result.Error)
+		return result.Error
+	}
+
+	fmt.Println("All location operations deleted")
+	return nil
 }
