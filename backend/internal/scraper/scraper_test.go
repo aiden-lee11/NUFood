@@ -11,6 +11,18 @@ import (
 	"testing"
 )
 
+// Total funcs in scraper.go
+
+// func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDataItem, error) {
+// func (d *DiningHallScraper) ScrapeOperationHours(date string) ([]models.LocationOperation, error) {
+// func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOperation, error) {
+// func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
+// func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
+// func parseOperationHours(locations []models.LocationOperationInfoJSON) ([]models.LocationOperation, error) {
+
+// In the future should add unit tests for all the functions that aren't the parent calls ie (ScrapeFood and ScrapeOperationHours), however since the functions that we test are dependent on these functions
+// I am assuming for now that everything is running correctly :D
+
 func TestScrapeFood(t *testing.T) {
 	// Define a mock HTTP response
 	mockResponse := models.DiningHallResponse{
