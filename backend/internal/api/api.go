@@ -77,7 +77,6 @@ func ScrapeOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
 	setCorsHeaders(w, r)
 
 	fmt.Println("Scraping operation hours")
-	fmt.Println("This is an internal API endpoint")
 
 	scraper := &scraper.DiningHallScraper{
 		Client: scraper.NewClient(),
@@ -85,6 +84,10 @@ func ScrapeOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	formattedDate := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	locationOperations, err := scraper.ScrapeOperationHours(formattedDate)
+
+	if locationOperations == nil {
+		http.Error(w, "Error scraping and saving: nil locationOperations", http.StatusInternalServerError)
+	}
 
 	err = db.InsertLocationOperations(locationOperations)
 	if err != nil {
@@ -294,6 +297,31 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Return the combined result as JSON
 	if err := json.NewEncoder(w).Encode(combinedData); err != nil {
+		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func GetOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	setCorsHeaders(w, r)
+
+	// Handle preflight OPTIONS request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	locationOperations, err := db.GetLocationOperations()
+	if err != nil {
+		http.Error(w, "Error fetching location operations: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set the response header to indicate JSON content
+	w.Header().Set("Content-Type", "application/json")
+
+	// Return the combined result as JSON
+	if err := json.NewEncoder(w).Encode(locationOperations); err != nil {
 		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
 	}
 }

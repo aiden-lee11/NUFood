@@ -74,8 +74,6 @@ func DailyItemToGorm(item DailyItem) GormDailyItem {
 
 // InitDB initializes the SQLite database connection and migrates the schema.
 func InitDB(databasePath string) error {
-	fmt.Println("Connecting to database at", databasePath)
-
 	var err error
 
 	DB, err = gorm.Open(postgres.Open(databasePath), &gorm.Config{})

@@ -42,6 +42,7 @@ func main() {
 	http.HandleFunc("/api/userPreferences", api.SetUserPreferences)
 	http.HandleFunc("/api/allData", api.GetAllDataHandler)
 	http.HandleFunc("/api/generalData", api.GetGeneralDataHandler)
+	http.HandleFunc("/api/operationHours", api.GetOperationHoursHandler)
 	http.HandleFunc("/api/scrapeDailyItems", api.ScrapeDailyItemsHandler)
 	http.HandleFunc("/api/scrapeOperationHours", api.ScrapeOperationHoursHandler)
 	http.HandleFunc("/api/scrapeHistorical", api.ScrapeHistoricalItemsHandler)

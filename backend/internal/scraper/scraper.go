@@ -70,7 +70,7 @@ var DefaultConfig = ScrapeConfig{
 		},
 	},
 	SiteID:  "5acea5d8f3eeb60b08c5a50d",
-	BaseURL: "https://api.dineoncampus.com/v1/location/",
+	BaseURL: "https://api.dineoncampus.com/v1",
 }
 
 // Maximum retries for failed visits
@@ -96,24 +96,25 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDat
 			c := colly.NewCollector()
 			c.WithTransport(d.Client.Transport)
 
-			url := fmt.Sprintf("%s/%s/periods/%s?platform=0&date=%s", d.Config.BaseURL, location.Hash, service.Hash, date)
+			url := fmt.Sprintf("%s/location/%s/periods/%s?platform=0&date=%s", d.Config.BaseURL, location.Hash, service.Hash, date)
+			log.Printf("Visiting URL: %s", url)
 
-			err := RetryRequest(url, MAX_RETRIES, func() error {
-				dItems, aItems, err := visitDiningHall(c, url, location.Name, service.TimeOfDay)
-				if err != nil {
-					return err
-				}
+			// err := RetryRequest(url, MAX_RETRIES, func() error {
+			// 	dItems, aItems, err := visitDiningHall(c, url, location.Name, service.TimeOfDay)
+			// 	if err != nil {
+			// 		return err
+			// 	}
 
-				dailyItems = append(dailyItems, dItems...)
-				allDataItems = append(allDataItems, aItems...)
+			// 	dailyItems = append(dailyItems, dItems...)
+			// 	allDataItems = append(allDataItems, aItems...)
 
-				return nil
-			})
+			// 	return nil
+			// })
 
-			if err != nil {
-				log.Printf("All retries failed for URL: %s", url)
-				return nil, nil, err
-			}
+			// if err != nil {
+			// 	log.Printf("All retries failed for URL: %s", url)
+			// 	return nil, nil, err
+			// }
 		}
 	}
 
@@ -126,7 +127,7 @@ func (d *DiningHallScraper) ScrapeOperationHours(date string) ([]models.Location
 	c := colly.NewCollector()
 	c.WithTransport(d.Client.Transport)
 
-	url := fmt.Sprintf("%s/weekly_schedule/?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
+	url := fmt.Sprintf("%s/locations/weekly_schedule/?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
 
 	var locationOperations []models.LocationOperation
 
@@ -175,6 +176,8 @@ func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOpera
 		log.Printf("Error for operation hours: %v", err)
 	})
 
+	log.Printf("Visiting URL: %s", url)
+
 	err := c.Visit(url)
 	if err != nil {
 		log.Printf("Visit failed for URL %s: %v", url, err)
@@ -183,6 +186,7 @@ func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOpera
 	return parsedAllOperations, nil
 }
 
+// TODO parse response to see if the overall json response has the closed being true if yes then don't even parse items
 func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
 	var dailyItems []db.DailyItem
 	var allDataItems []db.AllDataItem
