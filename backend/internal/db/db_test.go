@@ -211,6 +211,7 @@ func TestLocationOperationsLifeTime(t *testing.T) {
 
 }
 
+// TODO should make a test in which the allClosed flag for insert is true
 func TestDailyItemLifetime(t *testing.T) {
 	t.Log("Running TestInsertDailyItem")
 	// Set up the database
@@ -248,7 +249,7 @@ func TestDailyItemLifetime(t *testing.T) {
 		},
 	}
 
-	err := db.InsertDailyItems(dailyItems)
+	err := db.InsertDailyItems(dailyItems, false)
 	if err != nil {
 		t.Fatalf("Error inserting daily items: %v", err)
 	}

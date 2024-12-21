@@ -39,6 +39,7 @@ func TestScrapeFood(t *testing.T) {
 				},
 			},
 		},
+		Closed: false,
 	}
 	mockResponseBody, err := json.Marshal(mockResponse)
 	if err != nil {
@@ -53,7 +54,7 @@ func TestScrapeFood(t *testing.T) {
 		fmt.Printf("Mock server received request: Path=%s, Query=%v\n", path, query)
 
 		// Match the expected endpoint pattern
-		if strings.HasPrefix(path, "/5b33ae291178e909d807593d/periods/66e1fc2de45d43074be3a0e5") &&
+		if strings.HasPrefix(path, "/v1/location/5b33ae291178e909d807593d/periods/66e1fc2de45d43074be3a0e5") &&
 			query.Get("platform") == "0" && query.Get("date") != "" {
 			// Serve the mock response
 			w.Header().Set("Content-Type", "application/json")
@@ -67,7 +68,7 @@ func TestScrapeFood(t *testing.T) {
 	defer mockServer.Close()
 
 	testConfig := scraper.ScrapeConfig{
-		BaseURL: mockServer.URL,
+		BaseURL: mockServer.URL + "/v1",
 		Locations: []models.Location{
 			{
 				Name: "Allison",
@@ -86,7 +87,7 @@ func TestScrapeFood(t *testing.T) {
 	}
 
 	// Call the ScrapeAndSaveFood method and check results
-	dailyItems, allDataItems, err := diningHallScraper.ScrapeFood("2024-12-16")
+	dailyItems, allDataItems, _, err := diningHallScraper.ScrapeFood("2024-12-16")
 	if err != nil {
 		t.Fatalf("Error in ScrapeAndSaveFood: %v", err)
 	}
@@ -209,7 +210,7 @@ func TestScrapeOperationHours(t *testing.T) {
 		fmt.Printf("Mock server received request: Path=%s, Query=%v\n", path, query)
 
 		// Match the expected endpoint pattern
-		if strings.HasPrefix(path, "/weekly_schedule") &&
+		if strings.HasPrefix(path, "/v1/locations/weekly_schedule") &&
 			query.Get("site_id") == "5acea5d8f3eeb60b08c5a50d" && query.Get("date") != "" {
 			// Serve the mock response
 			w.Header().Set("Content-Type", "application/json")
@@ -223,7 +224,7 @@ func TestScrapeOperationHours(t *testing.T) {
 	defer mockServer.Close()
 
 	testConfig := scraper.ScrapeConfig{
-		BaseURL: mockServer.URL,
+		BaseURL: mockServer.URL + "/v1",
 		SiteID:  "5acea5d8f3eeb60b08c5a50d",
 	}
 

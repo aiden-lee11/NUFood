@@ -8,6 +8,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
+	"time"
 )
 
 // Global database variable
@@ -16,6 +17,7 @@ var DB *gorm.DB
 type GormDailyItem struct {
 	gorm.Model
 	DailyItem `gorm:"unique"`
+	AllClosed *bool `gorm:"column:all_closed"`
 }
 
 type GormAllDataItem struct {
@@ -122,7 +124,31 @@ func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
 }
 
 // InsertItem inserts a new MenuItem into the daily menu, avoiding duplicates by name, date, and location.
-func InsertDailyItems(items []DailyItem) error {
+func InsertDailyItems(items []DailyItem, allClosed bool) error {
+	// If all locations are closed we will use a hacky fix to insert a single record with allClosed set to true to avoid the no items in db error
+	if allClosed {
+		item := GormDailyItem{
+			DailyItem: DailyItem{
+				Name:        "All locations are closed",
+				Description: "All locations are closed",
+				Date:        time.Now().Format("2006-01-02"),
+				Location:    "All locations are closed",
+				StationName: "All locations are closed",
+				TimeOfDay:   "All locations are closed",
+			},
+			AllClosed: &allClosed,
+		}
+
+		result := DB.Create(&item)
+
+		if result.Error != nil {
+			log.Println("Error inserting allClosedItem:", result.Error)
+			return result.Error
+		}
+
+		return nil
+	}
+
 	var gormItems []GormDailyItem
 
 	for _, item := range items {
@@ -174,7 +200,11 @@ func ReturnDateOfDailyItems() (date string, err error) {
 }
 
 // InsertShortenedItem inserts unique menu item names into allData.
-func InsertAllDataItems(item []AllDataItem) error {
+func InsertAllDataItems(item []AllDataItem, allClosed bool) error {
+	if allClosed {
+		log.Println("All locations are closed, skipping insert")
+		return nil
+	}
 
 	var gormItems []GormAllDataItem
 
@@ -295,6 +325,11 @@ func GetAllDailyItems() ([]DailyItem, error) {
 	// Check if the dailyItems slice is empty
 	if len(dailyItems) == 0 {
 		return nil, NoItemsInDB
+	}
+
+	// If everything was closed there exists no error however there also exists no data so treat as such
+	if dailyItems[0].AllClosed != nil {
+		return []DailyItem{}, nil
 	}
 
 	// Convert the GormDailyItem slice to a DailyItem slice

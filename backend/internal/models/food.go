@@ -20,6 +20,7 @@ type DiningHallResponse struct {
 	// request_time float `json:"request_time"`
 	// records int `json:"records"`
 	// allergen_filter boolean `json:"allergen_filter"`
+	Closed bool `json:"closed"`
 }
 
 type Menu struct {

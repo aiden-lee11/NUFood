@@ -53,17 +53,17 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		Config: scraper.DefaultConfig,
 	}
 
-	dItems, aItems, err := scraper.ScrapeFood(time.Now().Format("2006-01-02"))
+	dItems, aItems, allClosed, err := scraper.ScrapeFood(time.Now().Format("2006-01-02"))
 
 	if err != nil {
 		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
 	}
 
-	if err := db.InsertDailyItems(dItems); err != nil {
+	if err := db.InsertDailyItems(dItems, allClosed); err != nil {
 		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
 	}
 
-	if err := db.InsertAllDataItems(aItems); err != nil {
+	if err := db.InsertAllDataItems(aItems, allClosed); err != nil {
 		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
 	}
 
@@ -96,48 +96,6 @@ func ScrapeOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
-	}
-
-	// Return success code
-	w.WriteHeader(http.StatusOK)
-}
-
-func ScrapeHistoricalItemsHandler(w http.ResponseWriter, r *http.Request) {
-
-	// Set CORS headers
-	setCorsHeaders(w, r)
-
-	fmt.Println("Scraping historical items")
-	// Iterate over the past 10 days
-	for i := 0; i < 20; i++ {
-		// Subtract i days from the current time
-		pastDay := time.Now().AddDate(0, 0, -i)
-		// Format the date as YYYY-MM-DD
-		formattedDate := pastDay.Format("2006-01-02")
-
-		scraper := &scraper.DiningHallScraper{
-			Client: scraper.NewClient(),
-			Config: scraper.DefaultConfig,
-		}
-
-		dItems, aItems, err := scraper.ScrapeFood(formattedDate)
-
-		if err != nil {
-			http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
-		}
-
-		if err := db.InsertDailyItems(dItems); err != nil {
-			http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
-		}
-
-		if err := db.InsertAllDataItems(aItems); err != nil {
-			http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
-		}
-
-		if err != nil {
-			fmt.Println("Error scraping and saving: ", err)
-			http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
-		}
 	}
 
 	// Return success code

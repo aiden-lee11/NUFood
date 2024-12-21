@@ -76,7 +76,7 @@ var DefaultConfig = ScrapeConfig{
 // Maximum retries for failed visits
 const MAX_RETRIES = 3
 
-func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDataItem, error) {
+func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDataItem, bool, error) {
 	// Check if we need to rescrape the daily items
 	// previousDate, err := db.ReturnDateOfDailyItems()
 	// if err != nil && err != db.NoItemsInDB {
@@ -90,6 +90,7 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDat
 
 	var dailyItems []db.DailyItem
 	var allDataItems []db.AllDataItem
+	allClosed := true
 
 	for _, location := range d.Config.Locations {
 		for _, service := range location.Services {
@@ -97,29 +98,32 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDat
 			c.WithTransport(d.Client.Transport)
 
 			url := fmt.Sprintf("%s/location/%s/periods/%s?platform=0&date=%s", d.Config.BaseURL, location.Hash, service.Hash, date)
-			log.Printf("Visiting URL: %s", url)
 
-			// err := RetryRequest(url, MAX_RETRIES, func() error {
-			// 	dItems, aItems, err := visitDiningHall(c, url, location.Name, service.TimeOfDay)
-			// 	if err != nil {
-			// 		return err
-			// 	}
+			err := RetryRequest(url, MAX_RETRIES, func() error {
+				dItems, aItems, closed, err := visitDiningHall(c, url, location.Name, service.TimeOfDay)
+				if err != nil {
+					return err
+				}
 
-			// 	dailyItems = append(dailyItems, dItems...)
-			// 	allDataItems = append(allDataItems, aItems...)
+				if !closed {
+					allClosed = false
+				}
 
-			// 	return nil
-			// })
+				dailyItems = append(dailyItems, dItems...)
+				allDataItems = append(allDataItems, aItems...)
 
-			// if err != nil {
-			// 	log.Printf("All retries failed for URL: %s", url)
-			// 	return nil, nil, err
-			// }
+				return nil
+			})
+
+			if err != nil {
+				log.Printf("All retries failed for URL: %s", url)
+				return nil, nil, allClosed, err
+			}
 		}
 	}
 
 	fmt.Println("Scraping successful")
-	return dailyItems, allDataItems, nil
+	return dailyItems, allDataItems, allClosed, nil
 }
 
 // Date needs to be in format like the following example 2024-12-08T06:00:00.000Z
@@ -187,9 +191,10 @@ func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOpera
 }
 
 // TODO parse response to see if the overall json response has the closed being true if yes then don't even parse items
-func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
+func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, bool, error) {
 	var dailyItems []db.DailyItem
 	var allDataItems []db.AllDataItem
+	closed := false
 
 	c.OnRequest(func(r *colly.Request) {
 		r.Ctx.Put("locationName", locationName)
@@ -201,6 +206,12 @@ func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([
 		err := json.Unmarshal(r.Body, &jsonResponse)
 		if err != nil {
 			log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
+			return
+		}
+
+		if jsonResponse.Closed {
+			log.Printf("Location %s is closed", locName)
+			closed = true
 			return
 		}
 
@@ -224,9 +235,9 @@ func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([
 	err := c.Visit(url)
 	if err != nil {
 		log.Printf("Visit failed for URL %s: %v", url, err)
-		return nil, nil, err
+		return nil, nil, closed, err
 	}
-	return dailyItems, allDataItems, nil
+	return dailyItems, allDataItems, closed, nil
 }
 
 func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
