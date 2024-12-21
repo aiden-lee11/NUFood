@@ -2,7 +2,8 @@ interface Item {
   Name: string
 }
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+// const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
+const API_URL = 'http://localhost:8081';
 
 export const postUserPreferences = async (preferences: Item[], userToken: string) => {
   try {
@@ -105,3 +106,17 @@ export const fetchGeneralData = async () => {
     console.error("Error fetching general data:", error);
   }
 };
+
+
+export const fetchAllOperationHours = async () => {
+  try {
+    const storedData = getStoredData(["operationHours"]);
+    if (storedData) return storedData;
+
+    console.log("New day... fetching new data");
+    return await fetchAndStoreData(`${API_URL}/api/operationHours`, ["operationHours"]);
+  } catch (error) {
+    console.error("Error fetching location hours:", error);
+  }
+}
+

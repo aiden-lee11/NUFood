@@ -211,7 +211,6 @@ func TestLocationOperationsLifeTime(t *testing.T) {
 
 }
 
-// TODO should make a test in which the allClosed flag for insert is true
 func TestDailyItemLifetime(t *testing.T) {
 	t.Log("Running TestInsertDailyItem")
 	// Set up the database
@@ -306,4 +305,45 @@ func TestDailyItemLifetime(t *testing.T) {
 	if err.Error() != "no daily items found" {
 		t.Fatalf("Expected error message 'no daily items found', got %v", err.Error())
 	}
+}
+
+func TestDailyItemAllClosed(t *testing.T) {
+	t.Log("Running TestDailyItemAllClosed")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	db.DB = testDB
+
+	err := db.InsertDailyItems([]db.DailyItem{}, true)
+
+	if err != nil {
+		t.Fatalf("Error inserting all closed daily items: %v", err)
+	}
+
+	items, err := db.GetAllDailyItems()
+	if err != nil {
+		t.Fatalf("Error fetching daily items: %v", err)
+	}
+
+	if len(items) != 0 {
+		t.Fatalf("Expected 0 daily items, got %d", len(items))
+	}
+
+	err = db.DeleteDailyItems()
+	if err != nil {
+		t.Fatalf("Error deleting daily items: %v", err)
+	}
+
+	items, err = db.GetAllDailyItems()
+
+	if err == nil {
+		t.Fatalf("Expected error fetching daily items, got nil")
+	}
+
+	if items != nil {
+		t.Fatalf("Expected nil items, got %v", items)
+	}
+
 }

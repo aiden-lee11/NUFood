@@ -275,11 +275,16 @@ func GetOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Combine all data into a single JSON structure
+	labeledData := map[string]interface{}{
+		"operationHours": locationOperations,
+	}
+
 	// Set the response header to indicate JSON content
 	w.Header().Set("Content-Type", "application/json")
 
 	// Return the combined result as JSON
-	if err := json.NewEncoder(w).Encode(locationOperations); err != nil {
+	if err := json.NewEncoder(w).Encode(labeledData); err != nil {
 		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
 	}
 }

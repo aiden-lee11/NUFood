@@ -112,11 +112,8 @@ const DailyItems: React.FC = () => {
   }, [authLoading, token]);
 
   useEffect(() => {
-    // Set the current time of day as the only visible time, if no dining halls open -> set all visible
-    const currentTime = getCurrentTimeOfDay();
-    if (currentTime) {
-      setVisibleTimes([getCurrentTimeOfDay()]);
-    }
+    // Set the current time of day as the only visible time, if no dining halls open -> set none
+    setVisibleTimes(getCurrentTimeOfDay());
   }, []);
 
   return (

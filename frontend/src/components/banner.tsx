@@ -7,7 +7,7 @@ const Banner: React.FC = () => {
     setIsVisible(false);
   };
 
-  const noShow = ["/login", "/signout", "/preferences"]
+  const noShow = ["/login", "/signout", "/preferences", "/hours"];
   if (!isVisible || noShow.includes(window.location.pathname)) {
     return null;
   }

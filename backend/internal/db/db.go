@@ -179,6 +179,7 @@ func DeleteDailyItems() error {
 	return nil
 }
 
+// BUG Still returning a string of words and not a date for when theyre all closed for some reason?
 func ReturnDateOfDailyItems() (date string, err error) {
 	var dailyItems []GormDailyItem
 	result := DB.Find(&dailyItems)
