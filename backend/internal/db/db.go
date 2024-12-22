@@ -74,7 +74,7 @@ func DailyItemToGorm(item DailyItem) GormDailyItem {
 	return GormDailyItem{DailyItem: item}
 }
 
-// InitDB initializes the SQLite database connection and migrates the schema.
+// InitDB initializes the PostgreSQL database connection and migrates the schema.
 func InitDB(databasePath string) error {
 	var err error
 
@@ -201,15 +201,15 @@ func ReturnDateOfDailyItems() (date string, err error) {
 }
 
 // InsertShortenedItem inserts unique menu item names into allData.
-func InsertAllDataItems(item []AllDataItem, allClosed bool) error {
-	if allClosed {
-		log.Println("All locations are closed, skipping insert")
+func InsertAllDataItems(items []AllDataItem, allClosed bool) error {
+	if allClosed || items == nil {
+		log.Println("No available items, skipping all data insert")
 		return nil
 	}
 
 	var gormItems []GormAllDataItem
 
-	for _, item := range item {
+	for _, item := range items {
 		appendable := AllDataItemToGorm(item)
 		gormItems = append(gormItems, appendable)
 	}
@@ -226,6 +226,7 @@ func InsertAllDataItems(item []AllDataItem, allClosed bool) error {
 }
 
 // SaveUserPreferences saves user preferences into the database
+// Does not append to existing preferences, but overwrites them entirely based on the favorites param
 func SaveUserPreferences(userID string, favorites []AllDataItem) error {
 	// Convert the maps to JSON
 	favoritesJSON, err := json.Marshal(favorites)

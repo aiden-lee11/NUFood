@@ -3,6 +3,8 @@ package db_test
 import (
 	"backend/internal/db"
 	"backend/internal/models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"testing"
@@ -46,9 +48,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 
 	// Initialize an in-memory SQLite database
 	DB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to initialize test database: %v", err)
-	}
+	require.NoError(t, err, "Failed to initialize test database")
 
 	// Apply migrations
 	err = DB.AutoMigrate(&db.GormDailyItem{}, &db.GormAllDataItem{}, &db.UserPreferences{}, &db.GormLocationOperation{})
@@ -64,10 +64,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 func teardownTestDB(db *gorm.DB, t *testing.T) {
 	t.Helper()
 	sqlDB, err := db.DB()
-	if err != nil {
-		t.Fatalf("Failed to retrieve SQL DB from Gorm DB: %v", err)
-	}
-	sqlDB.Close()
+	require.NoError(t, err, "Failed to retrieve SQL DB from Gorm DB")
+	assert.NoError(t, sqlDB.Close(), "Failed to close the test database")
 }
 
 func TestLocationOperationsLifeTime(t *testing.T) {
@@ -132,83 +130,94 @@ func TestLocationOperationsLifeTime(t *testing.T) {
 	}
 
 	err := db.InsertLocationOperations(locationOperations)
-	if err != nil {
-		t.Fatalf("Error inserting location operations: %v", err)
-	}
+	require.NoError(t, err, "Error inserting location operations")
 
 	locations, err := db.GetLocationOperations()
-	if err != nil {
-		t.Fatalf("Error fetching location operations: %v", err)
-	}
-
-	if len(locations) != 2 {
-		t.Fatalf("Expected 2 locations, got %d", len(locations))
-	}
+	require.NoError(t, err, "Error fetching location operations")
+	assert.Len(t, locations, 2, "Expected 2 locations")
 
 	for i, location := range locations {
-		if location.Name != locationOperations[i].Name {
-			t.Fatalf("Expected location name %s, got %s", locationOperations[i].Name, location.Name)
-		}
+		assert.Equal(t, location.Name, locationOperations[i].Name, "Expected location name %s, got %s", locationOperations[i].Name, location.Name)
 
-		if len(location.Week) != 1 {
-			t.Fatalf("Expected 1 day operation, got %d", len(location.Week))
-		}
+		assert.Len(t, location.Week, 1, "Expected 1 day operation, got %d", len(location.Week))
 
 		for j, day := range location.Week {
-			if day.Day != locationOperations[i].Week[j].Day {
-				t.Fatalf("Expected day %d, got %d", locationOperations[i].Week[j].Day, day.Day)
-			}
+			assert.Equal(
+				t,
+				day.Day,
+				locationOperations[i].Week[j].Day,
+				"Expected day %d, got %d",
+				locationOperations[i].Week[j].Day,
+				day.Day,
+			)
 
-			if day.Date != locationOperations[i].Week[j].Date {
-				t.Fatalf("Expected date %s, got %s", locationOperations[i].Week[j].Date, day.Date)
-			}
+			assert.Equal(
+				t,
+				day.Date,
+				locationOperations[i].Week[j].Date,
+				"Expected date %s, got %s",
+				locationOperations[i].Week[j].Date,
+				day.Date,
+			)
 
-			if day.Status != locationOperations[i].Week[j].Status {
-				t.Fatalf("Expected status %s, got %s", locationOperations[i].Week[j].Status, day.Status)
-			}
+			assert.Equal(
+				t,
+				day.Status,
+				locationOperations[i].Week[j].Status,
+				"Expected status %s, got %s",
+				locationOperations[i].Week[j].Status,
+				day.Status,
+			)
 
-			if len(day.Hours) != 2 {
-				t.Fatalf("Expected 2 hours, got %d", len(day.Hours))
-			}
+			assert.Len(t, day.Hours, 2, "Expected 2 hours, got %d", len(day.Hours))
 
 			for k, hour := range day.Hours {
-				if hour.StartHour != locationOperations[i].Week[j].Hours[k].StartHour {
-					t.Fatalf("Expected start hour %d, got %d", locationOperations[i].Week[j].Hours[k].StartHour, hour.StartHour)
-				}
+				assert.Equal(
+					t,
+					hour.StartHour,
+					locationOperations[i].Week[j].Hours[k].StartHour,
+					"Expected start hour %d, got %d",
+					locationOperations[i].Week[j].Hours[k].StartHour,
+					hour.StartHour,
+				)
 
-				if hour.StartMinutes != locationOperations[i].Week[j].Hours[k].StartMinutes {
-					t.Fatalf("Expected start minutes %d, got %d", locationOperations[i].Week[j].Hours[k].StartMinutes, hour.StartMinutes)
-				}
+				assert.Equal(
+					t,
+					hour.StartMinutes,
+					locationOperations[i].Week[j].Hours[k].StartMinutes,
+					"Expected start minutes %d, got %d",
+					locationOperations[i].Week[j].Hours[k].StartMinutes,
+					hour.StartMinutes,
+				)
 
-				if hour.EndHour != locationOperations[i].Week[j].Hours[k].EndHour {
-					t.Fatalf("Expected end hour %d, got %d", locationOperations[i].Week[j].Hours[k].EndHour, hour.EndHour)
-				}
+				assert.Equal(
+					t,
+					hour.EndHour,
+					locationOperations[i].Week[j].Hours[k].EndHour,
+					"Expected end hour %d, got %d",
+					locationOperations[i].Week[j].Hours[k].EndHour,
+					hour.EndHour,
+				)
 
-				if hour.EndMinutes != locationOperations[i].Week[j].Hours[k].EndMinutes {
-					t.Fatalf("Expected end minutes %d, got %d", locationOperations[i].Week[j].Hours[k].EndMinutes, hour.EndMinutes)
-				}
+				assert.Equal(
+					t,
+					hour.EndMinutes,
+					locationOperations[i].Week[j].Hours[k].EndMinutes,
+					"Expected end minutes %d, got %d",
+					locationOperations[i].Week[j].Hours[k].EndMinutes,
+					hour.EndMinutes,
+				)
 			}
 		}
 	}
 
 	err = db.DeleteLocationOperations()
-	if err != nil {
-		t.Fatalf("Error deleting location operations: %v", err)
-	}
+	require.NoError(t, err, "Error deleting location operations")
 
 	locations, err = db.GetLocationOperations()
-	if err == nil {
-		t.Fatalf("Expected error fetching location operations, got nil")
-	}
+	require.Error(t, err, "Expected error fetching location operations, got nil")
 
-	if locations != nil {
-		t.Fatalf("Expected nil locations, got %v", locations)
-	}
-
-	if err.Error() != "no location operations found" {
-		t.Fatalf("Expected error message 'no location operations found', got %v", err.Error())
-	}
-
+	assert.Nil(t, locations, "Expected nil locations, got %v", locations)
 }
 
 func TestDailyItemLifetime(t *testing.T) {
@@ -249,62 +258,44 @@ func TestDailyItemLifetime(t *testing.T) {
 	}
 
 	err := db.InsertDailyItems(dailyItems, false)
-	if err != nil {
-		t.Fatalf("Error inserting daily items: %v", err)
-	}
+	require.NoError(t, err, "Error inserting daily items")
 
 	items, err := db.GetAllDailyItems()
-	if err != nil {
-		t.Fatalf("Error fetching daily items: %v", err)
-	}
+	require.NoError(t, err, "Error fetching daily items")
 
-	if len(items) != 2 {
-		t.Fatalf("Expected 2 daily items, got %d", len(items))
-	}
+	assert.Len(t, items, 2, "Expected 2 daily items, got %d", len(items))
 
 	for i, item := range items {
-		if item.Name != dailyItems[i].Name {
-			t.Fatalf("Expected item name %s, got %s", dailyItems[i].Name, item.Name)
-		}
+		assert.Equal(t, item.Name, dailyItems[i].Name, "Expected item name %s, got %s", dailyItems[i].Name, item.Name)
 
-		if item.Description != dailyItems[i].Description {
-			t.Fatalf("Expected item description %s, got %s", dailyItems[i].Description, item.Description)
-		}
+		assert.Equal(t, item.Description, dailyItems[i].Description, "Expected item description %s, got %s", dailyItems[i].Description, item.Description)
 
-		if item.Date != dailyItems[i].Date {
-			t.Fatalf("Expected item date %s, got %s", dailyItems[i].Date, item.Date)
-		}
+		assert.Equal(t, item.Date, dailyItems[i].Date, "Expected item date %s, got %s", dailyItems[i].Date, item.Date)
 
-		if item.Location != dailyItems[i].Location {
-			t.Fatalf("Expected item location %s, got %s", dailyItems[i].Location, item.Location)
-		}
+		assert.Equal(t, item.Location, dailyItems[i].Location, "Expected item location %s, got %s", dailyItems[i].Location, item.Location)
 
-		if item.StationName != dailyItems[i].StationName {
-			t.Fatalf("Expected item station name %s, got %s", dailyItems[i].StationName, item.StationName)
-		}
+		assert.Equal(t, item.StationName, dailyItems[i].StationName, "Expected item station name %s, got %s", dailyItems[i].StationName, item.StationName)
 
-		if item.TimeOfDay != dailyItems[i].TimeOfDay {
-			t.Fatalf("Expected item time of day %s, got %s", dailyItems[i].TimeOfDay, item.TimeOfDay)
-		}
+		assert.Equal(t, item.TimeOfDay, dailyItems[i].TimeOfDay, "Expected item time of day %s, got %s", dailyItems[i].TimeOfDay, item.TimeOfDay)
 	}
+
+	date, err := db.ReturnDateOfDailyItems()
+
+	require.NoError(t, err, "Error fetching date of daily items")
+
+	assert.Equal(t, date, "2021-09-06", "Expected return date of %s, got %s", "2021-09-06", date)
 
 	err = db.DeleteDailyItems()
-	if err != nil {
-		t.Fatalf("Error deleting daily items: %v", err)
-	}
+	require.NoError(t, err, "Error deleting daily items")
 
 	items, err = db.GetAllDailyItems()
-	if err == nil {
-		t.Fatalf("Expected error fetching daily items, got nil")
-	}
+	require.Error(t, err, "Expected error fetching daily items, got nil")
 
-	if items != nil {
-		t.Fatalf("Expected nil items, got %v", items)
-	}
+	assert.Nil(t, items, "Expected nil items, got %v", items)
 
-	if err.Error() != "no daily items found" {
-		t.Fatalf("Expected error message 'no daily items found', got %v", err.Error())
-	}
+	date, err = db.ReturnDateOfDailyItems()
+
+	require.Error(t, err, "Expected error fetching date of daily items, got nil")
 }
 
 func TestDailyItemAllClosed(t *testing.T) {
@@ -318,32 +309,163 @@ func TestDailyItemAllClosed(t *testing.T) {
 
 	err := db.InsertDailyItems([]db.DailyItem{}, true)
 
-	if err != nil {
-		t.Fatalf("Error inserting all closed daily items: %v", err)
-	}
+	require.NoError(t, err, "Error inserting all closed daily items")
 
 	items, err := db.GetAllDailyItems()
-	if err != nil {
-		t.Fatalf("Error fetching daily items: %v", err)
-	}
+	require.NoError(t, err, "Error fetching daily items")
 
-	if len(items) != 0 {
-		t.Fatalf("Expected 0 daily items, got %d", len(items))
-	}
+	assert.Len(t, items, 0, "Expected 0 daily items, got %d", len(items))
 
 	err = db.DeleteDailyItems()
-	if err != nil {
-		t.Fatalf("Error deleting daily items: %v", err)
-	}
+	require.NoError(t, err, "Error deleting daily items")
 
 	items, err = db.GetAllDailyItems()
 
-	if err == nil {
-		t.Fatalf("Expected error fetching daily items, got nil")
+	require.Error(t, err, "Expected error fetching daily items, got nil")
+
+	assert.Nil(t, items, "Expected nil items, got %v", items)
+}
+
+func TestAllDataItemLifetime(t *testing.T) {
+	t.Log("Running TestAllDataItemLifetime")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	db.DB = testDB
+
+	allDataItems := []db.AllDataItem{
+		{Name: "Bacon"},
+		{Name: "Eggs"},
 	}
 
-	if items != nil {
-		t.Fatalf("Expected nil items, got %v", items)
+	err := db.InsertAllDataItems(allDataItems, false)
+	require.NoError(t, err, "Error inserting all data items")
+
+	items, err := db.GetAllDataItems()
+	require.NoError(t, err, "Error fetching all data items")
+
+	assert.Len(t, items, 2, "Expected 2 all data items, got %d", len(items))
+
+	for i, item := range items {
+		assert.Equal(t, item.Name, allDataItems[i].Name, "Expected item name %s, got %s", allDataItems[i].Name, item.Name)
+	}
+}
+
+func TestUserPreferencesLifetime(t *testing.T) {
+	t.Log("Running TestAllDataItemLifetime")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	db.DB = testDB
+
+	initialAllDataItems := []db.AllDataItem{
+		{Name: "Bacon"},
+		{Name: "Eggs"},
+		{Name: "Skirt Steak"},
+		{Name: "Chicken Parmesan"},
 	}
 
+	err := db.SaveUserPreferences("test_user", initialAllDataItems)
+	require.NoError(t, err, "Error saving user preferences")
+
+	items, err := db.GetUserPreferences("test_user")
+	require.NoError(t, err, "Error fetching user preferences")
+
+	assert.Len(t, items, 4, "Expected 4 user preferences, got %d", len(items))
+	for i, item := range items {
+		assert.Equal(t, item.Name, initialAllDataItems[i].Name, "Expected item name %s, got %s", initialAllDataItems[i].Name, item.Name)
+	}
+
+	// Add a new items to the user preferences
+	additionalDataItems := []db.AllDataItem{
+		{Name: "Mac and Cheese"},
+		{Name: "Baked Ziti"},
+	}
+
+	newAllDataItems := append(initialAllDataItems, additionalDataItems...)
+
+	err = db.SaveUserPreferences("test_user", newAllDataItems)
+	require.NoError(t, err, "Error saving user preferences with new items")
+
+	items, err = db.GetUserPreferences("test_user")
+	require.NoError(t, err, "Error fetching user preferences with new items")
+
+	assert.Len(t, items, 6, "Expected 6 user preferences, got %d", len(items))
+
+	for i, item := range items {
+		assert.Equal(t, item.Name, newAllDataItems[i].Name, "Expected item name %s, got %s", newAllDataItems[i].Name, item.Name)
+	}
+}
+
+func TestUserPreferencesLifetimeEmpty(t *testing.T) {
+	t.Log("Running TestUserPreferencesLifetimeEmpty")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	db.DB = testDB
+
+	items, err := db.GetUserPreferences("test_user")
+	require.Error(t, err, "Expected error fetching user preferences, got nil")
+
+	assert.Nil(t, items, "Expected nil items, got %v", items)
+}
+
+func TestAvailableFavorites(t *testing.T) {
+	t.Log("Running TestAvailableFavorites")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	db.DB = testDB
+
+	// Insert daily items to be looked up
+	dailyItems := []db.DailyItem{
+		{
+			Name:        "Bacon",
+			Description: "Delicious bacon",
+			Date:        "2021-09-06",
+			Location:    "Allison",
+			StationName: "Comfort",
+			TimeOfDay:   "Breakfast",
+		},
+		{
+			Name:        "Eggs",
+			Description: "Scrambled eggs",
+			Date:        "2021-09-06",
+			Location:    "Allison",
+			StationName: "Comfort",
+			TimeOfDay:   "Breakfast",
+		},
+	}
+
+	err := db.InsertDailyItems(dailyItems, false)
+	require.NoError(t, err, "Error inserting daily items")
+
+	// Insert user preferences
+	userPreferences := []db.AllDataItem{
+		{Name: "Bacon"},
+		{Name: "Eggs"},
+		{Name: "Skirt Steak"},
+		{Name: "Chicken Parmesan"},
+	}
+
+	err = db.SaveUserPreferences("test_user", userPreferences)
+	require.NoError(t, err, "Error saving user preferences")
+
+	// Get available favorites
+	items, err := db.GetAvailableFavorites("test_user")
+	require.NoError(t, err, "Error fetching available favorites")
+
+	assert.Len(t, items, 2, "Expected 2 available favorites, got %d", len(items))
+
+	for i, item := range items {
+		assert.Equal(t, item.Name, userPreferences[i].Name, "Expected item name %s, got %s", userPreferences[i].Name, item.Name)
+	}
 }

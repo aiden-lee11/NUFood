@@ -44,12 +44,12 @@ type Category struct {
 	// id string `json:"id"`
 	Name string `json:"name"`
 	// sort_order int `json:"sort_order"`
-	Items []DailyItem `json:"items"`
+	Items []Item `json:"items"`
 }
 
 type Item struct {
 	// id string `json:"id"`
-	// name string `json:"name"`
+	Name string `json:"name"`
 	// mrn int `json:"mrn"`
 	// rev string `json:"rev"`
 	// mrn_full string `json:"mrn_full"`

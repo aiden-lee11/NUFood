@@ -5,6 +5,8 @@ import (
 	"backend/internal/scraper"
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,9 +33,19 @@ func TestScrapeFood(t *testing.T) {
 			Periods: models.Periods{
 				Categories: []models.Category{
 					{
-						Name: "Breakfast",
-						Items: []models.DailyItem{
+						Name: "Comfort",
+						Items: []models.Item{
 							{Name: "Pancakes", Description: "Delicious pancakes"},
+							// Test of flagged ingredient food should not be in end results
+							{Name: "Butter", Description: "That Lard"},
+						},
+					},
+					{
+						// Test of flagged ingredient category ie no foods in category are to be saved
+						Name: "planet eats (cold)",
+						Items: []models.Item{
+							{Name: "Turkey Breast", Description: "this one didn't get pardoned"},
+							{Name: "Thinly sliced ham", Description: "Invisible from the side"},
 						},
 					},
 				},
@@ -42,9 +54,7 @@ func TestScrapeFood(t *testing.T) {
 		Closed: false,
 	}
 	mockResponseBody, err := json.Marshal(mockResponse)
-	if err != nil {
-		t.Fatalf("Error marshalling mock response: %v", err)
-	}
+	require.NoError(t, err, "Error marshalling mock response: %v", err)
 
 	// Create a mock server
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -88,31 +98,18 @@ func TestScrapeFood(t *testing.T) {
 
 	// Call the ScrapeAndSaveFood method and check results
 	dailyItems, allDataItems, _, err := diningHallScraper.ScrapeFood("2024-12-16")
-	if err != nil {
-		t.Fatalf("Error in ScrapeAndSaveFood: %v", err)
-	}
+	require.NoError(t, err, "Error in ScrapeAndSaveFood: %v", err)
 
 	// Check that the correct data was returned
-	if len(dailyItems) != 1 {
-		t.Fatalf("Expected 1 daily item, got %d", len(dailyItems))
-	}
+	assert.Len(t, dailyItems, 1, "Expected 1 daily item, got %d", len(dailyItems))
 
-	if dailyItems[0].Name != "Pancakes" {
-		t.Fatalf("Expected daily item name to be 'Pancakes', got %s", dailyItems[0].Name)
-	}
+	assert.Equal(t, "Pancakes", dailyItems[0].Name, "Expected daily item name to be 'Pancakes', got %s", dailyItems[0].Name)
 
-	if dailyItems[0].Description != "Delicious pancakes" {
-		t.Fatalf("Expected daily item description to be 'Delicious pancakes', got %s", dailyItems[0].Description)
-	}
+	assert.Equal(t, "Delicious pancakes", dailyItems[0].Description, "Expected daily item description to be 'Delicious pancakes', got %s", dailyItems[0].Description)
 
-	if len(allDataItems) != 1 {
-		t.Fatalf("Expected 1 all data item, got %d", len(allDataItems))
-	}
+	assert.Len(t, allDataItems, 1, "Expected 1 all data item, got %d", len(allDataItems))
 
-	if allDataItems[0].Name != "Pancakes" {
-		t.Fatalf("Expected all data item name to be 'Pancakes', got %s", allDataItems[0].Name)
-	}
-
+	assert.Equal(t, "Pancakes", allDataItems[0].Name, "Expected all data item name to be 'Pancakes', got %s", allDataItems[0].Name)
 }
 
 func TestScrapeOperationHours(t *testing.T) {
@@ -198,9 +195,7 @@ func TestScrapeOperationHours(t *testing.T) {
 	}
 
 	mockResponseBody, err := json.Marshal(mockResponse)
-	if err != nil {
-		t.Fatalf("Error marshalling mock response: %v", err)
-	}
+	require.NoError(t, err, "Error marshalling mock response: %v", err)
 
 	// Create a mock server
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -236,20 +231,17 @@ func TestScrapeOperationHours(t *testing.T) {
 
 	// Call the ScrapeAndSaveFood method and check results
 	locationOperationHours, err := diningHallScraper.ScrapeOperationHours("2024-12-08T06:00:00.000Z")
-	if err != nil {
-		t.Fatalf("Error in ScrapeAndSaveFood: %v", err)
-	}
+	require.NoError(t, err, "Error in ScrapeAndSaveFood: %v", err)
 
-	// Check that the correct data was returned
-	if len(locationOperationHours) != 1 {
-		t.Fatalf("Expected 1 location operation, got %d", len(locationOperationHours))
-	}
+	assert.Len(t, locationOperationHours, 1, "Expected 1 location operation, got %d", len(locationOperationHours))
 
-	if locationOperationHours[0].Name != "Allison Dining Commons" {
-		t.Fatalf("Expected location operation name to be 'Allison Dining Commons', got %s", locationOperationHours[0].Name)
-	}
+	assert.Equal(
+		t,
+		"Allison Dining Commons",
+		locationOperationHours[0].Name,
+		"Expected location operation name to be 'Allison Dining Commons', got %s",
+		locationOperationHours[0].Name,
+	)
 
-	if len(locationOperationHours[0].Week) != 7 {
-		t.Fatalf("Expected 7 days of operation, got %d", len(locationOperationHours[0].Week))
-	}
+	assert.Equal(t, 7, len(locationOperationHours[0].Week), "Expected 7 days of operation, got %d", len(locationOperationHours[0].Week))
 }
