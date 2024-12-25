@@ -114,80 +114,80 @@ func TestScrapeFood(t *testing.T) {
 
 func TestScrapeOperationHours(t *testing.T) {
 	// Define a mock HTTP response
-	mockResponse := models.OperationHoursResponseJSON{
-		Locations: []models.LocationOperationInfoJSON{
+	mockResponse := models.LocationOperationsResponse{
+		Locations: []models.LocationOperatingInfo{
 			{
 				Name: "Allison Dining Commons",
-				Week: []models.DayOperationInfoJSON{
+				Week: []models.DailyOperatingInfo{
 					{
 						Day:    0,
 						Date:   "2024-12-08",
 						Status: "open",
-						Hours: []models.HourOperationInfoJSON{
-							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						Hours: []models.HourlyOperatingInfo{
+							{StartHour: 7, StartMinutes: 0, EndHour: 20, EndMinutes: 0},
 						},
-						Has_special_hours: false,
-						Closed:            false,
+						HasSpecialHours: false,
+						Closed:          false,
 					},
 					{
 						Day:    1,
 						Date:   "2024-12-09",
 						Status: "open",
-						Hours: []models.HourOperationInfoJSON{
-							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						Hours: []models.HourlyOperatingInfo{
+							{StartHour: 7, StartMinutes: 0, EndHour: 20, EndMinutes: 0},
 						},
-						Has_special_hours: false,
-						Closed:            false,
+						HasSpecialHours: false,
+						Closed:          false,
 					},
 					{
 						Day:    2,
 						Date:   "2024-12-10",
 						Status: "open",
-						Hours: []models.HourOperationInfoJSON{
-							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						Hours: []models.HourlyOperatingInfo{
+							{StartHour: 7, StartMinutes: 0, EndHour: 20, EndMinutes: 0},
 						},
-						Has_special_hours: false,
-						Closed:            false,
+						HasSpecialHours: false,
+						Closed:          false,
 					},
 					{
 						Day:    3,
 						Date:   "2024-12-11",
 						Status: "open",
-						Hours: []models.HourOperationInfoJSON{
-							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						Hours: []models.HourlyOperatingInfo{
+							{StartHour: 7, StartMinutes: 0, EndHour: 20, EndMinutes: 0},
 						},
-						Has_special_hours: false,
-						Closed:            false,
+						HasSpecialHours: false,
+						Closed:          false,
 					},
 					{
 						Day:    4,
 						Date:   "2024-12-12",
 						Status: "open",
-						Hours: []models.HourOperationInfoJSON{
-							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						Hours: []models.HourlyOperatingInfo{
+							{StartHour: 7, StartMinutes: 0, EndHour: 20, EndMinutes: 0},
 						},
-						Has_special_hours: false,
-						Closed:            false,
+						HasSpecialHours: false,
+						Closed:          false,
 					},
 					{
 						Day:    5,
 						Date:   "2024-12-13",
 						Status: "open",
-						Hours: []models.HourOperationInfoJSON{
-							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						Hours: []models.HourlyOperatingInfo{
+							{StartHour: 7, StartMinutes: 0, EndHour: 20, EndMinutes: 0},
 						},
-						Has_special_hours: false,
-						Closed:            false,
+						HasSpecialHours: false,
+						Closed:          false,
 					},
 					{
 						Day:    6,
 						Date:   "2024-12-14",
 						Status: "closed",
-						Hours: []models.HourOperationInfoJSON{
-							{Start_hour: 7, Start_minutes: 0, End_hour: 20, End_minutes: 0},
+						Hours: []models.HourlyOperatingInfo{
+							{StartHour: 7, StartMinutes: 0, EndHour: 20, EndMinutes: 0},
 						},
-						Has_special_hours: false,
-						Closed:            true,
+						HasSpecialHours: false,
+						Closed:          true,
 					},
 				},
 			},
@@ -230,18 +230,18 @@ func TestScrapeOperationHours(t *testing.T) {
 	}
 
 	// Call the ScrapeAndSaveFood method and check results
-	locationOperationHours, err := diningHallScraper.ScrapeOperationHours("2024-12-08T06:00:00.000Z")
+	locationOperationTimes, err := diningHallScraper.ScrapeLocationOperatingTimes("2024-12-08T06:00:00.000Z")
 	require.NoError(t, err, "Error in ScrapeAndSaveFood: %v", err)
 
-	assert.Len(t, locationOperationHours, 1, "Expected 1 location operation, got %d", len(locationOperationHours))
+	assert.Len(t, locationOperationTimes, 1, "Expected 1 location operation, got %d", len(locationOperationTimes))
 
 	assert.Equal(
 		t,
 		"Allison Dining Commons",
-		locationOperationHours[0].Name,
+		locationOperationTimes[0].Name,
 		"Expected location operation name to be 'Allison Dining Commons', got %s",
-		locationOperationHours[0].Name,
+		locationOperationTimes[0].Name,
 	)
 
-	assert.Equal(t, 7, len(locationOperationHours[0].Week), "Expected 7 days of operation, got %d", len(locationOperationHours[0].Week))
+	assert.Equal(t, 7, len(locationOperationTimes[0].Week), "Expected 7 days of operation, got %d", len(locationOperationTimes[0].Week))
 }

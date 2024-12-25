@@ -40,7 +40,7 @@ func DeleteDailyItems(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func DeleteOperationHours(w http.ResponseWriter, r *http.Request) {
+func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
 
@@ -50,7 +50,7 @@ func DeleteOperationHours(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := db.DeleteLocationOperations()
+	err := db.DeleteLocationOperatingTimes()
 	if err != nil {
 		http.Error(w, "Error deleting location operations: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -96,17 +96,17 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func ScrapeOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
+func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set CORS headers
 	setCorsHeaders(w, r)
 
-	fmt.Println("Scraping operation hours, so clearing table first")
+	fmt.Println("Scraping location operating hours, so clearing table first")
 
-	err := db.DeleteLocationOperations()
+	err := db.DeleteLocationOperatingTimes()
 
 	if err != nil {
-		http.Error(w, "Error clearing operation hours before scrape: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error clearing location operating hours before scrape: "+err.Error(), http.StatusInternalServerError)
 	}
 
 	scraper := &scraper.DiningHallScraper{
@@ -114,15 +114,15 @@ func ScrapeOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
 		Config: scraper.DefaultConfig,
 	}
 	formattedDate := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
-	locationOperations, err := scraper.ScrapeOperationHours(formattedDate)
+	locationOperatingTimes, err := scraper.ScrapeLocationOperatingTimes(formattedDate)
 
-	if locationOperations == nil {
-		http.Error(w, "Error scraping and saving: nil locationOperations", http.StatusInternalServerError)
+	if locationOperatingTimes == nil {
+		http.Error(w, "Error scraping and saving: nil locationOperatingTimes", http.StatusInternalServerError)
 	}
 
-	err = db.InsertLocationOperations(locationOperations)
+	err = db.InsertLocationOperatingTimes(locationOperatingTimes)
 	if err != nil {
-		http.Error(w, "Error inserting operation hours: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error inserting locationOperatingTimes: "+err.Error(), http.StatusInternalServerError)
 	}
 
 	if err != nil {
@@ -247,16 +247,16 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	locationOperations, err := db.GetLocationOperations()
+	locationOperatingTimes, err := db.GetLocationOperatingTimes()
 	if err != nil {
-		http.Error(w, "Error fetching location operations: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching locationOperatingTimes: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	combinedData := map[string]interface{}{
-		"date":               date,
-		"allItems":           allItems,
-		"locationOperations": locationOperations,
+		"date":                   date,
+		"allItems":               allItems,
+		"locationOperatingTimes": locationOperatingTimes,
 	}
 
 	// Data to only fetch if there exists dailyItems that day
@@ -293,7 +293,7 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
+func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
 
@@ -303,15 +303,15 @@ func GetOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	locationOperations, err := db.GetLocationOperations()
+	locationOperatingTimes, err := db.GetLocationOperatingTimes()
 	if err != nil {
-		http.Error(w, "Error fetching location operations: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching locationOperatingTimes : "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Combine all data into a single JSON structure
 	labeledData := map[string]interface{}{
-		"operationHours": locationOperations,
+		"locationOperatingTimes": locationOperatingTimes,
 	}
 
 	// Set the response header to indicate JSON content
@@ -353,7 +353,7 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	locationOperations, err := db.GetLocationOperations()
+	locationOperatingTimes, err := db.GetLocationOperatingTimes()
 	if err != nil {
 		http.Error(w, "Error fetching location operations: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -361,9 +361,9 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
-		"date":               date,
-		"allItems":           allItems,
-		"locationOperations": locationOperations,
+		"date":                   date,
+		"allItems":               allItems,
+		"locationOperatingTimes": locationOperatingTimes,
 	}
 
 	if len(dailyItems) > 0 {

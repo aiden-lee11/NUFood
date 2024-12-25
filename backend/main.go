@@ -42,11 +42,11 @@ func main() {
 	http.HandleFunc("/api/userPreferences", api.SetUserPreferences)
 	http.HandleFunc("/api/allData", api.GetAllDataHandler)
 	http.HandleFunc("/api/generalData", api.GetGeneralDataHandler)
-	http.HandleFunc("/api/operationHours", api.GetOperationHoursHandler)
+	http.HandleFunc("/api/operatingTimes", api.GetLocationOperatingTimesHandler)
 	http.HandleFunc("/api/scrapeDailyItems", api.ScrapeDailyItemsHandler)
-	http.HandleFunc("/api/scrapeOperationHours", api.ScrapeOperationHoursHandler)
+	http.HandleFunc("/api/scrapeOperatingTimes", api.ScrapeLocationOperatingTimesHandler)
 	http.HandleFunc("/api/deleteDailyItems", api.DeleteDailyItems)
-	http.HandleFunc("/api/deleteOperationHours", api.DeleteOperationHours)
+	http.HandleFunc("/api/deleteOperatingTimes", api.DeleteLocationOperatingTimes)
 
 	// Start the HTTP server on port 8080
 	http.ListenAndServe(":8081", nil)

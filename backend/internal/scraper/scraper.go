@@ -116,21 +116,21 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDat
 }
 
 // Date needs to be in format like the following example 2024-12-08T06:00:00.000Z
-func (d *DiningHallScraper) ScrapeOperationHours(date string) ([]models.LocationOperation, error) {
+func (d *DiningHallScraper) ScrapeLocationOperatingTimes(date string) ([]models.LocationOperatingTimes, error) {
 	c := colly.NewCollector()
 	c.WithTransport(d.Client.Transport)
 
 	url := fmt.Sprintf("%s/locations/weekly_schedule/?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
 
-	var locationOperations []models.LocationOperation
+	var locationOperatingTimesList []models.LocationOperatingTimes
 
 	err := RetryRequest(url, MAX_RETRIES, func() error {
-		locationOperationInfo, err := visitOperationHours(c, url)
+		locationOperationInfo, err := visitLocationOperatingTimes(c, url)
 		if err != nil {
 			return err
 		}
 
-		locationOperations = append(locationOperations, locationOperationInfo...)
+		locationOperatingTimesList = append(locationOperatingTimesList, locationOperationInfo...)
 
 		return nil
 	})
@@ -141,14 +141,14 @@ func (d *DiningHallScraper) ScrapeOperationHours(date string) ([]models.Location
 	}
 
 	fmt.Println("Scraping and saving successful")
-	return locationOperations, nil
+	return locationOperatingTimesList, nil
 }
 
-func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOperation, error) {
-	var parsedAllOperations []models.LocationOperation
+func visitLocationOperatingTimes(c *colly.Collector, url string) ([]models.LocationOperatingTimes, error) {
+	var locationOperatingTimesList []models.LocationOperatingTimes
 
 	c.OnResponse(func(r *colly.Response) {
-		var jsonResponse models.OperationHoursResponseJSON
+		var jsonResponse models.LocationOperationsResponse
 		err := json.Unmarshal(r.Body, &jsonResponse)
 		if err != nil {
 			log.Printf("Error unmarshalling JSON for operation hours: %v", err)
@@ -157,7 +157,7 @@ func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOpera
 
 		locations := jsonResponse.Locations
 
-		parsedAllOperations, err = parseOperationHours(locations)
+		locationOperatingTimesList, err = parseLocationOperatingTimes(locations)
 
 		if err != nil {
 			log.Printf("Error for operation hours: %v", err)
@@ -176,10 +176,9 @@ func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOpera
 		log.Printf("Visit failed for URL %s: %v", url, err)
 		return nil, err
 	}
-	return parsedAllOperations, nil
+	return locationOperatingTimesList, nil
 }
 
-// TODO parse response to see if the overall json response has the closed being true if yes then don't even parse items
 func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, bool, error) {
 	var dailyItems []db.DailyItem
 	var allDataItems []db.AllDataItem
@@ -254,10 +253,6 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, [
 
 			itemName := db.AllDataItem{Name: item.Name}
 			allDataItems = append(allDataItems, itemName)
-			// err := db.InsertAllDataItem(itemName)
-			// if err != nil {
-			// 	log.Printf("Error saving item %s: %v", item.Name, err)
-			// }
 
 			menuItem := db.DailyItem{
 				Name:        item.Name,
@@ -270,30 +265,26 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, [
 
 			dailyItems = append(dailyItems, menuItem)
 
-			// err = db.InsertDailyItem(menuItem)
-			// if err != nil {
-			// 	log.Printf("Error saving item %s: %v", item.Name, err)
-			// }
 		}
 	}
 
 	return dailyItems, allDataItems, nil
 }
 
-func parseOperationHours(locations []models.LocationOperationInfoJSON) ([]models.LocationOperation, error) {
-	fmt.Printf("Posting operation hours for %d locations\n", len(locations))
-	var locationOperations []models.LocationOperation
+func parseLocationOperatingTimes(locations []models.LocationOperatingInfo) ([]models.LocationOperatingTimes, error) {
+	fmt.Printf("Posting location operating times for %d locations\n", len(locations))
+	var locationOperatingTimesList []models.LocationOperatingTimes
 
 	for _, location := range locations {
 		fmt.Printf("Location: %s\n", location.Name)
 
-		parsedInfo := models.LocationOperation{
+		parsedInfo := models.LocationOperatingTimes{
 			Name: location.Name,
 			Week: convertWeekOperationInfoJSON(location.Week),
 		}
 
-		locationOperations = append(locationOperations, parsedInfo)
+		locationOperatingTimesList = append(locationOperatingTimesList, parsedInfo)
 	}
 
-	return locationOperations, nil
+	return locationOperatingTimesList, nil
 }

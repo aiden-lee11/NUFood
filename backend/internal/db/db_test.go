@@ -12,34 +12,22 @@ import (
 
 // Total functions in db.go
 
-// Unnecessary to test:
 // func AllDataItemToGorm(item AllDataItem) GormAllDataItem {
 // func DailyItemToGorm(item DailyItem) GormDailyItem {
 // func InitDB(databasePath string) error {
-
-// Necessary to test:
 // func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
-// func InsertDailyItems(item DailyItem) error {
+// func InsertDailyItems(items []DailyItem, allClosed bool) error {
 // func DeleteDailyItems() error {
 // func ReturnDateOfDailyItems() (date string, err error) {
-// func InsertAllDataItem(item AllDataItem) error {
+// func InsertAllDataItems(items []AllDataItem, allClosed bool) error {
 // func SaveUserPreferences(userID string, favorites []AllDataItem) error {
 // func GetAvailableFavorites(userID string) ([]DailyItem, error) {
 // func GetUserPreferences(userID string) ([]AllDataItem, error) {
 // func GetAllDataItems() ([]AllDataItem, error) {
 // func GetAllDailyItems() ([]DailyItem, error) {
-// func InsertLocationOperations(locationOperations []models.LocationOperation) error {
-// func GetLocationOperations() ([]models.LocationOperation, error) {
-// func DeleteLocationOperations() error {
-
-// TODO Add tests for the following functions:
-// func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
-// func ReturnDateOfDailyItems() (date string, err error) {
-// func InsertAllDataItem(item AllDataItem) error {
-// func SaveUserPreferences(userID string, favorites []AllDataItem) error {
-// func GetAvailableFavorites(userID string) ([]DailyItem, error) {
-// func GetUserPreferences(userID string) ([]AllDataItem, error) {
-// func GetAllDataItems() ([]AllDataItem, error) {
+// func InsertLocationOperatingTimes(locations []models.LocationOperatingTimes) error {
+// func GetLocationOperatingTimes() ([]models.LocationOperatingTimes, error) {
+// func DeleteLocationOperatingTimes() error {
 
 func setupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
@@ -51,7 +39,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err, "Failed to initialize test database")
 
 	// Apply migrations
-	err = DB.AutoMigrate(&db.GormDailyItem{}, &db.GormAllDataItem{}, &db.UserPreferences{}, &db.GormLocationOperation{})
+	err = DB.AutoMigrate(&db.GormDailyItem{}, &db.GormAllDataItem{}, &db.UserPreferences{}, &db.GormLocationOperatingTimes{})
 	if err != nil {
 		t.Fatalf("Failed to migrate schema: %v", err)
 	}
@@ -78,15 +66,15 @@ func TestLocationOperationsLifeTime(t *testing.T) {
 	// Override the global DB variable in your `db` package
 	db.DB = testDB
 
-	locationOperations := []models.LocationOperation{
+	locationOperations := []models.LocationOperatingTimes{
 		{
 			Name: "allison dining commons",
-			Week: []models.DayOperation{
+			Week: []models.DailyOperatingTimes{
 				{
 					Day:    0,
 					Date:   "2021-09-06",
 					Status: "open",
-					Hours: []models.HourOperation{
+					Hours: []models.HourlyTimes{
 						{
 							StartHour:    7,
 							StartMinutes: 0,
@@ -105,12 +93,12 @@ func TestLocationOperationsLifeTime(t *testing.T) {
 		},
 		{
 			Name: "sargent",
-			Week: []models.DayOperation{
+			Week: []models.DailyOperatingTimes{
 				{
 					Day:    0,
 					Date:   "2021-09-06",
 					Status: "open",
-					Hours: []models.HourOperation{
+					Hours: []models.HourlyTimes{
 						{
 							StartHour:    8,
 							StartMinutes: 0,
@@ -129,10 +117,10 @@ func TestLocationOperationsLifeTime(t *testing.T) {
 		},
 	}
 
-	err := db.InsertLocationOperations(locationOperations)
+	err := db.InsertLocationOperatingTimes(locationOperations)
 	require.NoError(t, err, "Error inserting location operations")
 
-	locations, err := db.GetLocationOperations()
+	locations, err := db.GetLocationOperatingTimes()
 	require.NoError(t, err, "Error fetching location operations")
 	assert.Len(t, locations, 2, "Expected 2 locations")
 
@@ -211,10 +199,10 @@ func TestLocationOperationsLifeTime(t *testing.T) {
 		}
 	}
 
-	err = db.DeleteLocationOperations()
+	err = db.DeleteLocationOperatingTimes()
 	require.NoError(t, err, "Error deleting location operations")
 
-	locations, err = db.GetLocationOperations()
+	locations, err = db.GetLocationOperatingTimes()
 	require.Error(t, err, "Expected error fetching location operations, got nil")
 
 	assert.Nil(t, locations, "Expected nil locations, got %v", locations)
@@ -228,15 +216,6 @@ func TestDailyItemLifetime(t *testing.T) {
 
 	// Override the global DB variable in your `db` package
 	db.DB = testDB
-
-	// type DailyItem struct {
-	// 	Name        string
-	// 	Description string `json:"desc"`
-	// 	Date        string // The date this item is available
-	// 	Location    string // The dining hall location
-	// 	StationName string // The station name
-	// 	TimeOfDay   string // The time of day this item is available
-	// }
 
 	dailyItems := []db.DailyItem{
 		{
@@ -448,24 +427,30 @@ func TestAvailableFavorites(t *testing.T) {
 	err := db.InsertDailyItems(dailyItems, false)
 	require.NoError(t, err, "Error inserting daily items")
 
-	// Insert user preferences
-	userPreferences := []db.AllDataItem{
+	// Set up a user's preferences
+	initialPreferences := []db.AllDataItem{
 		{Name: "Bacon"},
 		{Name: "Eggs"},
-		{Name: "Skirt Steak"},
-		{Name: "Chicken Parmesan"},
 	}
 
-	err = db.SaveUserPreferences("test_user", userPreferences)
+	err = db.SaveUserPreferences("test_user", initialPreferences)
 	require.NoError(t, err, "Error saving user preferences")
 
-	// Get available favorites
-	items, err := db.GetAvailableFavorites("test_user")
+	// Fetch the available favorites based on user preferences
+	favorites, err := db.GetAvailableFavorites("test_user")
 	require.NoError(t, err, "Error fetching available favorites")
 
-	assert.Len(t, items, 2, "Expected 2 available favorites, got %d", len(items))
+	// Check if the favorites match the user preferences
+	assert.Len(t, favorites, 2, "Expected 2 favorite items, got %d", len(favorites))
 
-	for i, item := range items {
-		assert.Equal(t, item.Name, userPreferences[i].Name, "Expected item name %s, got %s", userPreferences[i].Name, item.Name)
+	for i, favorite := range favorites {
+		assert.Equal(t, favorite.Name, initialPreferences[i].Name, "Expected favorite name %s, got %s", initialPreferences[i].Name, favorite.Name)
 	}
+
+	// Delete the test data
+	err = db.DeleteDailyItems()
+	require.NoError(t, err, "Error deleting daily items")
+
+	favorites, err = db.GetAvailableFavorites("test_user")
+	assert.Len(t, favorites, 0, "Expected 0 favorite items, got %d", len(favorites))
 }

@@ -133,20 +133,20 @@ func NewClient() *http.Client {
 	}
 }
 
-func convertWeekOperationInfoJSON(day []models.DayOperationInfoJSON) []models.DayOperation {
-	var week []models.DayOperation
-	for _, day := range day {
-		week = append(week, convertDayOperationInfoJSON(day))
+func convertWeekOperationInfoJSON(week []models.DailyOperatingInfo) []models.DailyOperatingTimes {
+	var parsedWeek []models.DailyOperatingTimes
+	for _, day := range week {
+		parsedWeek = append(parsedWeek, convertDayOperationInfoJSON(day))
 	}
-	return week
+	return parsedWeek
 }
 
-func convertDayOperationInfoJSON(day models.DayOperationInfoJSON) models.DayOperation {
-	var hours []models.HourOperation
+func convertDayOperationInfoJSON(day models.DailyOperatingInfo) models.DailyOperatingTimes {
+	var hours []models.HourlyTimes
 	for _, hour := range day.Hours {
 		hours = append(hours, convertHourOperationInfoJSON(hour))
 	}
-	return models.DayOperation{
+	return models.DailyOperatingTimes{
 		Day:    day.Day,
 		Date:   day.Date,
 		Status: day.Status,
@@ -154,11 +154,11 @@ func convertDayOperationInfoJSON(day models.DayOperationInfoJSON) models.DayOper
 	}
 }
 
-func convertHourOperationInfoJSON(hour models.HourOperationInfoJSON) models.HourOperation {
-	return models.HourOperation{
-		StartHour:    hour.Start_hour,
-		StartMinutes: hour.Start_minutes,
-		EndHour:      hour.End_hour,
-		EndMinutes:   hour.End_minutes,
+func convertHourOperationInfoJSON(hour models.HourlyOperatingInfo) models.HourlyTimes {
+	return models.HourlyTimes{
+		StartHour:    hour.StartHour,
+		StartMinutes: hour.StartMinutes,
+		EndHour:      hour.EndHour,
+		EndMinutes:   hour.EndMinutes,
 	}
 }
