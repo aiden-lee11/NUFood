@@ -40,13 +40,38 @@ func DeleteDailyItems(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func DeleteOperationHours(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	setCorsHeaders(w, r)
+
+	// Handle preflight OPTIONS request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	err := db.DeleteLocationOperations()
+	if err != nil {
+		http.Error(w, "Error deleting location operations: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return success code
+	w.WriteHeader(http.StatusOK)
+}
+
 func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set CORS headers
 	setCorsHeaders(w, r)
 
 	fmt.Println("Scraping daily items")
-	fmt.Println("This is an internal API endpoint")
+
+	err := db.DeleteDailyItems()
+
+	if err != nil {
+		http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
+	}
 
 	scraper := &scraper.DiningHallScraper{
 		Client: scraper.NewClient(),
@@ -76,7 +101,13 @@ func ScrapeOperationHoursHandler(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
 
-	fmt.Println("Scraping operation hours")
+	fmt.Println("Scraping operation hours, so clearing table first")
+
+	err := db.DeleteLocationOperations()
+
+	if err != nil {
+		http.Error(w, "Error clearing operation hours before scrape: "+err.Error(), http.StatusInternalServerError)
+	}
 
 	scraper := &scraper.DiningHallScraper{
 		Client: scraper.NewClient(),
@@ -196,15 +227,6 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch available favorites for the user
-	availableFavorites, err := db.GetAvailableFavorites(userID)
-	if err == db.NoUserPreferencesInDB {
-		availableFavorites = []db.DailyItem{}
-	} else if err != nil {
-		http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Fetch all daily items
 	dailyItems, err := db.GetAllDailyItems()
 	if err != nil {
@@ -212,19 +234,10 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch all daily items
+	// Fetch data that doesn't depend on `dailyItems`
 	allItems, err := db.GetAllDataItems()
 	if err != nil {
-		http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Fetch user preferences
-	userPreferences, err := db.GetUserPreferences(userID)
-	if err == db.NoUserPreferencesInDB {
-		userPreferences = []db.AllDataItem{}
-	} else if err != nil {
-		http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -240,14 +253,35 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
-		"availableFavorites": availableFavorites,
-		"dailyItems":         dailyItems,
 		"date":               date,
 		"allItems":           allItems,
-		"userPreferences":    userPreferences,
 		"locationOperations": locationOperations,
+	}
+
+	// Data to only fetch if there exists dailyItems that day
+	if len(dailyItems) > 0 {
+		combinedData["dailyItems"] = dailyItems
+
+		userPreferences, err := db.GetUserPreferences(userID)
+		if err == db.NoUserPreferencesInDB {
+			userPreferences = []db.AllDataItem{}
+		} else if err != nil {
+			http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		combinedData["userPreferences"] = userPreferences
+
+		availableFavorites, err := db.GetAvailableFavorites(userID)
+		if err == db.NoUserPreferencesInDB {
+			availableFavorites = []db.DailyItem{}
+		} else if err != nil {
+			http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		combinedData["availableFavorites"] = availableFavorites
+	} else {
+		combinedData["allClosed"] = true
 	}
 
 	// Set the response header to indicate JSON content
@@ -327,10 +361,15 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
-		"dailyItems":         dailyItems,
 		"date":               date,
 		"allItems":           allItems,
 		"locationOperations": locationOperations,
+	}
+
+	if len(dailyItems) > 0 {
+		combinedData["dailyItems"] = dailyItems
+	} else {
+		combinedData["allClosed"] = true
 	}
 
 	// Set the response header to indicate JSON content

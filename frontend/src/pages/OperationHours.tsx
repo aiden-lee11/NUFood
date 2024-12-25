@@ -1,35 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { fetchAllOperationHours } from '../util/data';
+import { getWeekday } from '../util/helper';
+import { OperationHoursData } from '../types/OperationTypes';
 
-interface OperationHours {
-  Name: string;
-  Week: Day[];
-}
-
-interface Day {
-  Day: string;
-  Date: string;
-  Status: string;
-  Hours: Hour[] | null;
-}
-
-interface Hour {
-  StartHour: string;
-  StartMinutes: string;
-  EndHour: string;
-  EndMinutes: string;
-}
 
 const OperationHours: React.FC = () => {
-  const [operationHours, setOperationHours] = useState<OperationHours[]>([]);
+  const [operationHours, setOperationHours] = useState<OperationHoursData[]>([]);
 
   useEffect(() => {
     fetchAllOperationHours().then((data) => {
       setOperationHours(data.operationHours);
     });
   }, []);
-
-  console.log(operationHours);
 
   return (
     <div className="p-6 min-h-screen bg-white text-black dark:bg-zinc-900 dark:text-white transition-colors duration-200">
@@ -58,7 +40,7 @@ const OperationHours: React.FC = () => {
                   `}
                 >
                   <h3 className="text-lg font-semibold">
-                    {day.Day} ({day.Date})
+                    {getWeekday(parseInt(day.Day))} ({day.Date})
                   </h3>
                   <p className="mt-1">
                     <span className="font-bold">Status:</span>{" "}

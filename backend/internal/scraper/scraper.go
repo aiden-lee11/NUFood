@@ -77,17 +77,6 @@ var DefaultConfig = ScrapeConfig{
 const MAX_RETRIES = 3
 
 func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDataItem, bool, error) {
-	// Check if we need to rescrape the daily items
-	// previousDate, err := db.ReturnDateOfDailyItems()
-	// if err != nil && err != db.NoItemsInDB {
-	// 	log.Printf("Error getting date of daily items: %v", err)
-	// 	return nil, nil, err
-	// }
-
-	// if date != previousDate {
-	// 	db.DeleteDailyItems()
-	// }
-
 	var dailyItems []db.DailyItem
 	var allDataItems []db.AllDataItem
 	allClosed := true

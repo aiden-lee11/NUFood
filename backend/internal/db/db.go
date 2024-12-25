@@ -324,6 +324,8 @@ func GetAllDailyItems() ([]DailyItem, error) {
 		return nil, result.Error
 	}
 
+	fmt.Printf("getting daily items with val %v", dailyItems)
+
 	// Check if the dailyItems slice is empty
 	if len(dailyItems) == 0 {
 		return nil, NoItemsInDB

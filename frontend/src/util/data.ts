@@ -84,11 +84,11 @@ const fetchAndStoreData = async (endpoint: string, keys: string[], authToken?: s
 // Main function for fetching all data
 export const fetchAllData = async (userToken: string | null) => {
   try {
-    const storedData = getStoredData(["allItems", "dailyItems", "availableFavorites", "userPreferences"]);
+    const storedData = getStoredData(["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed"]);
     if (storedData) return storedData;
 
     console.log("New day... fetching new data");
-    return await fetchAndStoreData(`${API_URL}/api/allData`, ["allItems", "dailyItems", "availableFavorites", "userPreferences"], userToken || undefined);
+    return await fetchAndStoreData(`${API_URL}/api/allData`, ["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed"], userToken || undefined);
   } catch (error) {
     console.error("Error fetching all data:", error);
   }
@@ -97,11 +97,11 @@ export const fetchAllData = async (userToken: string | null) => {
 // Main function for fetching general (non-user-exclusive) data
 export const fetchGeneralData = async () => {
   try {
-    const storedData = getStoredData(["allItems", "dailyItems"]);
+    const storedData = getStoredData(["allItems", "dailyItems", "operationHours", "allClosed"]);
     if (storedData) return storedData;
 
     console.log("New day... fetching new data");
-    return await fetchAndStoreData(`${API_URL}/api/generalData`, ["allItems", "dailyItems"]);
+    return await fetchAndStoreData(`${API_URL}/api/generalData`, ["allItems", "dailyItems", "operationHours", "allClosed"]);
   } catch (error) {
     console.error("Error fetching general data:", error);
   }
