@@ -1,5 +1,7 @@
 import React from "react";
 import DailyItemAccordion from "./DailyItemAccordion"; // Import the DailyItemAccordion component
+import { locationToHours } from "../types/OperationTypes";
+import Status from "./Status";
 
 interface Item {
   Name: string;
@@ -16,6 +18,7 @@ interface FavoriteItem {
 
 interface LocationProps {
   locations: string[];
+  locationOperationHours: locationToHours | undefined
   visibleLocations: string[];
   timesOfDay: string[];
   visibleTimes: string[];
@@ -28,6 +31,7 @@ interface LocationProps {
 
 const LocationItemGrid: React.FC<LocationProps> = ({
   locations,
+  locationOperationHours,
   visibleLocations,
   timesOfDay,
   visibleTimes,
@@ -49,6 +53,7 @@ const LocationItemGrid: React.FC<LocationProps> = ({
               className="p-6 rounded-md shadow-lg transition-all duration-300 bg-white dark:bg-zinc-900"
             >
               <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">{location}</h2>
+              {locationOperationHours && (<Status hours={locationOperationHours[location]} />)}
               {timesOfDay
                 .filter((timeOfDay) => visibleTimes.includes(timeOfDay))
                 .map((timeOfDay) => {

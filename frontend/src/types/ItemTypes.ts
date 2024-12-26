@@ -20,7 +20,7 @@ interface BaseDataResponse {
   dailyItems: DailyItem[] | null;
   allItems: Item[];
   date: string;
-  locationOperations: OperationHoursData[];
+  locationOperatingTimes: OperationHoursData[];
 }
 
 // Interface for general data without user-specific data

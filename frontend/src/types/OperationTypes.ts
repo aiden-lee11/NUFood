@@ -16,3 +16,7 @@ export interface Hour {
   EndHour: string;
   EndMinutes: string;
 }
+
+export interface locationToHours {
+  [key: string]: Hour | null,
+}

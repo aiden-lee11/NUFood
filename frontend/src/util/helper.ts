@@ -2,6 +2,9 @@
 // -- Breakfast if current time is between 8:00 AM and 10:59 AM
 // -- Lunch if current time is between 11:00 AM and 4:59 PM
 // -- Dinner if current time is between 5:00 PM and 7:59 PM
+
+import { locationToHours, OperationHoursData } from "../types/OperationTypes";
+
 // -- Empty string if current time is outside of the above ranges
 export const getCurrentTimeOfDay = (): [string] => {
   const currentTime = new Date();
@@ -37,4 +40,36 @@ export const getWeekday = (dateNum: number): string => {
   }
 }
 
-// export const allClosed = (dailyItems: )
+// Take in the data and return a mapping of location to operation times
+export const getDailyLocationOperationTimes = (data: OperationHoursData[]): locationToHours => {
+  const locationNameMap: Record<string, string> = {
+    "Elder Dining Commons": "Elder",
+    "Sargent Dining Commons": "Sargent",
+    "Allison Dining Commons": "Allison",
+    "Foster Walker Plex East": "Plex East",
+    "Foster Walker Plex West & Market": "Plex West",
+  };
+  const currentTime = new Date();
+  const currentDay = currentTime.getDay();
+
+  const res: locationToHours = {}
+
+  Object.entries(locationNameMap).forEach(([fullName, shortName]) => {
+    const locationData = data.find((loc) => loc.Name === fullName);
+    if (!locationData) {
+      console.warn(`Location data not found for: ${location}`);
+      res[shortName] = null; // Handle missing data gracefully
+      return;
+    }
+    const locationDay = locationData.Week[currentDay]
+
+    if (locationDay.Hours) {
+      res[shortName] = locationDay.Hours[0]
+    } else {
+      res[shortName] = null
+    }
+  }
+  )
+  return res
+}
+
