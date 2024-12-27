@@ -41,6 +41,7 @@ export const getWeekday = (dateNum: number): string => {
 }
 
 // Take in the data and return a mapping of location to operation times
+// TODO make a test for when its not closed and during open time 
 export const getDailyLocationOperationTimes = (data: OperationHoursData[]): locationToHours => {
   const locationNameMap: Record<string, string> = {
     "Elder Dining Commons": "Elder",
@@ -57,14 +58,17 @@ export const getDailyLocationOperationTimes = (data: OperationHoursData[]): loca
   Object.entries(locationNameMap).forEach(([fullName, shortName]) => {
     const locationData = data.find((loc) => loc.Name === fullName);
     if (!locationData) {
-      console.warn(`Location data not found for: ${location}`);
+      console.warn(`Location data not found for: ${fullName}`);
       res[shortName] = null; // Handle missing data gracefully
       return;
     }
     const locationDay = locationData.Week[currentDay]
 
-    if (locationDay.Hours) {
-      res[shortName] = locationDay.Hours[0]
+    // If the location is closed we set it to closed else the operation hours else null 
+    if (locationDay.Status === "closed") {
+      res[shortName] = locationDay.Status
+    } else if (locationDay.Hours) {
+      res[shortName] = locationDay.Hours
     } else {
       res[shortName] = null
     }

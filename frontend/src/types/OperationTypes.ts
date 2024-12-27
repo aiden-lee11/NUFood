@@ -18,5 +18,5 @@ export interface Hour {
 }
 
 export interface locationToHours {
-  [key: string]: Hour | null,
+  [key: string]: Hour[] | string | null,
 }

@@ -1,44 +1,72 @@
 import React, { useState, useEffect } from "react";
-import { Hour } from "../types/OperationTypes";
+import { locationToHours } from "../types/OperationTypes";
 
-type StatusProps = {
-  hours: Hour | null;
-};
 
-const Status: React.FC<StatusProps> = ({ hours }) => {
-  if (hours == null) {
+const Status: React.FC<locationToHours> = ({ operatingTimes }) => {
+  if (!operatingTimes || (typeof operatingTimes === "string" && operatingTimes === "closed")) {
     return <div className="text-red-500">Status -- Closed</div>;
+  }
+
+  if (typeof operatingTimes === "string") {
+    return <div className="text-yellow-500">Status -- Invalid Data</div>;
   }
 
   const [remainingTime, setRemainingTime] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
-  // Helper function to convert Hour data into a Date object
-  const getEndDateTime = (): Date => {
-    const now = new Date();
-    const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    endDate.setHours(parseInt(hours.EndHour, 10), parseInt(hours.EndMinutes, 10), 0);
-    return endDate;
-  };
-
   const calculateRemainingTime = () => {
     const now = new Date();
-    const endDateTime = getEndDateTime();
-    const diffMs = endDateTime.getTime() - now.getTime();
+    let nextOpenTime: Date | null = null;
+    let nextCloseTime: Date | null = null;
+    let currentlyOpen = false;
 
-    if (diffMs <= 0) {
-      setIsOpen(false); // It's closed
-      return "Closed";
+    operatingTimes.forEach(({ StartHour, StartMinutes, EndHour, EndMinutes }) => {
+      const start = new Date();
+      const end = new Date();
+      start.setHours(parseInt(StartHour, 10), parseInt(StartMinutes, 10), 0);
+      end.setHours(parseInt(EndHour, 10), parseInt(EndMinutes, 10), 0);
+
+      if (now >= start && now < end) {
+        // The current time is within this range
+        currentlyOpen = true;
+        if (!nextCloseTime || end < nextCloseTime) {
+          nextCloseTime = end;
+        }
+      } else if (now < start) {
+        // The current time is before this range
+        if (!nextOpenTime || start < nextOpenTime) {
+          nextOpenTime = start;
+        }
+      }
+    });
+
+    if (currentlyOpen) {
+      setIsOpen(true);
+      if (nextCloseTime) {
+        const diffMs = (nextCloseTime as Date).getTime() - now.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const hours = Math.floor(diffMins / 60);
+        const minutes = diffMins % 60;
+
+        return hours > 0
+          ? `Closes in ${hours} hr${hours > 1 ? "s" : ""} ${minutes} min${minutes !== 1 ? "s" : ""}`
+          : `Closes in ${minutes} min${minutes !== 1 ? "s" : ""}`;
+      }
+    } else {
+      setIsOpen(false);
+      if (nextOpenTime) {
+        const diffMs = (nextOpenTime as Date).getTime() - now.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const hours = Math.floor(diffMins / 60);
+        const minutes = diffMins % 60;
+
+        return hours > 0
+          ? `Opens in ${hours} hr${hours > 1 ? "s" : ""} ${minutes} min${minutes !== 1 ? "s" : ""}`
+          : `Opens in ${minutes} min${minutes !== 1 ? "s" : ""}`;
+      }
     }
 
-    setIsOpen(true); // It's open
-    const diffMins = Math.floor(diffMs / 60000); // Minutes
-    const hours = Math.floor(diffMins / 60); // Hours
-    const minutes = diffMins % 60; // Remaining minutes
-
-    return hours > 0
-      ? `${hours} hr${hours > 1 ? "s" : ""} ${minutes} min${minutes !== 1 ? "s" : ""}`
-      : `${minutes} min${minutes !== 1 ? "s" : ""}`;
+    return "Closed";
   };
 
   useEffect(() => {
@@ -52,13 +80,13 @@ const Status: React.FC<StatusProps> = ({ hours }) => {
 
     // Cleanup
     return () => clearInterval(intervalId);
-  }, [hours]);
+  }, [operatingTimes]);
 
   return (
     <div className={isOpen ? "text-green-500" : "text-red-500"}>
-      Status -- {isOpen ? `Closes in ${remainingTime}` : "Closed"}
+      Status -- {remainingTime}
     </div>
   );
 };
 
-export default Status;
+export default Status

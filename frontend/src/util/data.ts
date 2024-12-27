@@ -108,7 +108,7 @@ export const fetchGeneralData = async () => {
 };
 
 
-export const fetchAllOperationHours = async () => {
+export const fetchAllLocationOperatingTimes = async () => {
   try {
     const storedData = getStoredData(["locationOperatingTimes"]);
     if (storedData) return storedData;

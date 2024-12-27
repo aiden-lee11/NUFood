@@ -13,6 +13,7 @@ export interface Item {
   Name: string;
 }
 
+export interface FavoriteItem extends Item { }
 
 // Base interface for shared properties
 interface BaseDataResponse {
