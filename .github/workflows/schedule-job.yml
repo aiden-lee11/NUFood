@@ -1,13 +1,23 @@
-name: Daily Data Scrape
+name: Data Scrape
 
 on:
   schedule:
-    - cron: '0 12 * * *'  
+    # Daily at 12 PM UTC
+    - cron: '0 12 * * *'
 
 jobs:
   run-curl:
     runs-on: ubuntu-latest
     steps:
-      - name: Run curl command
+      - name: Install curl
+        run: apt-get update && apt-get install -y curl
+      - name: Determine day of the week
+        id: day-of-week
+        run: echo "DAY_OF_WEEK=$(date +'%u')" >> $GITHUB_ENV
+      - name: Run daily item scraping
         run: curl https://nufoodfinder-prod.up.railway.app/api/scrapeDailyItems
-
+      # Check if the day is Sunday if it is we need to scrape the new operating times data
+      # day of week is index Monday (1) to Sunday (7)
+      - name: Run operating times scraping (only on Sundays)
+        if: ${{ env.DAY_OF_WEEK == '7' }}
+        run: curl https://nufoodfinder-prod.up.railway.app/api/scrapeOperatingTimes
