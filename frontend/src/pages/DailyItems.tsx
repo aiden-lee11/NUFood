@@ -17,7 +17,6 @@ const DailyItems: React.FC = () => {
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
   const [favorites, setFavorites] = useState<Item[]>([]);
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
-  const [allClosed, setAllClosed] = useState<boolean>(false);
   const [locationOperationHours, setLocationOperationHours] = useState<locationToHours>();
 
   // Data involved with fuse
@@ -84,9 +83,9 @@ const DailyItems: React.FC = () => {
 
   useEffect(() => {
     const processData = (data: GeneralDataResponse | UserDataResponse) => {
-      if (data.allClosed) {
-        setAllClosed(true);
-      } else {
+      if (!data.allClosed) {
+        // setAllClosed(true);
+        // } else {
         const locations: string[] = Array.from(new Set(data.dailyItems?.map((item: DailyItem) => item.Location) || []));
         setLocations(locations);
         setDailyItems(data.dailyItems || []);
@@ -126,70 +125,62 @@ const DailyItems: React.FC = () => {
 
   return (
     <div className="p-6 min-h-screen bg-transparent">
-      {allClosed && (
-        <div className="flex justify-center items-center h-full text-center bg-yellow-100 text-yellow-800 p-4 rounded-md shadow-md">
-          <h2 className="text-xl font-bold">All dining halls are currently closed.</h2>
-        </div>
-      )}
-      <>
-        <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-          Daily Items
-        </h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+        Daily Items
+      </h1>
 
-        {/* Preferences Toggle */}
-        <button
-          onClick={() => setShowPreferences(!showPreferences)}
-          className="p-2 rounded-md mb-4 
+      <button
+        onClick={() => setShowPreferences(!showPreferences)}
+        className="p-2 rounded-md mb-4 
              bg-white-100 text-black 
              dark:bg-black-700 dark:text-white 
              border border-gray-300 dark:border-gray-700
              transition-colors duration-200"
-        >
-          {showPreferences ? "Hide Preferences" : "Show Preferences"}
-        </button>
+      >
+        {showPreferences ? "Hide Preferences" : "Show Preferences"}
+      </button>
 
-        {/* Preferences Box */}
-        {showPreferences &&
-          Preferences({
-            showPreferences,
-            locations,
-            visibleLocations,
-            timesOfDay,
-            visibleTimes,
-            expandFolders,
-            togglePreferencesItem,
-          })}
+      {/* Preferences Box */}
+      {showPreferences &&
+        Preferences({
+          showPreferences,
+          locations,
+          visibleLocations,
+          timesOfDay,
+          visibleTimes,
+          expandFolders,
+          togglePreferencesItem,
+        })}
 
-        {/* Search Input */}
-        <Input
-          type="text"
-          placeholder="Search for an item..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="mb-4 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent 
+      {/* Search Input */}
+      <Input
+        type="text"
+        placeholder="Search for an item..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="mb-4 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent 
             bg-gray-100 text-gray-900 border-gray-300 focus:ring-gray-500 
             dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:focus:ring-gray-400"
-        />
+      />
 
 
-        {/* LocationItem Grid */}
-        <LocationItemGrid
-          locations={locations}
-          locationOperationHours={locationOperationHours}
-          visibleLocations={visibleLocations}
-          timesOfDay={timesOfDay}
-          visibleTimes={visibleTimes}
-          filteredItems={filteredItems}
-          availableFavorites={availableFavorites}
-          favorites={favorites}
-          expandFolders={expandFolders}
-          handleItemClick={handleItemClick}
-        />
+      {/* LocationItem Grid */}
+      <LocationItemGrid
+        locations={locations}
+        locationOperationHours={locationOperationHours}
+        visibleLocations={visibleLocations}
+        timesOfDay={timesOfDay}
+        visibleTimes={visibleTimes}
+        filteredItems={filteredItems}
+        availableFavorites={availableFavorites}
+        favorites={favorites}
+        expandFolders={expandFolders}
+        handleItemClick={handleItemClick}
+      />
 
-        {showPopup && <AuthPopup onClose={() => setShowPopup(false)} />}
-      </>
+      {showPopup && <AuthPopup onClose={() => setShowPopup(false)} />}
       )
-    </div>
+    </div >
   );
 };
 

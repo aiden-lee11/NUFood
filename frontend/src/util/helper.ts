@@ -1,10 +1,9 @@
+import { locationToHours, OperationHoursData, Hour } from "../types/OperationTypes";
+
 // Returns
 // -- Breakfast if current time is between 8:00 AM and 10:59 AM
 // -- Lunch if current time is between 11:00 AM and 4:59 PM
 // -- Dinner if current time is between 5:00 PM and 7:59 PM
-
-import { locationToHours, OperationHoursData } from "../types/OperationTypes";
-
 // -- Empty string if current time is outside of the above ranges
 export const getCurrentTimeOfDay = (): [string] => {
   const currentTime = new Date();
@@ -76,4 +75,19 @@ export const getDailyLocationOperationTimes = (data: OperationHoursData[]): loca
   )
   return res
 }
+
+
+export const formatTime = (hour: string, minutes: string): string => {
+  const hourInt = parseInt(hour, 10);
+  const minutesInt = parseInt(minutes, 10);
+
+  // Determine AM/PM
+  const period = hourInt >= 12 ? "p" : "a";
+  const formattedHour = hourInt > 12 ? hourInt - 12 : hourInt === 0 ? 12 : hourInt;
+
+  // Format the time as "hh:mm"
+  const formattedTime = `${formattedHour}:${minutesInt.toString().padStart(2, "0")}${period}`;
+
+  return formattedTime;
+};
 
