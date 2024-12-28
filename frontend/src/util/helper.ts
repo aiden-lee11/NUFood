@@ -1,4 +1,4 @@
-import { locationToHours, OperationHoursData, Hour } from "../types/OperationTypes";
+import { locationToHours, OperationHoursData } from "../types/OperationTypes";
 
 // Returns
 // -- Breakfast if current time is between 8:00 AM and 10:59 AM
