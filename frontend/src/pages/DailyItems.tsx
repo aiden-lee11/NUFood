@@ -6,38 +6,35 @@ import Preferences from '../components/preferences'
 import LocationItemGrid from '../components/locationGrid'
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
-import { getCurrentTimeOfDay } from '../util/helper';
+import { getCurrentTimeOfDay, getDailyLocationOperationTimes } from '../util/helper';
+import { DailyItem, Item, GeneralDataResponse, UserDataResponse } from '../types/ItemTypes';
+import { locationToHours } from '../types/OperationTypes';
 
-interface DailyItem {
-  Name: string;
-  Description: string;
-  Location: string;
-  StationName: string;
-  Date: string;
-  TimeOfDay: string;
-}
-
-interface Item {
-  Name: string;
-}
 
 const DailyItems: React.FC = () => {
+  // Data involved with API
   const [locations, setLocations] = useState(["Elder", "Sargent", "Allison", "Plex East", "Plex West"]);
-  const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
   const [favorites, setFavorites] = useState<Item[]>([]);
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
+  const [locationOperationHours, setLocationOperationHours] = useState<locationToHours>();
+
+  // Data involved with fuse
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<DailyItem[]>([]);
-  const [visibleLocations, setVisibleLocations] = useState<string[]>(locations);
-  const [visibleTimes, setVisibleTimes] = useState<string[]>(timesOfDay);
-  const [showPreferences, setShowPreferences] = useState(false); // Toggle for preferences visibility
-  const [showPopup, setShowPopup] = useState(false); // Popup visibility state
-  const [expandFolders, setExpandFolders] = useState(false); // New state for collapsing all preferences
+  const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
 
+  // Data involved with display of items
+  const [visibleLocations, setVisibleLocations] = useState<string[]>(locations);
+  const [visibleTimes, setVisibleTimes] = useState<string[]>(getCurrentTimeOfDay());
+  const [expandFolders, setExpandFolders] = useState(false); // New state for collapsing all preferences
+  const [showPreferences, setShowPreferences] = useState(false);
+  const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
+
+  // Data involved with auth
+  const [showPopup, setShowPopup] = useState(false);
   const { authLoading, token } = useAuth();
 
-  const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
 
   useEffect(() => {
     if (searchQuery) {
@@ -69,7 +66,6 @@ const DailyItems: React.FC = () => {
       tempAvailable = [...availableFavorites, dailyItems.find(i => i.Name.toLowerCase().trim() === formattedItemName) as DailyItem];
     }
 
-
     setFavorites(tempPreferences);
     setAvailableFavorites(tempAvailable);
     postUserPreferences(tempPreferences, token as string);
@@ -86,21 +82,37 @@ const DailyItems: React.FC = () => {
   }
 
   useEffect(() => {
+    const processData = (data: GeneralDataResponse | UserDataResponse) => {
+      if (!data.allClosed) {
+        // setAllClosed(true);
+        // } else {
+        const locations: string[] = Array.from(new Set(data.dailyItems?.map((item: DailyItem) => item.Location) || []));
+        setLocations(locations);
+        setDailyItems(data.dailyItems || []);
+
+        if ('userPreferences' in data) {
+          setFavorites(data.userPreferences?.map((item: Item) => item) || []);
+          setAvailableFavorites(data.availableFavorites || []);
+        }
+      }
+
+      // Will always have location operating times data
+      setLocationOperationHours(getDailyLocationOperationTimes(data.locationOperatingTimes))
+
+    };
+
     const fetchData = async () => {
       try {
-        if (!authLoading && token) {
-          const data = await fetchAllData(token);
-          if (data) {
-            setDailyItems(data.dailyItems);
-            setLocations(Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Location))));
-            setFavorites(data.userPreferences.map((item: Item) => item));
-            setAvailableFavorites(data.availableFavorites ?? []);
+        if (!authLoading) {
+          let data: GeneralDataResponse | UserDataResponse;
+          if (token) {
+            data = await fetchAllData(token);
+          } else {
+            data = await fetchGeneralData();
           }
-        } else if (!authLoading && !token) {
-          const data = await fetchGeneralData();
+
           if (data) {
-            setDailyItems(data.dailyItems);
-            setLocations(Array.from(new Set(data.dailyItems.map((item: DailyItem) => item.Location))));
+            processData(data);
           }
         }
       } catch (error) {
@@ -111,21 +123,12 @@ const DailyItems: React.FC = () => {
     fetchData();
   }, [authLoading, token]);
 
-  useEffect(() => {
-    // Set the current time of day as the only visible time, if no dining halls open -> set all visible
-    const currentTime = getCurrentTimeOfDay();
-    if (currentTime) {
-      setVisibleTimes([getCurrentTimeOfDay()]);
-    }
-  }, []);
-
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Daily Items
       </h1>
 
-      {/* Preferences Toggle */}
       <button
         onClick={() => setShowPreferences(!showPreferences)}
         className="p-2 rounded-md mb-4 
@@ -138,8 +141,16 @@ const DailyItems: React.FC = () => {
       </button>
 
       {/* Preferences Box */}
-      {showPreferences && (Preferences({ showPreferences, locations, visibleLocations, timesOfDay, visibleTimes, expandFolders, togglePreferencesItem })
-      )}
+      {showPreferences &&
+        Preferences({
+          showPreferences,
+          locations,
+          visibleLocations,
+          timesOfDay,
+          visibleTimes,
+          expandFolders,
+          togglePreferencesItem,
+        })}
 
       {/* Search Input */}
       <Input
@@ -148,14 +159,15 @@ const DailyItems: React.FC = () => {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className="mb-4 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent 
-        bg-gray-100 text-gray-900 border-gray-300 focus:ring-gray-500 
-        dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:focus:ring-gray-400"
+            bg-gray-100 text-gray-900 border-gray-300 focus:ring-gray-500 
+            dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:focus:ring-gray-400"
       />
 
-      {/* LocationItem Grid */}
 
+      {/* LocationItem Grid */}
       <LocationItemGrid
         locations={locations}
+        locationOperationHours={locationOperationHours}
         visibleLocations={visibleLocations}
         timesOfDay={timesOfDay}
         visibleTimes={visibleTimes}
@@ -166,13 +178,9 @@ const DailyItems: React.FC = () => {
         handleItemClick={handleItemClick}
       />
 
-      {showPopup && (
-        <AuthPopup
-          onClose={() => setShowPopup(false)}
-        />
-      )}
-
-    </div>
+      {showPopup && <AuthPopup onClose={() => setShowPopup(false)} />}
+      )
+    </div >
   );
 };
 

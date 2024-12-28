@@ -40,42 +40,93 @@ func DeleteDailyItems(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	setCorsHeaders(w, r)
+
+	// Handle preflight OPTIONS request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	err := db.DeleteLocationOperatingTimes()
+	if err != nil {
+		http.Error(w, "Error deleting location operations: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return success code
+	w.WriteHeader(http.StatusOK)
+}
+
 func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set CORS headers
 	setCorsHeaders(w, r)
 
 	fmt.Println("Scraping daily items")
-	fmt.Println("This is an internal API endpoint")
 
-	err := scraper.ScrapeAndSave(time.Now().Format("2006-01-02"))
+	err := db.DeleteDailyItems()
+
+	if err != nil {
+		http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	scraper := &scraper.DiningHallScraper{
+		Client: scraper.NewClient(),
+		Config: scraper.DefaultConfig,
+	}
+
+	dItems, aItems, allClosed, err := scraper.ScrapeFood(time.Now().Format("2006-01-02"))
 
 	if err != nil {
 		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
 	}
+
+	if err := db.InsertDailyItems(dItems, allClosed); err != nil {
+		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	if err := db.InsertAllDataItems(aItems, allClosed); err != nil {
+		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+	}
+
 	// Return success code
 	w.WriteHeader(http.StatusOK)
 }
 
-func ScrapeHistoricalItemsHandler(w http.ResponseWriter, r *http.Request) {
+func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set CORS headers
 	setCorsHeaders(w, r)
 
-	fmt.Println("Scraping historical items")
-	// Iterate over the past 10 days
-	for i := 0; i < 20; i++ {
-		// Subtract i days from the current time
-		pastDay := time.Now().AddDate(0, 0, -i)
-		// Format the date as YYYY-MM-DD
-		formattedDate := pastDay.Format("2006-01-02")
+	fmt.Println("Scraping location operating hours, so clearing table first")
 
-		err := scraper.ScrapeAndSave(formattedDate)
+	err := db.DeleteLocationOperatingTimes()
 
-		if err != nil {
-			fmt.Println("Error scraping and saving: ", err)
-			http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
-		}
+	if err != nil {
+		http.Error(w, "Error clearing location operating hours before scrape: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	scraper := &scraper.DiningHallScraper{
+		Client: scraper.NewClient(),
+		Config: scraper.DefaultConfig,
+	}
+	formattedDate := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+	locationOperatingTimes, err := scraper.ScrapeLocationOperatingTimes(formattedDate)
+
+	if locationOperatingTimes == nil {
+		http.Error(w, "Error scraping and saving: nil locationOperatingTimes", http.StatusInternalServerError)
+	}
+
+	err = db.InsertLocationOperatingTimes(locationOperatingTimes)
+	if err != nil {
+		http.Error(w, "Error inserting locationOperatingTimes: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	if err != nil {
+		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
 	}
 
 	// Return success code
@@ -176,15 +227,6 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch available favorites for the user
-	availableFavorites, err := db.GetAvailableFavorites(userID)
-	if err == db.NoUserPreferencesInDB {
-		availableFavorites = []db.DailyItem{}
-	} else if err != nil {
-		http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Fetch all daily items
 	dailyItems, err := db.GetAllDailyItems()
 	if err != nil {
@@ -192,19 +234,10 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch all daily items
+	// Fetch data that doesn't depend on `dailyItems`
 	allItems, err := db.GetAllDataItems()
 	if err != nil {
-		http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Fetch user preferences
-	userPreferences, err := db.GetUserPreferences(userID)
-	if err == db.NoUserPreferencesInDB {
-		userPreferences = []db.AllDataItem{}
-	} else if err != nil {
-		http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -214,13 +247,41 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Combine all data into a single JSON structure
+	locationOperatingTimes, err := db.GetLocationOperatingTimes()
+	if err != nil {
+		http.Error(w, "Error fetching locationOperatingTimes: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	combinedData := map[string]interface{}{
-		"availableFavorites": availableFavorites,
-		"dailyItems":         dailyItems,
-		"date":               date,
-		"allItems":           allItems,
-		"userPreferences":    userPreferences,
+		"date":                   date,
+		"allItems":               allItems,
+		"locationOperatingTimes": locationOperatingTimes,
+	}
+
+	// Data to only fetch if there exists dailyItems that day
+	if len(dailyItems) > 0 {
+		combinedData["dailyItems"] = dailyItems
+
+		userPreferences, err := db.GetUserPreferences(userID)
+		if err == db.NoUserPreferencesInDB {
+			userPreferences = []db.AllDataItem{}
+		} else if err != nil {
+			http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		combinedData["userPreferences"] = userPreferences
+
+		availableFavorites, err := db.GetAvailableFavorites(userID)
+		if err == db.NoUserPreferencesInDB {
+			availableFavorites = []db.DailyItem{}
+		} else if err != nil {
+			http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		combinedData["availableFavorites"] = availableFavorites
+	} else {
+		combinedData["allClosed"] = true
 	}
 
 	// Set the response header to indicate JSON content
@@ -228,6 +289,36 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Return the combined result as JSON
 	if err := json.NewEncoder(w).Encode(combinedData); err != nil {
+		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	setCorsHeaders(w, r)
+
+	// Handle preflight OPTIONS request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	locationOperatingTimes, err := db.GetLocationOperatingTimes()
+	if err != nil {
+		http.Error(w, "Error fetching locationOperatingTimes : "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Combine all data into a single JSON structure
+	labeledData := map[string]interface{}{
+		"locationOperatingTimes": locationOperatingTimes,
+	}
+
+	// Set the response header to indicate JSON content
+	w.Header().Set("Content-Type", "application/json")
+
+	// Return the combined result as JSON
+	if err := json.NewEncoder(w).Encode(labeledData); err != nil {
 		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -262,11 +353,23 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	locationOperatingTimes, err := db.GetLocationOperatingTimes()
+	if err != nil {
+		http.Error(w, "Error fetching location operations: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
-		"dailyItems": dailyItems,
-		"date":       date,
-		"allItems":   allItems,
+		"date":                   date,
+		"allItems":               allItems,
+		"locationOperatingTimes": locationOperatingTimes,
+	}
+
+	if len(dailyItems) > 0 {
+		combinedData["dailyItems"] = dailyItems
+	} else {
+		combinedData["allClosed"] = true
 	}
 
 	// Set the response header to indicate JSON content

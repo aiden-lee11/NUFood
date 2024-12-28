@@ -4,19 +4,8 @@ import AccordionSummary from "@mui/material/AccordionSummary";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import clsx from "clsx";
+import { DailyItem, FavoriteItem } from "../types/ItemTypes";
 
-interface DailyItem {
-  Name: string;
-  Description: string;
-  Location: string;
-  StationName: string;
-  Date: string;
-  TimeOfDay: string;
-}
-
-interface FavoriteItem {
-  Name: string;
-}
 
 interface Props {
   items: DailyItem[];

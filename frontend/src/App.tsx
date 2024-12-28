@@ -9,6 +9,7 @@ import Preferences from './pages/Preferences';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import ReactGA from 'react-ga4';
 import Banner from './components/banner';
+import OperationHours from './pages/OperationHours';
 
 const theme = createTheme({
   colorSchemes: {
@@ -27,6 +28,7 @@ function App() {
         <Banner />
         <Routes>
           <Route path="/" element={<DailyItems />} />
+          <Route path="/hours" element={<OperationHours />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signout" element={<SignOutButton />} />
           <Route path="/preferences" element={<Preferences />} />

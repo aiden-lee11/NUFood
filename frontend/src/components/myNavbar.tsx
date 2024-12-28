@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthProvider'
 const navItemsLeft = [
   { label: 'Home', url: '/' },
   { label: 'All Items', url: '/all' },
+  { label: 'Operation Hours', url: '/hours' },
 ]
 
 function MyNavbar({ children }: { children: ReactNode }) {

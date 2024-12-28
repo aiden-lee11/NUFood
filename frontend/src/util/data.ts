@@ -2,7 +2,8 @@ interface Item {
   Name: string
 }
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+// const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
+const API_URL = 'http://localhost:8081';
 
 export const postUserPreferences = async (preferences: Item[], userToken: string) => {
   try {
@@ -83,11 +84,11 @@ const fetchAndStoreData = async (endpoint: string, keys: string[], authToken?: s
 // Main function for fetching all data
 export const fetchAllData = async (userToken: string | null) => {
   try {
-    const storedData = getStoredData(["allItems", "dailyItems", "availableFavorites", "userPreferences"]);
+    const storedData = getStoredData(["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes"]);
     if (storedData) return storedData;
 
     console.log("New day... fetching new data");
-    return await fetchAndStoreData(`${API_URL}/api/allData`, ["allItems", "dailyItems", "availableFavorites", "userPreferences"], userToken || undefined);
+    return await fetchAndStoreData(`${API_URL}/api/allData`, ["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes"], userToken || undefined);
   } catch (error) {
     console.error("Error fetching all data:", error);
   }
@@ -96,12 +97,26 @@ export const fetchAllData = async (userToken: string | null) => {
 // Main function for fetching general (non-user-exclusive) data
 export const fetchGeneralData = async () => {
   try {
-    const storedData = getStoredData(["allItems", "dailyItems"]);
+    const storedData = getStoredData(["allItems", "dailyItems", "allClosed", "locationOperatingTimes"]);
     if (storedData) return storedData;
 
     console.log("New day... fetching new data");
-    return await fetchAndStoreData(`${API_URL}/api/generalData`, ["allItems", "dailyItems"]);
+    return await fetchAndStoreData(`${API_URL}/api/generalData`, ["allItems", "dailyItems", "allClosed", "locationOperatingTimes"]);
   } catch (error) {
     console.error("Error fetching general data:", error);
   }
 };
+
+
+export const fetchAllLocationOperatingTimes = async () => {
+  try {
+    const storedData = getStoredData(["locationOperatingTimes"]);
+    if (storedData) return storedData;
+
+    console.log("New day... fetching new data");
+    return await fetchAndStoreData(`${API_URL}/api/operatingTimes`, ["locationOperatingTimes"]);
+  } catch (error) {
+    console.error("Error fetching location hours:", error);
+  }
+}
+
