@@ -11,7 +11,6 @@ import (
 	"os"
 )
 
-// Main function takes in flags for if the user wants to scrape, if the user wants to run the Tinder app, and if the user wants to get the favorites.
 func main() {
 	// Load .env file only if not in production
 	if os.Getenv("RENDER") != "true" && os.Getenv("RAILWAY") != "true" {
@@ -38,15 +37,23 @@ func main() {
 
 	fmt.Println("Database initialized successfully")
 
-	// Define the route for getting favorites
-	http.HandleFunc("/api/userPreferences", api.SetUserPreferences)
+	// Define API routes
+
+	// Response Data
 	http.HandleFunc("/api/allData", api.GetAllDataHandler)
 	http.HandleFunc("/api/generalData", api.GetGeneralDataHandler)
 	http.HandleFunc("/api/operatingTimes", api.GetLocationOperatingTimesHandler)
+
+	// Post and response with new data
+	http.HandleFunc("/api/userPreferences", api.SetUserPreferences)
+
+	// Scrape and Save Data
 	http.HandleFunc("/api/scrapeDailyItems", api.ScrapeDailyItemsHandler)
 	http.HandleFunc("/api/scrapeOperatingTimes", api.ScrapeLocationOperatingTimesHandler)
-	http.HandleFunc("/api/deleteDailyItems", api.DeleteDailyItems)
-	http.HandleFunc("/api/deleteOperatingTimes", api.DeleteLocationOperatingTimes)
+
+	// Delete Existing Data (used for development)
+	// http.HandleFunc("/api/deleteDailyItems", api.DeleteDailyItems)
+	// http.HandleFunc("/api/deleteOperatingTimes", api.DeleteLocationOperatingTimes)
 
 	// Start the HTTP server on port 8080
 	http.ListenAndServe(":8081", nil)

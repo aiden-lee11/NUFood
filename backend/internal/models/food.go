@@ -83,20 +83,14 @@ type Filter struct {
 
 // Item Struct for only data that I want to save
 type DailyItem struct {
-	// id string `json:"id"`
-	// name string `json:"name"`
-	// mrn int `json:"mrn"`
-	// rev string `json:"rev"`
-	// mrn_full string `json:"mrn_full"`
+	Name        string
 	Description string `json:"desc"`
-	// webtrition_id string `json:"webtrition_id"`
-	// sort_order int `json:"sort_order"`
-	// portion string `json:"portion"`
-	// qty string `json:"qty"`
-	// ingredients string `json:"ingredients"`
-	// nutrients []Nutrient `json:"nutrients"`
+	Date        string // The date this item is available
+	Location    string // The dining hall location
+	StationName string // The station name
+	TimeOfDay   string // The time of day this item is available
+}
 
-	Name     string
-	Date     string
-	Location string
+type AllDataItem struct {
+	Name string
 }

@@ -15,12 +15,12 @@ import (
 
 // Total funcs in scraper.go
 
-// func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDataItem, error) {
-// func (d *DiningHallScraper) ScrapeOperationHours(date string) ([]models.LocationOperation, error) {
-// func visitOperationHours(c *colly.Collector, url string) ([]models.LocationOperation, error) {
-// func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
-// func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
-// func parseOperationHours(locations []models.LocationOperationInfoJSON) ([]models.LocationOperation, error) {
+// func (d *DiningHallScraper) ScrapeFood(date string) ([]models.DailyItem, []models.AllDataItem, bool, error) {
+// func (d *DiningHallScraper) ScrapeLocationOperatingTimes(date string) ([]models.LocationOperatingTimes, error) {
+// func visitLocationOperatingTimes(c *colly.Collector, url string) ([]models.LocationOperatingTimes, error) {
+// func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, bool, error) {
+// func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, error) {
+// func parseLocationOperatingTimes(locations []models.LocationOperatingInfo) ([]models.LocationOperatingTimes, error) {
 
 // In the future should add unit tests for all the functions that aren't the parent calls ie (ScrapeFood and ScrapeOperationHours), however since the functions that we test are dependent on these functions
 // I am assuming for now that everything is running correctly :D

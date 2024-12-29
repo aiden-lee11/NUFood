@@ -1,7 +1,6 @@
 package scraper
 
 import (
-	"backend/internal/db"
 	"backend/internal/models"
 	"encoding/json"
 	"fmt"
@@ -11,16 +10,21 @@ import (
 	"strings"
 )
 
+// DiningHallScraper represents a scraper for dining hall information.
 type DiningHallScraper struct {
-	Client *http.Client
-	Config ScrapeConfig
+	Client *http.Client // HTTP client for making requests.
+	Config ScrapeConfig // Configuration for scraping dining hall data.
 }
 
+// ScrapeConfig defines the configuration for scraping.
 type ScrapeConfig struct {
-	Locations []models.Location
-	SiteID    string
-	BaseURL   string
+	Locations []models.Location // List of dining hall locations to scrape.
+	SiteID    string            // Site ID for the dining hall API.
+	BaseURL   string            // Base URL for the dining hall API.
 }
+
+// Maximum retries for failed visits
+const MAX_RETRIES = 3
 
 var DefaultConfig = ScrapeConfig{
 	Locations: []models.Location{
@@ -73,12 +77,20 @@ var DefaultConfig = ScrapeConfig{
 	BaseURL: "https://api.dineoncampus.com/v1",
 }
 
-// Maximum retries for failed visits
-const MAX_RETRIES = 3
-
-func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDataItem, bool, error) {
-	var dailyItems []db.DailyItem
-	var allDataItems []db.AllDataItem
+// ScrapeFood scrapes daily menu items for a given date.
+// It iterates through configured locations and services, making API calls to gather menu data.
+//
+// Parameters:
+//   - date: The date for which to scrape food data (e.g., "2024-12-08").
+//
+// Returns:
+//   - []models.DailyItem: A list of daily menu items.
+//   - []models.AllDataItem: A list of all data items.
+//   - bool: Indicates whether all locations are closed.
+//   - error: An error, if any occurred during the scraping process.
+func (d *DiningHallScraper) ScrapeFood(date string) ([]models.DailyItem, []models.AllDataItem, bool, error) {
+	var dailyItems []models.DailyItem
+	var allDataItems []models.AllDataItem
 	allClosed := true
 
 	for _, location := range d.Config.Locations {
@@ -115,7 +127,14 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]db.DailyItem, []db.AllDat
 	return dailyItems, allDataItems, allClosed, nil
 }
 
-// Date needs to be in format like the following example 2024-12-08T06:00:00.000Z
+// ScrapeLocationOperatingTimes scrapes operating times for dining hall locations on a given date.
+//
+// Parameters:
+//   - date: The date for which to scrape operating times (e.g., "2024-12-08").
+//
+// Returns:
+//   - []models.LocationOperatingTimes: A list of operating times for each location.
+//   - error: An error, if any occurred during the scraping process.
 func (d *DiningHallScraper) ScrapeLocationOperatingTimes(date string) ([]models.LocationOperatingTimes, error) {
 	c := colly.NewCollector()
 	c.WithTransport(d.Client.Transport)
@@ -144,6 +163,15 @@ func (d *DiningHallScraper) ScrapeLocationOperatingTimes(date string) ([]models.
 	return locationOperatingTimesList, nil
 }
 
+// visitLocationOperatingTimes visits the API endpoint to fetch operating times for a location.
+//
+// Parameters:
+//   - c: A Colly collector for scraping.
+//   - url: The URL to scrape.
+//
+// Returns:
+//   - []models.LocationOperatingTimes: Parsed operating times for locations.
+//   - error: An error, if any occurred during the scraping process.
 func visitLocationOperatingTimes(c *colly.Collector, url string) ([]models.LocationOperatingTimes, error) {
 	var locationOperatingTimesList []models.LocationOperatingTimes
 
@@ -179,9 +207,22 @@ func visitLocationOperatingTimes(c *colly.Collector, url string) ([]models.Locat
 	return locationOperatingTimesList, nil
 }
 
-func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, bool, error) {
-	var dailyItems []db.DailyItem
-	var allDataItems []db.AllDataItem
+// visitDiningHall visits the API endpoint to fetch menu data for a dining hall.
+//
+// Parameters:
+//   - c: A Colly collector for scraping.
+//   - url: The URL to scrape.
+//   - locationName: The name of the dining hall location.
+//   - timeOfDay: The service time (e.g., "Breakfast", "Lunch", "Dinner").
+//
+// Returns:
+//   - []models.DailyItem: A list of daily menu items.
+//   - []models.AllDataItem: A list of all data items.
+//   - bool: Indicates whether the location is closed.
+//   - error: An error, if any occurred during the scraping process.
+func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, bool, error) {
+	var dailyItems []models.DailyItem
+	var allDataItems []models.AllDataItem
 	closed := false
 
 	c.OnRequest(func(r *colly.Request) {
@@ -228,12 +269,23 @@ func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([
 	return dailyItems, allDataItems, closed, nil
 }
 
-func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, []db.AllDataItem, error) {
+// parseItems parses menu items from the API response.
+//
+// Parameters:
+//   - menu: The menu data from the API response.
+//   - location: The name of the dining hall location.
+//   - timeOfDay: The service time (e.g., "Breakfast", "Lunch", "Dinner").
+//
+// Returns:
+//   - []models.DailyItem: A list of parsed daily menu items.
+//   - []models.AllDataItem: A list of parsed all data items.
+//   - error: An error, if any occurred during parsing.
+func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, error) {
 	categories := menu.Periods.Categories
 	date := menu.Date
 
-	var dailyItems []db.DailyItem
-	var allDataItems []db.AllDataItem
+	var dailyItems []models.DailyItem
+	var allDataItems []models.AllDataItem
 
 	for _, category := range categories {
 		cleanedCategory := strings.ToLower(strings.TrimSpace(category.Name))
@@ -251,10 +303,10 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, [
 				continue
 			}
 
-			itemName := db.AllDataItem{Name: item.Name}
+			itemName := models.AllDataItem{Name: item.Name}
 			allDataItems = append(allDataItems, itemName)
 
-			menuItem := db.DailyItem{
+			menuItem := models.DailyItem{
 				Name:        item.Name,
 				Description: item.Description,
 				Date:        date,
@@ -271,6 +323,14 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]db.DailyItem, [
 	return dailyItems, allDataItems, nil
 }
 
+// parseLocationOperatingTimes parses operating times for multiple locations.
+//
+// Parameters:
+//   - locations: A list of location operation information from the API response.
+//
+// Returns:
+//   - []models.LocationOperatingTimes: A list of parsed operating times for locations.
+//   - error: An error, if any occurred during parsing.
 func parseLocationOperatingTimes(locations []models.LocationOperatingInfo) ([]models.LocationOperatingTimes, error) {
 	fmt.Printf("Posting location operating times for %d locations\n", len(locations))
 	var locationOperatingTimesList []models.LocationOperatingTimes

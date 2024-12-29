@@ -1,3 +1,22 @@
+/**
+ * Component: AllItems
+ * Description:
+ * This component displays a paginated list of items with a search feature, allowing users to select and favorite items.
+ * 
+ * Features:
+ * - Fetches all items and user preferences from the backend or general data if unauthenticated.
+ * - Implements a search functionality using Fuse.js for fuzzy searching.
+ * - Provides pagination for navigating large datasets.
+ * - Allows users to favorite or unfavorite items, with preferences saved to the backend.
+ * - Displays an authentication popup if an unauthenticated user tries to favorite an item.
+ * 
+ * Key Components:
+ * - `fetchAllData`, `fetchGeneralData`: Fetch data based on authentication state.
+ * - `postUserPreferences`: Updates user preferences in the backend.
+ * - `Fuse`: Fuzzy search library for filtering items.
+ * 
+ */
+
 import React, { useState, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
@@ -5,10 +24,8 @@ import clsx from 'clsx';
 import { fetchAllData, fetchGeneralData, postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
+import { Item } from '../types/ItemTypes';
 
-interface Item {
-  Name: string; // Assuming your items have a 'Name' property
-}
 
 const ITEMS_PER_PAGE = 100;
 

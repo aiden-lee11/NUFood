@@ -1,3 +1,21 @@
+/**
+ * DailyItems Component
+ * 
+ * This React component manages and displays daily dining items for users. 
+ * Users can view items, search, filter by preferences (e.g., location, time), and save favorites.
+ * 
+ * Features:
+ * - Fetches daily items and user preferences from an API.
+ * - Implements fuzzy search for item names.
+ * - Allows filtering by location, time of day, and other preferences.
+ * - Supports user authentication for saving favorites.
+ * 
+ * Props: None
+ * 
+ * Author: Aiden Lee
+ * Date: 12-28-24
+ */
+
 import React, { useState, useEffect } from 'react'
 import { fetchAllData, fetchGeneralData, postUserPreferences } from '../util/data';
 import Fuse from 'fuse.js';
@@ -84,8 +102,6 @@ const DailyItems: React.FC = () => {
   useEffect(() => {
     const processData = (data: GeneralDataResponse | UserDataResponse) => {
       if (!data.allClosed) {
-        // setAllClosed(true);
-        // } else {
         const locations: string[] = Array.from(new Set(data.dailyItems?.map((item: DailyItem) => item.Location) || []));
         setLocations(locations);
         setDailyItems(data.dailyItems || []);

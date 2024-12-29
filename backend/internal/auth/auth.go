@@ -16,6 +16,22 @@ import (
 var firebaseAuth *auth.Client
 
 // FirebaseConfig represents the structure of the Firebase configuration JSON.
+//
+// This struct is used to define the structure of the configuration required to initialize Firebase.
+// It holds details such as credentials, project ID, and URI values.
+//
+// Fields:
+//   - Type: The type of the service account (usually "service_account").
+//   - ProjectID: The project ID for the Firebase project.
+//   - PrivateKeyID: The ID of the private key.
+//   - PrivateKey: The private key itself.
+//   - ClientEmail: The email associated with the Firebase service account.
+//   - ClientID: The client ID associated with the Firebase project.
+//   - AuthURI: The URI for Firebase authentication.
+//   - TokenURI: The URI for token authentication.
+//   - AuthProviderX509CertURL: URL for the Firebase provider's certificate.
+//   - ClientX509CertURL: URL for the Firebase client's certificate.
+//   - UniverseDomain: The Firebase domain (optional).
 type FirebaseConfig struct {
 	Type                    string `json:"type"`
 	ProjectID               string `json:"project_id"`
@@ -30,7 +46,16 @@ type FirebaseConfig struct {
 	universe_domain         string `json:universe_domain`
 }
 
-// CreateFirebaseConfig creates and writes a Firebase JSON configuration file
+// CreateFirebaseConfig creates and writes a Firebase JSON configuration file.
+//
+// This function generates a Firebase configuration file using the environment variables
+// and writes it to the specified filename.
+//
+// Parameters:
+//   - filename: The path to the configuration file to be created.
+//
+// Returns:
+//   - error: Returns an error if the file could not be created or marshaled, otherwise nil.
 func CreateFirebaseConfig(filename string) error {
 	config := FirebaseConfig{
 		Type:                    os.Getenv("FIREBASE_TYPE"),
@@ -62,9 +87,20 @@ func CreateFirebaseConfig(filename string) error {
 	return nil
 }
 
-// Initialize Firebase SDK with credentials
+// InitFirebase initializes the Firebase SDK with credentials from a file.
+//
+// This function loads Firebase credentials from the environment or a specified file.
+// It returns an error if there is an issue with the initialization.
+//
+// Expected Behavior:
+//   - Creates a Firebase configuration file if running on Railway, otherwise uses an existing credentials file.
+//   - Initializes the Firebase app and retrieves the authentication client.
+//
+// Returns:
+//   - error: Returns an error if the Firebase app initialization fails, otherwise nil.
 func InitFirebase() error {
-	credentials := "firebase_keys.json" // Replace this with the relative path to your key file
+	// Replace this with the relative path to your key file
+	credentials := "firebase_keys.json"
 
 	if os.Getenv("RAILWAY") == "true" {
 		err := CreateFirebaseConfig(credentials)
@@ -89,6 +125,16 @@ func InitFirebase() error {
 }
 
 // VerifyIDToken verifies a Firebase ID token and returns the decoded token.
+//
+// This function checks if the provided Authorization header contains a valid Firebase ID token.
+// It parses the token, verifies its authenticity, and returns the decoded token if valid.
+//
+// Parameters:
+//   - authHeader: The "Authorization" header value from the request, which should include the "Bearer" token.
+//
+// Returns:
+//   - *auth.Token: The decoded Firebase ID token if the token is valid.
+//   - error: An error indicating why the token is invalid or missing.
 func VerifyIDToken(authHeader string) (*auth.Token, error) {
 	if authHeader == "" {
 		return nil, errors.New("missing Authorization header")

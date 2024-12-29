@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAllData, postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
+import { FavoriteItem } from '../types/ItemTypes';
 
-interface FavoriteItem {
-  Name: string;
-}
 
 const Preferences: React.FC = () => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);

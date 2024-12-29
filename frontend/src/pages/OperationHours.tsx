@@ -1,3 +1,22 @@
+/**
+ * Component: OperationHours
+ * Description:
+ * This component displays the operating hours for various dining locations grouped by category.
+ * 
+ * Features:
+ * - Fetches operating hours data from the backend.
+ * - Dynamically generates tables and card layouts to display location hours.
+ * - Supports responsive design for mobile and desktop views.
+ * 
+ * Key Components:
+ * - `fetchAllLocationOperatingTimes`: Fetches operating hours from the backend.
+ * - `formatHours`: Formats the time range for display.
+ * - Tables for larger screens and cards for smaller screens.
+ * 
+ * TODO:
+ * - Improve the responsiveness for mobile views.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { fetchAllLocationOperatingTimes } from '../util/data';
 import { getWeekday, formatTime } from '../util/helper';
@@ -102,46 +121,6 @@ const OperationHours: React.FC = () => {
   );
 
 };
-// return (
-// <div>
-//   {Object.keys(locationGrouping).map((group) => (
-//     <div key={group} className="overflow-x-auto mb-8">
-//       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">{group}</h2>
-//         <Table grid className="min-w-full table-auto">
-//           <TableHead>
-//             <TableRow>
-//               <TableHeader className="p-2">Location</TableHeader>
-//               {locationOperatingTimes?.[0]?.Week?.map((day) => (
-//                 <TableHeader key={day.Date} className="p-2">
-//                   {getWeekday(parseInt(day.Day))}
-//                     <br />
-//                   ({day.Date.slice(5)})
-//                 </TableHeader>
-//               ))}
-//             </TableRow>
-//           </TableHead>
-//           <TableBody>
-//             {locationGrouping[group].map((location) => {
-//               const locationData = locationOperatingTimes.find((data) => data.Name === location);
-//               return (
-//                 <TableRow key={location}>
-//                   <TableCell className="p-2">{location}</TableCell>
-//                     {locationData?.Week.map((day) => {
-//                       const hours = day?.Hours
-//                       return (
-//                         <TableCell key={day.Date} className="p-2">
-//                           {formatHours(hours)}
-//                           </TableCell>
-//                       );
-//                     })}
-//                   </TableRow>
-//               );
-//             })}
-//           </TableBody>
-//         </Table>
-//       </div>
-//   ))}
-//   </div>
-// );
+
 export default OperationHours;
 

@@ -3,6 +3,7 @@ package api
 import (
 	"backend/internal/auth"
 	"backend/internal/db"
+	"backend/internal/models"
 	"backend/internal/scraper"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,13 @@ import (
 	"time"
 )
 
+// setCorsHeaders sets the necessary CORS headers for the HTTP response.
+//
+// This function allows requests from specific origins and sets headers for allowed methods and content types.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func setCorsHeaders(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 	if origin == "http://localhost:5173" || origin == "https://www.nufood.me" {
@@ -20,6 +28,17 @@ func setCorsHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }
 
+// DeleteDailyItems deletes all daily items from the database.
+//
+// This handler expects no request body and no special authorization.
+// It responds with an HTTP status code indicating the result of the operation.
+//
+// Expected Authorization:
+//   - No special authorization required.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func DeleteDailyItems(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
@@ -40,6 +59,17 @@ func DeleteDailyItems(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// DeleteLocationOperatingTimes deletes all location operating times from the database.
+//
+// This handler expects no request body and no special authorization.
+// It responds with an HTTP status code indicating the result of the operation.
+//
+// Expected Authorization:
+//   - No special authorization required.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
@@ -60,6 +90,17 @@ func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// ScrapeDailyItemsHandler scrapes daily dining hall items and updates the database.
+//
+// This handler expects no request body but requires no authorization for the request.
+// It responds with an HTTP status code indicating the result of the scraping operation.
+//
+// Expected Authorization:
+//   - No special authorization required.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set CORS headers
@@ -96,6 +137,17 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// ScrapeLocationOperatingTimesHandler scrapes dining hall location operating times and updates the database.
+//
+// This handler expects no request body but requires no authorization for the request.
+// It responds with an HTTP status code indicating the result of the scraping operation.
+//
+// Expected Authorization:
+//   - No special authorization required.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set CORS headers
@@ -133,6 +185,20 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 }
 
+// SetUserPreferences saves user food preferences to the database.
+//
+// This handler expects a JSON body containing an array of `models.AllDataItem` objects representing the user's preferences.
+// It requires an Authorization header containing a valid Firebase ID token.
+//
+// Expected Authorization:
+//   - Authorization header containing a Firebase ID token (Bearer token).
+//
+// Expected Body:
+//   - A JSON array of `models.AllDataItem` objects representing the user's food preferences.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
@@ -160,7 +226,7 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read and parse the JSON body
-	var favorites []db.AllDataItem
+	var favorites []models.AllDataItem
 
 	// Read the request body
 	body, err := io.ReadAll(r.Body)
@@ -201,6 +267,19 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetAllDataHandler retrieves and combines all relevant dining hall data for the user.
+//
+// This handler expects an Authorization header containing a valid Firebase ID token. It combines daily items, location operating times, and user preferences into a single JSON response.
+//
+// Expected Authorization:
+//   - Authorization header containing a Firebase ID token (Bearer token).
+//
+// Expected Body:
+//   - No body is expected in this request.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
@@ -265,7 +344,7 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 
 		userPreferences, err := db.GetUserPreferences(userID)
 		if err == db.NoUserPreferencesInDB {
-			userPreferences = []db.AllDataItem{}
+			userPreferences = []models.AllDataItem{}
 		} else if err != nil {
 			http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -274,7 +353,7 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 
 		availableFavorites, err := db.GetAvailableFavorites(userID)
 		if err == db.NoUserPreferencesInDB {
-			availableFavorites = []db.DailyItem{}
+			availableFavorites = []models.DailyItem{}
 		} else if err != nil {
 			http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -293,6 +372,19 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetLocationOperatingTimesHandler retrieves dining hall location operating times from the database.
+//
+// This handler expects no request body and responds with location operating times in JSON format.
+//
+// Expected Authorization:
+//   - No special authorization required.
+//
+// Expected Body:
+//   - No body is expected in this request.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)
@@ -323,6 +415,19 @@ func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetGeneralDataHandler retrieves general dining hall data.
+//
+// This handler expects no request body but responds with general data, including daily items, location operating times, and other relevant information in JSON format.
+//
+// Expected Authorization:
+//   - No special authorization required.
+//
+// Expected Body:
+//   - No body is expected in this request.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
 func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	setCorsHeaders(w, r)

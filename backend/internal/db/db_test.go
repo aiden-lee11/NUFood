@@ -12,21 +12,21 @@ import (
 
 // Total functions in db.go
 
-// func AllDataItemToGorm(item AllDataItem) GormAllDataItem {
-// func DailyItemToGorm(item DailyItem) GormDailyItem {
+// func AllDataItemToGorm(item models.AllDataItem) GormAllDataItem {
+// func DailyItemToGorm(item models.DailyItem) GormDailyItem {
 // func InitDB(databasePath string) error {
-// func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
-// func InsertDailyItems(items []DailyItem, allClosed bool) error {
-// func DeleteDailyItems() error {
-// func ReturnDateOfDailyItems() (date string, err error) {
-// func InsertAllDataItems(items []AllDataItem, allClosed bool) error {
-// func SaveUserPreferences(userID string, favorites []AllDataItem) error {
-// func GetAvailableFavorites(userID string) ([]DailyItem, error) {
-// func GetUserPreferences(userID string) ([]AllDataItem, error) {
-// func GetAllDataItems() ([]AllDataItem, error) {
-// func GetAllDailyItems() ([]DailyItem, error) {
+// func InsertDailyItems(items []models.DailyItem, allClosed bool) error {
+// func InsertAllDataItems(items []models.AllDataItem, allClosed bool) error {
 // func InsertLocationOperatingTimes(locations []models.LocationOperatingTimes) error {
+// func SaveUserPreferences(userID string, favorites []models.AllDataItem) error {
+// func ReturnDateOfDailyItems() (date string, err error) {
+// func GetAllDailyItems() ([]models.DailyItem, error) {
+// func GetAllDataItems() ([]models.AllDataItem, error) {
 // func GetLocationOperatingTimes() ([]models.LocationOperatingTimes, error) {
+// func GetUserPreferences(userID string) ([]models.AllDataItem, error) {
+// func FindFavoriteItemInDailyItems(favorite string) ([]models.DailyItem, error) {
+// func GetAvailableFavorites(userID string) ([]models.DailyItem, error) {
+// func DeleteDailyItems() error {
 // func DeleteLocationOperatingTimes() error {
 
 func setupTestDB(t *testing.T) *gorm.DB {
@@ -39,7 +39,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err, "Failed to initialize test database")
 
 	// Apply migrations
-	err = DB.AutoMigrate(&db.GormDailyItem{}, &db.GormAllDataItem{}, &db.UserPreferences{}, &db.GormLocationOperatingTimes{})
+	err = DB.AutoMigrate(&db.GormDailyItem{}, &db.GormAllDataItem{}, &db.GormUserPreferences{}, &db.GormLocationOperatingTimes{})
 	if err != nil {
 		t.Fatalf("Failed to migrate schema: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestDailyItemLifetime(t *testing.T) {
 	// Override the global DB variable in your `db` package
 	db.DB = testDB
 
-	dailyItems := []db.DailyItem{
+	dailyItems := []models.DailyItem{
 		{
 			Name:        "Bacon",
 			Description: "Delicious bacon",
@@ -286,7 +286,7 @@ func TestDailyItemAllClosed(t *testing.T) {
 	// Override the global DB variable in your `db` package
 	db.DB = testDB
 
-	err := db.InsertDailyItems([]db.DailyItem{}, true)
+	err := db.InsertDailyItems([]models.DailyItem{}, true)
 
 	require.NoError(t, err, "Error inserting all closed daily items")
 
@@ -314,7 +314,7 @@ func TestAllDataItemLifetime(t *testing.T) {
 	// Override the global DB variable in your `db` package
 	db.DB = testDB
 
-	allDataItems := []db.AllDataItem{
+	allDataItems := []models.AllDataItem{
 		{Name: "Bacon"},
 		{Name: "Eggs"},
 	}
@@ -341,7 +341,7 @@ func TestUserPreferencesLifetime(t *testing.T) {
 	// Override the global DB variable in your `db` package
 	db.DB = testDB
 
-	initialAllDataItems := []db.AllDataItem{
+	initialAllDataItems := []models.AllDataItem{
 		{Name: "Bacon"},
 		{Name: "Eggs"},
 		{Name: "Skirt Steak"},
@@ -360,7 +360,7 @@ func TestUserPreferencesLifetime(t *testing.T) {
 	}
 
 	// Add a new items to the user preferences
-	additionalDataItems := []db.AllDataItem{
+	additionalDataItems := []models.AllDataItem{
 		{Name: "Mac and Cheese"},
 		{Name: "Baked Ziti"},
 	}
@@ -405,7 +405,7 @@ func TestAvailableFavorites(t *testing.T) {
 	db.DB = testDB
 
 	// Insert daily items to be looked up
-	dailyItems := []db.DailyItem{
+	dailyItems := []models.DailyItem{
 		{
 			Name:        "Bacon",
 			Description: "Delicious bacon",
@@ -428,7 +428,7 @@ func TestAvailableFavorites(t *testing.T) {
 	require.NoError(t, err, "Error inserting daily items")
 
 	// Set up a user's preferences
-	initialPreferences := []db.AllDataItem{
+	initialPreferences := []models.AllDataItem{
 		{Name: "Bacon"},
 		{Name: "Eggs"},
 	}

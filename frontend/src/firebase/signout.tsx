@@ -12,9 +12,6 @@ const SignOutButton = () => {
     sessionStorage.removeItem('userPreferences');
     sessionStorage.removeItem('availableFavorites');
 
-    // Remove user specific data from local storage
-    localStorage.removeItem('t');
-
     setLoading(true);
     try {
       await signOut(auth);
