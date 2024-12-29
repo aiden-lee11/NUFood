@@ -108,7 +108,7 @@ const OperationHours: React.FC = () => {
                   {locationData?.Week.map((day) => (
                     <div key={day.Date} className="flex justify-between text-sm border-t border-gray-200 py-2">
                       <span className="text-gray-600 dark:text-gray-400">{getWeekday(parseInt(day.Day))}</span>
-                      <span className="text-gray-800 dark:text-gray-200">{formatHours(day?.Hours)}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{day.Status == "closed" ? "Closed" : formatHours(day?.Hours)}</span>
                     </div>
                   ))}
                 </div>
