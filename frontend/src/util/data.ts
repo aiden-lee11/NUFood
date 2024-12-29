@@ -2,8 +2,7 @@ interface Item {
   Name: string
 }
 
-// const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
-const API_URL = 'http://localhost:8081';
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 export const postUserPreferences = async (preferences: Item[], userToken: string) => {
   try {

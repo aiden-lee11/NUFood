@@ -294,7 +294,7 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyIte
 			continue
 		}
 
-		station_name := category.Name
+		stationName := category.Name
 
 		for _, item := range category.Items {
 			cleanedItem := strings.ToLower(strings.TrimSpace(item.Name))
@@ -311,7 +311,7 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyIte
 				Description: item.Description,
 				Date:        date,
 				Location:    location,
-				StationName: station_name,
+				StationName: stationName,
 				TimeOfDay:   timeOfDay,
 			}
 
