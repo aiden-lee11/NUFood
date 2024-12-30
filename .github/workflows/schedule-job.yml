@@ -9,8 +9,6 @@ jobs:
   run-curl:
     runs-on: ubuntu-latest
     steps:
-      - name: Install curl
-        run: apt-get update && apt-get install -y curl
       - name: Determine day of the week
         id: day-of-week
         run: echo "DAY_OF_WEEK=$(date +'%u')" >> $GITHUB_ENV
