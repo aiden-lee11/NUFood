@@ -332,24 +332,24 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userPreferences, err := db.GetUserPreferences(userID)
+	if err == db.NoUserPreferencesInDB {
+		userPreferences = []models.AllDataItem{}
+	} else if err != nil {
+		http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	combinedData := map[string]interface{}{
 		"date":                   date,
 		"allItems":               allItems,
 		"locationOperatingTimes": locationOperatingTimes,
+		"userPreferences":        userPreferences,
 	}
 
 	// Data to only fetch if there exists dailyItems that day
 	if len(dailyItems) > 0 {
 		combinedData["dailyItems"] = dailyItems
-
-		userPreferences, err := db.GetUserPreferences(userID)
-		if err == db.NoUserPreferencesInDB {
-			userPreferences = []models.AllDataItem{}
-		} else if err != nil {
-			http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		combinedData["userPreferences"] = userPreferences
 
 		availableFavorites, err := db.GetAvailableFavorites(userID)
 		if err == db.NoUserPreferencesInDB {
