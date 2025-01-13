@@ -12,7 +12,6 @@ interface Props {
   availableFavorites: DailyItem[];
   handleItemClick: (item: DailyItem) => void;
   expandFolders: boolean;
-  location: string;
 }
 
 const DailyItemAccordion: React.FC<Props> = ({
@@ -20,7 +19,6 @@ const DailyItemAccordion: React.FC<Props> = ({
   availableFavorites,
   handleItemClick,
   expandFolders,
-  location,
 }) => {
   // Group items by StationName
   const itemsByStation = items.reduce<Record<string, DailyItem[]>>((acc, item) => {

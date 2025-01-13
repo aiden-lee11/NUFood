@@ -69,7 +69,6 @@ const LocationItemGrid: React.FC<LocationProps> = ({
                             availableFavorites={filteredAvailableFavorites} // Pass filtered favorites
                             handleItemClick={handleItemClick} // Pass click handler
                             expandFolders={expandFolders}
-                            location={location}
                           />
                         </div>
                       )
