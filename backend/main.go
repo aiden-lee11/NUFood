@@ -2,7 +2,9 @@ package main
 
 import (
 	"backend/internal/api"
+	"backend/internal/auth"
 	"backend/internal/db"
+	"backend/internal/middleware"
 	"fmt"
 	"github.com/joho/godotenv"
 	"log"
@@ -10,14 +12,17 @@ import (
 	"os"
 )
 
-// Main function takes in flags for if the user wants to scrape, if the user wants to run the Tinder app, and if the user wants to get the favorites.
 func main() {
 	// Load .env file only if not in production
-	if os.Getenv("RENDER") != "true" {
+	if os.Getenv("RENDER") != "true" && os.Getenv("RAILWAY") != "true" {
 		env_err := godotenv.Load()
 		if env_err != nil {
 			log.Printf("Error loading .env file: %v", env_err)
 		}
+	}
+
+	if err := auth.InitFirebase(); err != nil {
+		log.Fatalf("Error initializing Firebase: %v", err)
 	}
 
 	POSTGRES_URL := os.Getenv("POSTGRES_URL")
@@ -33,13 +38,32 @@ func main() {
 
 	fmt.Println("Database initialized successfully")
 
-	// Define the route for getting favorites
-	http.HandleFunc("/api/favorites", api.GetAvailableFavoritesHandler)
-	http.HandleFunc("/api/data", api.GetAllDataItemsHander)
-	http.HandleFunc("/api/userPreferences", api.UserPreferencesHandler)
-	http.HandleFunc("/api/dailyItems", api.GetAllDailyItemsHander)
-	http.HandleFunc("/api/scrapeDailyItems", api.ScrapeDailyItemsHandler)
-	http.HandleFunc("/api/scrapeHistorical", api.ScrapeHistoricalItemsHandler)
+	// Define API routes
+
+	// Response Data
+	http.HandleFunc("GET /api/allData", middleware.CorsMiddleware(middleware.AuthMiddleware(api.GetAllDataHandler)))
+	http.HandleFunc("OPTIONS /api/allData", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
+	http.HandleFunc("GET /api/generalData", middleware.CorsMiddleware(api.GetGeneralDataHandler))
+	http.HandleFunc("OPTIONS /api/generalData", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
+	http.HandleFunc("GET /api/operatingTimes", middleware.CorsMiddleware(api.GetLocationOperatingTimesHandler))
+	http.HandleFunc("OPTIONS /api/operatingTimes", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
+	// Post and response with new data
+	http.HandleFunc("POST /api/userPreferences", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserPreferences)))
+	http.HandleFunc("OPTIONS /api/userPreferences", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
+	// Scrape and Save Data
+	http.HandleFunc("GET /api/scrapeDailyItems", middleware.CorsMiddleware(api.ScrapeDailyItemsHandler))
+	http.HandleFunc("OPTIONS /api/scrapeDailyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
+	http.HandleFunc("GET /api/scrapeOperatingTimes", middleware.CorsMiddleware(api.ScrapeLocationOperatingTimesHandler))
+	http.HandleFunc("OPTIONS /api/scrapeOperatingTimes", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
+	// Delete Existing Data (used for development)
+	// http.HandleFunc("DELETE /api/deleteDailyItems", api.DeleteDailyItems)
+	// http.HandleFunc("DELETE /api/deleteOperatingTimes", api.DeleteLocationOperatingTimes)
 
 	// Start the HTTP server on port 8080
 	http.ListenAndServe(":8081", nil)

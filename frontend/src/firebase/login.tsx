@@ -1,22 +1,21 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  signInWithPopup,
-  GoogleAuthProvider,
-} from "firebase/auth";
-import GoogleButton from 'react-google-button';
-import { auth } from '../firebase'; // Adjust the path if needed
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from '../firebase';
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { FcGoogle } from "react-icons/fc";
+import { useToast } from "@/hooks/use-toast"
 
 export default function Login() {
   const navigate = useNavigate();
   const googleAuth = new GoogleAuthProvider();
-
+  const { toast } = useToast();
 
   const login = async () => {
     try {
-
       if (!auth || !googleAuth) {
-        throw new Error("Authentication or Google Auth is not initialized ");
+        throw new Error("Authentication or Google Auth is not initialized");
       }
 
       const result = await signInWithPopup(auth, googleAuth);
@@ -25,12 +24,21 @@ export default function Login() {
         throw new Error("Login failed: No user found");
       }
 
+      localStorage.setItem('t', 'true');
+      toast({
+        title: "Login Successful",
+        description: "Welcome to NU Food Finder!",
+      })
       navigate("/");
     } catch (error) {
       console.error(error);
+      toast({
+        title: "Login Failed",
+        description: "An error occurred during login. Please try again.",
+        variant: "destructive",
+      })
     }
   };
-
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -42,29 +50,25 @@ export default function Login() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold text-white mb-4">Welcome to NU Food Finder</h1>
-        <p className="text-2xl text-white">Find out what's cooking at Northwestern</p>
-      </div>
-
-      <div className="bg-purple-600 p-12 rounded-xl shadow-2xl max-w-2xl w-full">
-        <div className="text-center mb-10">
-          <h2 className="text-4xl font-bold text-white mb-4">Enjoy your stay!</h2>
-        </div>
-
-        <div className="mb-10 flex justify-center">
-          <img src="/images/NUDining.jpg" alt="NUDining" className="h-48 rounded-lg shadow-md" />
-        </div>
-
-        <div className="flex flex-col items-center">
-          <GoogleButton
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#030711]">
+      <Card className="w-full max-w-md bg-[#1a1d24] text-white border-gray-700">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold mb-2">Welcome to NU Food!</CardTitle>
+          <CardDescription className="text-gray-400">Find out what's cooking at Northwestern</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6 flex justify-center">
+            <img src="/images/NUDining.jpg" alt="NUDining" className="h-40 rounded-lg shadow-md transition-transform duration-300 hover:scale-105" />
+          </div>
+          <Button
             onClick={login}
-            style={{ width: '80%', height: '50px', borderRadius: '25px' }}
-          />
-        </div>
-      </div>
+            className="w-full h-12 bg-white hover:bg-gray-100 text-black font-semibold transition-all duration-300 ease-in-out transform hover:scale-105"
+          >
+            <FcGoogle className="mr-2 h-5 w-5" /> Sign in with Google
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
-};
+}
 

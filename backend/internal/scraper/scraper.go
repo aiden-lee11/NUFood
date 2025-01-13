@@ -1,214 +1,347 @@
 package scraper
 
 import (
-	"backend/internal/db"
+	"backend/internal/models"
 	"encoding/json"
 	"fmt"
 	"github.com/gocolly/colly"
 	"log"
 	"net/http"
-	"time"
+	"strings"
 )
 
-// TODO add google calendar functionality so it scrapes the following days menu and then adds possible favorites and their locations and times to a google calendar
-
-type DailyItem struct {
-	Name        string
-	Description string `json:"desc"`
-	Date        string
-	Location    string
+// DiningHallScraper represents a scraper for dining hall information.
+type DiningHallScraper struct {
+	Client *http.Client // HTTP client for making requests.
+	Config ScrapeConfig // Configuration for scraping dining hall data.
 }
 
-type Location struct {
-	Name       string
-	Hash       string
-	Services   []Service
-	DailyItems []DailyItem
+// ScrapeConfig defines the configuration for scraping.
+type ScrapeConfig struct {
+	Locations []models.Location // List of dining hall locations to scrape.
+	SiteID    string            // Site ID for the dining hall API.
+	BaseURL   string            // Base URL for the dining hall API.
 }
 
-type Period struct {
-	Name       string     `json:"name"`
-	Categories []Category `json:"categories"`
-	ID         string     `json:"id"`
+// Maximum retries for failed visits
+const MAX_RETRIES = 3
+
+var DefaultConfig = ScrapeConfig{
+	Locations: []models.Location{
+		{
+			Name: "Allison",
+			Hash: "5b33ae291178e909d807593d",
+			Services: []models.Service{
+				{TimeOfDay: "Breakfast", Hash: "677822c2c625af074ef5cd6b"},
+				{TimeOfDay: "Lunch", Hash: "677822c2c625af074ef5cd81"},
+				{TimeOfDay: "Dinner", Hash: "677822c2c625af074ef5cd97"},
+			},
+		},
+		{
+			Name: "Sargent",
+			Hash: "5b33ae291178e909d807593e",
+			Services: []models.Service{
+				{TimeOfDay: "Breakfast", Hash: "677951c9351d53052c3afdd9"},
+				{TimeOfDay: "Lunch", Hash: "677951c9351d53052c3afdf7"},
+				{TimeOfDay: "Dinner", Hash: "677951c9351d53052c3afde8"},
+			},
+		},
+		{
+			Name: "Plex East",
+			Hash: "5bae7de3f3eeb60c7d3854ba",
+			Services: []models.Service{
+				{TimeOfDay: "Breakfast", Hash: "67788534351d53055628527f"},
+				{TimeOfDay: "Lunch", Hash: "67788534351d53055628528f"},
+				{TimeOfDay: "Dinner", Hash: "67788534351d53055628529a"},
+			},
+		},
+		{
+			Name: "Plex West",
+			Hash: "5bae7ee9f3eeb60cb4f8f3af",
+			Services: []models.Service{
+				{TimeOfDay: "Lunch", Hash: "67788534351d5305562852a6"},
+				{TimeOfDay: "Dinner", Hash: "67788534351d5305562852a0"},
+			},
+		},
+		{
+			Name: "Elder",
+			Hash: "5d113c924198d409c34fdf5c",
+			Services: []models.Service{
+				{TimeOfDay: "Breakfast", Hash: "677785c8351d53054024699c"},
+				{TimeOfDay: "Lunch", Hash: "677785c8351d5305402469b0"},
+				{TimeOfDay: "Dinner", Hash: "677785c8351d530540246995"},
+			},
+		},
+	},
+	SiteID:  "5acea5d8f3eeb60b08c5a50d",
+	BaseURL: "https://api.dineoncampus.com/v1",
 }
 
-type Category struct {
-	Items []DailyItem `json:"items"`
-	Name  string      `json:"name"`
-}
+// ScrapeFood scrapes daily menu items for a given date.
+// It iterates through configured locations and services, making API calls to gather menu data.
+//
+// Parameters:
+//   - date: The date for which to scrape food data (e.g., "2024-12-08").
+//
+// Returns:
+//   - []models.DailyItem: A list of daily menu items.
+//   - []models.AllDataItem: A list of all data items.
+//   - bool: Indicates whether all locations are closed.
+//   - error: An error, if any occurred during the scraping process.
+func (d *DiningHallScraper) ScrapeFood(date string) ([]models.DailyItem, []models.AllDataItem, bool, error) {
+	var dailyItems []models.DailyItem
+	var allDataItems []models.AllDataItem
+	allClosed := true
 
-type Menu struct {
-	Periods Period
-	Date    string `json:"date"`
-}
-
-type Service struct {
-	TimeOfDay string
-	Hash      string
-}
-
-type Response struct {
-	Menu Menu `json:"menu"`
-}
-
-func ScrapeAndSave(date string) error {
-	locations := []Location{
-		{Name: "Allison", Hash: "5b33ae291178e909d807593d", Services: []Service{
-			{"Breakfast", "66e1fc2de45d43074be3a0e5"},
-			{"Lunch", "66e1fc2de45d43074be3a0fb"},
-			{"Dinner", "66e1fc2de45d43074be3a111"},
-		}},
-		{Name: "Sargent", Hash: "5b33ae291178e909d807593e", Services: []Service{
-			{"Breakfast", "66e97bac351d530685467360"},
-			{"Lunch", "66e97bac351d53068546737e"},
-			{"Dinner", "66e97bac351d53068546736f"},
-		}},
-		{Name: "Plex West", Hash: "5bae7de3f3eeb60c7d3854ba", Services: []Service{
-			{"Breakfast", "66e99466351d5306ad498440"},
-			{"Lunch", "66e99466351d5306ad498450"},
-			{"Dinner", "66e99466351d5306ad49845b"},
-		}},
-		{Name: "Plex East", Hash: "5bae7ee9f3eeb60cb4f8f3af", Services: []Service{
-			{"Lunch", "66e99466351d5306ad498467"},
-			{"Dinner", "66e99466351d5306ad498461"},
-		}},
-		{Name: "Elder", Hash: "5d113c924198d409c34fdf5c", Services: []Service{
-			{"Breakfast", "66e43426c625af07233bfef2"},
-			{"Lunch", "66e43426c625af07233bff01"},
-			{"Dinner", "66e85380351d5306adcbcbcd"},
-		}},
-	}
-	baseURL := "https://api.dineoncampus.com/v1/location/"
-
-	// Check if we need to rescrape the daily items
-	previousDate, err := db.ReturnDateOfDailyItems()
-	if err != nil && err != db.NoItemsInDB {
-		log.Printf("Error getting date of daily items: %v", err)
-		return err
-	}
-	rescrapeDaily := date != previousDate
-	if rescrapeDaily {
-		db.DeleteDailyItems()
-	}
-	// Create an HTTP client with a 30-second timeout
-	client := &http.Client{
-		Timeout: 30 * time.Second, // Set timeout to 30 seconds
-	}
-
-	// Set the HTTP client with timeout to the collector
-
-	for _, location := range locations {
+	for _, location := range d.Config.Locations {
 		for _, service := range location.Services {
 			c := colly.NewCollector()
-			c.WithTransport(client.Transport)
+			c.WithTransport(d.Client.Transport)
 
-			locationName := location.Name
+			url := fmt.Sprintf("%s/location/%s/periods/%s?platform=0&date=%s", d.Config.BaseURL, location.Hash, service.Hash, date)
 
-			c.OnRequest(func(r *colly.Request) {
-				r.Ctx.Put("locationName", locationName)
-			})
-
-			c.OnResponse(func(r *colly.Response) {
-				locName := r.Ctx.Get("locationName")
-				var jsonResponse Response
-				err := json.Unmarshal(r.Body, &jsonResponse)
+			err := RetryRequest(url, MAX_RETRIES, func() error {
+				dItems, aItems, closed, err := visitDiningHall(c, url, location.Name, service.TimeOfDay)
 				if err != nil {
-					log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
-					return
+					return err
 				}
 
-				err = postItemsToAllandDaily(jsonResponse, service, locName, rescrapeDaily)
-				if err != nil {
-					log.Printf("Error posting items for %s: %v", locName, err)
+				if !closed {
+					allClosed = false
 				}
 
+				dailyItems = append(dailyItems, dItems...)
+				allDataItems = append(allDataItems, aItems...)
+
+				return nil
 			})
 
-			c.OnError(func(r *colly.Response, err error) {
-				log.Printf("Error for %s: %v", location.Name, err)
-			})
-
-			url := baseURL + location.Hash + "/periods/" + service.Hash + "?platform=0&date=" + date
-			if err := c.Visit(url); err != nil {
-				log.Printf("Failed to visit URL %s: %v", url, err)
-				return err // Return the error to the caller
+			if err != nil {
+				log.Printf("All retries failed for URL: %s", url)
+				return nil, nil, allClosed, err
 			}
 		}
 	}
 
-	return nil
+	fmt.Println("Scraping successful")
+	return dailyItems, allDataItems, allClosed, nil
 }
 
-func postItemsToAllandDaily(jsonResponse Response, service Service, location string, rescrapeDaily bool) error {
-	categories := jsonResponse.Menu.Periods.Categories
+// ScrapeLocationOperatingTimes scrapes operating times for dining hall locations on a given date.
+//
+// Parameters:
+//   - date: The date for which to scrape operating times (e.g., "2024-12-08").
+//
+// Returns:
+//   - []models.LocationOperatingTimes: A list of operating times for each location.
+//   - error: An error, if any occurred during the scraping process.
+func (d *DiningHallScraper) ScrapeLocationOperatingTimes(date string) ([]models.LocationOperatingTimes, error) {
+	c := colly.NewCollector()
+	c.WithTransport(d.Client.Transport)
 
-	date := jsonResponse.Menu.Date
+	url := fmt.Sprintf("%s/locations/weekly_schedule/?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
 
-	nonIngredientCategories := map[string]bool{
-		"Comfort":                        true,
-		"Comfort 1":                      true,
-		"Comfort 2":                      true,
-		"Grill - Available Upon Request": true,
-		"Bakery-Dessert":                 true,
-		"500 Degrees":                    true,
-		"500 Degrees 1":                  true,
-		"Soup":                           true,
-		"Rice Cooker":                    true,
-		"Kitchen Entree":                 true,
-		"Kitchen Sides":                  true,
-		"Flame":                          true,
-		"Kosher":                         true,
-		"Pure Eats":                      true,
-		"Pure Eat 1":                     true,
-		"Pure Eat 2":                     true,
+	var locationOperatingTimesList []models.LocationOperatingTimes
+
+	err := RetryRequest(url, MAX_RETRIES, func() error {
+		locationOperationInfo, err := visitLocationOperatingTimes(c, url)
+		if err != nil {
+			return err
+		}
+
+		locationOperatingTimesList = append(locationOperatingTimesList, locationOperationInfo...)
+
+		return nil
+	})
+
+	if err != nil {
+		log.Printf("All retries failed for URL: %s", url)
+		return nil, err
 	}
 
-	ingredients := map[string]bool{
-		"Shredded Cheddar Cheese":   true,
-		"Crushed Red Pepper":        true,
-		"Grated Parmesan Cheese":    true,
-		"Lettuce Leaf":              true,
-		"Sliced Red Onion":          true,
-		"Sliced Dill Pickles":       true,
-		"American Cheese Slice":     true,
-		"Whole Wheat Hamburger Bun": true,
-		"White Hamburger Bun":       true,
-		"Hamburger Patty":           true,
-		"Turkey Burger (No Bun)":    true,
+	fmt.Println("Scraping and saving successful")
+	return locationOperatingTimesList, nil
+}
+
+// visitLocationOperatingTimes visits the API endpoint to fetch operating times for a location.
+//
+// Parameters:
+//   - c: A Colly collector for scraping.
+//   - url: The URL to scrape.
+//
+// Returns:
+//   - []models.LocationOperatingTimes: Parsed operating times for locations.
+//   - error: An error, if any occurred during the scraping process.
+func visitLocationOperatingTimes(c *colly.Collector, url string) ([]models.LocationOperatingTimes, error) {
+	var locationOperatingTimesList []models.LocationOperatingTimes
+
+	c.OnResponse(func(r *colly.Response) {
+		var jsonResponse models.LocationOperationsResponse
+		err := json.Unmarshal(r.Body, &jsonResponse)
+		if err != nil {
+			log.Printf("Error unmarshalling JSON for operation hours: %v", err)
+			return
+		}
+
+		locations := jsonResponse.Locations
+
+		locationOperatingTimesList, err = parseLocationOperatingTimes(locations)
+
+		if err != nil {
+			log.Printf("Error for operation hours: %v", err)
+			return
+		}
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		log.Printf("Error for operation hours: %v", err)
+	})
+
+	log.Printf("Visiting URL: %s", url)
+
+	err := c.Visit(url)
+	if err != nil {
+		log.Printf("Visit failed for URL %s: %v", url, err)
+		return nil, err
 	}
+	return locationOperatingTimesList, nil
+}
+
+// visitDiningHall visits the API endpoint to fetch menu data for a dining hall.
+//
+// Parameters:
+//   - c: A Colly collector for scraping.
+//   - url: The URL to scrape.
+//   - locationName: The name of the dining hall location.
+//   - timeOfDay: The service time (e.g., "Breakfast", "Lunch", "Dinner").
+//
+// Returns:
+//   - []models.DailyItem: A list of daily menu items.
+//   - []models.AllDataItem: A list of all data items.
+//   - bool: Indicates whether the location is closed.
+//   - error: An error, if any occurred during the scraping process.
+func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, bool, error) {
+	var dailyItems []models.DailyItem
+	var allDataItems []models.AllDataItem
+	closed := false
+
+	c.OnRequest(func(r *colly.Request) {
+		r.Ctx.Put("locationName", locationName)
+	})
+
+	c.OnResponse(func(r *colly.Response) {
+		locName := r.Ctx.Get("locationName")
+		var jsonResponse models.DiningHallResponse
+		err := json.Unmarshal(r.Body, &jsonResponse)
+		if err != nil {
+			log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
+			return
+		}
+
+		if jsonResponse.Closed {
+			log.Printf("Location %s is closed", locName)
+			closed = true
+			return
+		}
+
+		menu := jsonResponse.Menu
+
+		parsedDailyItems, parsedAllDataItems, err := parseItems(menu, locName, timeOfDay)
+		if err != nil {
+			log.Printf("Error posting items for %s: %v", locName, err)
+			return
+		}
+
+		dailyItems = append(dailyItems, parsedDailyItems...)
+		allDataItems = append(allDataItems, parsedAllDataItems...)
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		log.Printf("Error for %s: %v", locationName, err)
+		return
+	})
+
+	err := c.Visit(url)
+	if err != nil {
+		log.Printf("Visit failed for URL %s: %v", url, err)
+		return nil, nil, closed, err
+	}
+	return dailyItems, allDataItems, closed, nil
+}
+
+// parseItems parses menu items from the API response.
+//
+// Parameters:
+//   - menu: The menu data from the API response.
+//   - location: The name of the dining hall location.
+//   - timeOfDay: The service time (e.g., "Breakfast", "Lunch", "Dinner").
+//
+// Returns:
+//   - []models.DailyItem: A list of parsed daily menu items.
+//   - []models.AllDataItem: A list of parsed all data items.
+//   - error: An error, if any occurred during parsing.
+func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, error) {
+	categories := menu.Periods.Categories
+	date := menu.Date
+
+	var dailyItems []models.DailyItem
+	var allDataItems []models.AllDataItem
 
 	for _, category := range categories {
-		// Skip categories that are not food items
-		if !nonIngredientCategories[category.Name] {
+		cleanedCategory := strings.ToLower(strings.TrimSpace(category.Name))
+		if contains(IngredientCategories, cleanedCategory) {
 			continue
 		}
 
 		for _, item := range category.Items {
-			// Skip items that are ingredients
-			if ingredients[item.Name] {
+			cleanedItem := strings.ToLower(strings.TrimSpace(item.Name))
+
+			if contains(Ingredients, cleanedItem) {
 				continue
 			}
 
-			itemName := db.AllDataItem{item.Name}
-			err := db.InsertAllDataItem(itemName)
-			if err != nil {
-				log.Printf("Error saving item %s: %v", item.Name, err)
+			itemName := models.AllDataItem{Name: item.Name}
+			allDataItems = append(allDataItems, itemName)
+
+			menuItem := models.DailyItem{
+				Name:        item.Name,
+				Description: item.Description,
+				Date:        date,
+				Location:    location,
+				StationName: category.Name,
+				TimeOfDay:   timeOfDay,
 			}
 
-			if !rescrapeDaily {
-				fmt.Println("Not rescraping daily items")
-				continue
-			}
-
-			fmt.Println("Rescraping daily items")
-			menuItem := db.DailyItem{item.Name, item.Description, date, location, service.TimeOfDay}
-			err = db.InsertDailyItem(menuItem)
-			if err != nil {
-				log.Printf("Error saving item %s: %v", item.Name, err)
-			}
+			dailyItems = append(dailyItems, menuItem)
 
 		}
 	}
 
-	return nil
+	return dailyItems, allDataItems, nil
+}
+
+// parseLocationOperatingTimes parses operating times for multiple locations.
+//
+// Parameters:
+//   - locations: A list of location operation information from the API response.
+//
+// Returns:
+//   - []models.LocationOperatingTimes: A list of parsed operating times for locations.
+//   - error: An error, if any occurred during parsing.
+func parseLocationOperatingTimes(locations []models.LocationOperatingInfo) ([]models.LocationOperatingTimes, error) {
+	fmt.Printf("Posting location operating times for %d locations\n", len(locations))
+	var locationOperatingTimesList []models.LocationOperatingTimes
+
+	for _, location := range locations {
+		fmt.Printf("Location: %s\n", location.Name)
+
+		parsedInfo := models.LocationOperatingTimes{
+			Name: location.Name,
+			Week: convertWeekOperationInfoJSON(location.Week),
+		}
+
+		locationOperatingTimesList = append(locationOperatingTimesList, parsedInfo)
+	}
+
+	return locationOperatingTimesList, nil
 }

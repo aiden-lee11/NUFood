@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 *.env
 .env
+.vercel
+
+.DS_Store
+src/components/tailwind-ui/

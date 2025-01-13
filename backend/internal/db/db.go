@@ -1,88 +1,74 @@
 package db
 
 import (
+	"backend/internal/models"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
+	"time"
 )
 
 // Global database variable
 var DB *gorm.DB
 
-// Item represents the daily menu item model with full details
+// GormDailyItem represents a daily menu item in the database.
 type GormDailyItem struct {
 	gorm.Model
-	Name        string
-	Description string
-	Date        string // The date this item is available
-	Location    string // The dining hall location
-	TimeOfDay   string // The time of day this item is available
+	models.DailyItem `gorm:"unique"`
+	AllClosed        *bool `gorm:"column:all_closed"`
 }
 
-// MenuItem represents the input data for an item
-type DailyItem struct {
-	Name        string
-	Description string `json:"desc"`
-	Date        string // The date this item is available
-	Location    string // The dining hall location
-	TimeOfDay   string // The time of day this item is available
-}
-
-// ShortedItem represents unique menu item names
+// GormAllDataItem represents a unique menu item in the database.
 type GormAllDataItem struct {
 	gorm.Model
-	Name string `gorm:"unique"`
+	models.AllDataItem `gorm:"unique"`
 }
 
-type AllDataItem struct {
-	Name string
-}
-
-// UserPreferences represents user-specific preferences for menu items
-type UserPreferences struct {
+// GormUserPreferences represents user-specific preferences for menu items.
+type GormUserPreferences struct {
 	gorm.Model
-	UserID string `gorm:"unique"`
-	// Maps of item names to boolean values
-	Favorites string // Array of item names marked as favorite
+	UserID    string `gorm:"unique"` // Unique identifier for the user.
+	Favorites string // JSON-encoded array of item names marked as favorites.
 }
 
-type UserPreferencesJSON struct {
-	UserID    string
-	Favorites []AllDataItem
+// GormLocationOperatingTimes represents the operating times for a location.
+type GormLocationOperatingTimes struct {
+	gorm.Model
+	Name string `gorm:"primaryKey"` // Unique identifier for the location.
+	Week []byte `gorm:"type:jsonb"` // JSON-encoded weekly operating times.
 }
 
-// Define NoItemsInDB as a package-level variable
-var NoItemsInDB = errors.New("no daily items found")
+// Package-level errors for database operations.
+var (
+	NoItemsInDB           = errors.New("no daily items found")
+	NoUserPreferencesInDB = errors.New("no user preferences found")
+)
 
-var NoUserPreferencesInDB = errors.New("no user preferences found")
-
-// ConvertShortedMenuItem converts a MenuItem into a ShortedItem
-func AllDataItemToGorm(item AllDataItem) GormAllDataItem {
-	return GormAllDataItem{
-		Name: item.Name,
-	}
+// AllDataItemToGorm converts an AllDataItem model to a GormAllDataItem.
+func AllDataItemToGorm(item models.AllDataItem) GormAllDataItem {
+	return GormAllDataItem{AllDataItem: item}
 }
 
-// ConvertMenuItem converts a MenuItem into an Item
-func DailyItemToGorm(menuItem DailyItem) GormDailyItem {
-	return GormDailyItem{
-		Name:        menuItem.Name,
-		Description: menuItem.Description,
-		Date:        menuItem.Date,
-		Location:    menuItem.Location,
-		TimeOfDay:   menuItem.TimeOfDay,
-	}
+// DailyItemToGorm converts a DailyItem model to a GormDailyItem.
+func DailyItemToGorm(item models.DailyItem) GormDailyItem {
+	return GormDailyItem{DailyItem: item}
 }
 
-// InitDB initializes the SQLite database connection and migrates the schema.
+// InitDB initializes the PostgreSQL database connection and migrates the schema.
+//
+// It sets up the global database variable and performs schema migrations to
+// ensure that the database tables match the defined models.
+//
+// Parameters:
+// - databasePath: The connection string for the PostgreSQL database.
+//
+// Returns:
+// - error: An error if the database connection or migration fails.
 func InitDB(databasePath string) error {
 	var err error
-	// Open a connection to the SQLite database
-	// Open a connection to the PostgreSQL database
-	fmt.Println("Connecting to database at", databasePath)
 
 	DB, err = gorm.Open(postgres.Open(databasePath), &gorm.Config{})
 	if err != nil {
@@ -90,7 +76,7 @@ func InitDB(databasePath string) error {
 	}
 
 	// Auto migrate the schemas
-	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &UserPreferences{})
+	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &GormUserPreferences{}, &GormLocationOperatingTimes{})
 	if err != nil {
 		return err
 	}
@@ -99,72 +85,173 @@ func InitDB(databasePath string) error {
 	return nil
 }
 
-func FindFavoriteItemInDailyItems(favorite string) ([]DailyItem, error) {
-	var dailyItems []GormDailyItem
-	result := DB.Where("name = ?", favorite).Find(&dailyItems)
-	if result.Error != nil {
-		fmt.Println("Error finding favorite item:", result.Error)
-		return []DailyItem{}, result.Error
-	}
-	fmt.Println("result found", result.RowsAffected)
+// InsertDailyItems inserts a list of DailyItem objects into the daily items table.
+//
+// If all locations are closed, a special record is inserted to reflect this.
+//
+// Parameters:
+// - items: A slice of DailyItem objects to be inserted.
+// - allClosed: A boolean indicating whether all locations are closed.
+//
+// Returns:
+// - error: An error if the insertion fails.
+func InsertDailyItems(items []models.DailyItem, allClosed bool) error {
+	// If all locations are closed we will use a hacky fix to insert a single record with allClosed set to true to avoid the no items in db error
+	if allClosed {
+		item := GormDailyItem{
+			DailyItem: models.DailyItem{
+				Name:        "All locations are closed",
+				Description: "All locations are closed",
+				Date:        time.Now().Format("2006-01-02"),
+				Location:    "All locations are closed",
+				StationName: "All locations are closed",
+				TimeOfDay:   "All locations are closed",
+			},
+			AllClosed: &allClosed,
+		}
 
-	if result.RowsAffected == 0 {
-		return []DailyItem{}, errors.New("no favorite item found")
-	}
+		result := DB.Create(&item)
 
-	rows, err := result.Rows()
+		if result.Error != nil {
+			log.Println("Error inserting allClosedItem:", result.Error)
+			return result.Error
+		}
 
-	if err != nil {
-		return []DailyItem{}, result.Error
-	}
-
-	defer rows.Close()
-
-	var items []DailyItem
-	for rows.Next() {
-		var item DailyItem
-		DB.ScanRows(rows, &item)
-		items = append(items, item)
-	}
-
-	return items, nil
-}
-
-// InsertItem inserts a new MenuItem into the daily menu, avoiding duplicates by name, date, and location.
-func InsertDailyItem(item DailyItem) error {
-	// Check if the item already exists (by Name, Date, Location, and TimeOfDay)
-	fmt.Println("Inserting item", item.Name, item.Date, item.Location)
-	var existingItem GormDailyItem
-	result := DB.Where("name = ? AND date = ? AND location = ? AND time_of_day = ?", item.Name, item.Date, item.Location, item.TimeOfDay).First(&existingItem)
-
-	if result.Error == nil {
-		log.Printf("Item '%s' already exists for date '%s' and location '%s', skipping insertion", item.Name, item.Date, item.Location)
 		return nil
 	}
 
-	// Insert the new item into the daily data
-	savable := DailyItemToGorm(item)
-	result = DB.Create(&savable)
+	var gormItems []GormDailyItem
+
+	for _, item := range items {
+		appendable := DailyItemToGorm(item)
+		gormItems = append(gormItems, appendable)
+	}
+
+	result := DB.Create(&gormItems)
+
 	if result.Error != nil {
+		log.Println("Error inserting items:", result.Error)
 		return result.Error
 	}
 
-	log.Printf("Item '%s' inserted successfully", item.Name)
+	log.Println("All items inserted successfully")
 	return nil
 }
 
-func DeleteDailyItems() error {
-	// Attempt to delete all items from gorm_daily_items table
-	result := DB.Exec("DELETE FROM gorm_daily_items")
+// InsertAllDataItems inserts a list of AllDataItem objects into the all data table.
+//
+// This operation is skipped if the provided list is empty or if all locations are closed.
+//
+// Parameters:
+// - items: A slice of AllDataItem objects to be inserted.
+// - allClosed: A boolean indicating whether all locations are closed.
+//
+// Returns:
+// - error: An error if the insertion fails.
+func InsertAllDataItems(items []models.AllDataItem, allClosed bool) error {
+	if allClosed || items == nil {
+		log.Println("No available items, skipping all data insert")
+		return nil
+	}
+
+	var gormItems []GormAllDataItem
+
+	for _, item := range items {
+		appendable := AllDataItemToGorm(item)
+		gormItems = append(gormItems, appendable)
+	}
+
+	// Insert the unique item into the allData
+	result := DB.Create(&gormItems)
 	if result.Error != nil {
-		fmt.Println("Error deleting items:", result.Error)
+		log.Println("Error inserting items:", result.Error)
 		return result.Error
 	}
 
-	fmt.Println("All items deleted")
+	log.Println("All items inserted successfully")
 	return nil
 }
 
+// InsertLocationOperatingTimes inserts a list of LocationOperatingTimes into the database.
+//
+// This function serializes the weekly operating times into JSON format for storage.
+//
+// Parameters:
+// - locations: A slice of LocationOperatingTimes objects to be inserted.
+//
+// Returns:
+// - error: An error if the insertion fails.
+func InsertLocationOperatingTimes(locations []models.LocationOperatingTimes) error {
+	var gormLocationOperatingTimes []GormLocationOperatingTimes
+
+	for _, locationOperatingTimes := range locations {
+		// Serialize the Week field to JSON
+		weekData, err := json.Marshal(locationOperatingTimes.Week)
+		if err != nil {
+			return fmt.Errorf("failed to serialize Week field: %v", err)
+		}
+
+		// Create the record
+		record := GormLocationOperatingTimes{
+			Name: locationOperatingTimes.Name,
+			Week: weekData,
+		}
+
+		gormLocationOperatingTimes = append(gormLocationOperatingTimes, record)
+	}
+
+	// Insert into the database
+	result := DB.Create(&gormLocationOperatingTimes)
+	if result.Error != nil {
+		return fmt.Errorf("failed to insert locationOperatingTimes: %v", result.Error)
+	}
+
+	return nil
+
+}
+
+// SaveUserPreferences saves user-specific preferences into the database.
+//
+// This function overwrites existing preferences with the provided list of favorites.
+//
+// Parameters:
+// - userID: The ID of the user whose preferences are being saved.
+// - favorites: A slice of AllDataItem objects representing the user's favorite items.
+//
+// Returns:
+// - error: An error if the save operation fails.
+func SaveUserPreferences(userID string, favorites []models.AllDataItem) error {
+	// Convert the maps to JSON
+	favoritesJSON, err := json.Marshal(favorites)
+	if err != nil {
+		return fmt.Errorf("error serializing favorites: %v", err)
+	}
+
+	// Check if the user preferences already exist
+	var userPreferences GormUserPreferences
+	if err := DB.Where("user_id = ?", userID).First(&userPreferences).Error; err != nil {
+		if err != nil {
+			// Create a new user preferences record if not found
+			userPreferences = GormUserPreferences{
+				UserID:    userID,
+				Favorites: string(favoritesJSON),
+			}
+			return DB.Create(&userPreferences).Error
+		}
+		return err
+	}
+
+	// If the user preferences exist, update the existing record
+	userPreferences.Favorites = string(favoritesJSON)
+	return DB.Save(&userPreferences).Error
+}
+
+// ReturnDateOfDailyItems retrieves the date associated with the daily items in the database.
+//
+// Returns:
+// - string: The date of the daily items.
+// - error: An error if no items are found or the query fails.
+// BUG Still returning a string of words and not a date for when theyre all closed for some reason?
 func ReturnDateOfDailyItems() (date string, err error) {
 	var dailyItems []GormDailyItem
 	result := DB.Find(&dailyItems)
@@ -180,105 +267,50 @@ func ReturnDateOfDailyItems() (date string, err error) {
 	}
 
 	date = dailyItems[0].Date
+	log.Println("Date of daily items:", date)
 
 	return date, nil
 }
 
-// InsertShortenedItem inserts unique menu item names into allData.
-func InsertAllDataItem(item AllDataItem) error {
-	// Check if the shortened item already exists
-	fmt.Println("Inserting item", item.Name)
-	var existingItem GormAllDataItem
-	result := DB.Where("name = ?", item.Name).First(&existingItem)
-
-	if result.Error == nil {
-		log.Printf("Item '%s' already exists", item.Name)
-		return nil
-	}
-
-	// Insert the unique item into the allData
-	savable := AllDataItemToGorm(item)
-	result = DB.Create(&savable)
+// GetAllDailyItems retrieves all records from the daily items table.
+//
+// Returns:
+// - []models.DailyItem: A slice of DailyItem objects.
+// - error: An error if no items are found or the query fails.
+func GetAllDailyItems() ([]models.DailyItem, error) {
+	var dailyItems []GormDailyItem
+	result := DB.Find(&dailyItems)
 	if result.Error != nil {
-		return result.Error
+		return nil, result.Error
 	}
 
-	log.Printf("Item '%s' inserted successfully", item.Name)
-	return nil
+	fmt.Printf("getting daily items with val %v", dailyItems)
+
+	// Check if the dailyItems slice is empty
+	if len(dailyItems) == 0 {
+		return nil, NoItemsInDB
+	}
+
+	// If everything was closed there exists no error however there also exists no data so treat as such
+	if dailyItems[0].AllClosed != nil {
+		return []models.DailyItem{}, nil
+	}
+
+	// Convert the GormDailyItem slice to a DailyItem slice
+	var items []models.DailyItem
+	for _, item := range dailyItems {
+		items = append(items, item.DailyItem)
+	}
+
+	return items, nil
 }
 
-// SaveUserPreferences saves user preferences into the database
-func SaveUserPreferences(userID string, favorites []AllDataItem) error {
-	// Convert the maps to JSON
-	favoritesJSON, err := json.Marshal(favorites)
-	if err != nil {
-		return fmt.Errorf("error serializing favorites: %v", err)
-	}
-
-	// Check if the user preferences already exist
-	var userPreferences UserPreferences
-	if err := DB.Where("user_id = ?", userID).First(&userPreferences).Error; err != nil {
-		if err != nil {
-			// Create a new user preferences record if not found
-			userPreferences = UserPreferences{
-				UserID:    userID,
-				Favorites: string(favoritesJSON),
-			}
-			return DB.Create(&userPreferences).Error
-		}
-		return err
-	}
-
-	// If the user preferences exist, update the existing record
-	userPreferences.Favorites = string(favoritesJSON)
-	return DB.Save(&userPreferences).Error
-}
-
-func GetAvailableFavorites(userID string) ([]DailyItem, error) {
-	var favorites []DailyItem
-	userPreferences, err := GetUserPreferences(userID)
-	fmt.Println(userPreferences)
-
-	if err != nil {
-		return nil, err
-	}
-
-	for _, favorite := range userPreferences.Favorites {
-		fmt.Println("Finding favorite item", favorite.Name)
-		result, err := FindFavoriteItemInDailyItems(favorite.Name)
-		if err != nil {
-			// Skip items that are not found
-			continue
-		}
-		favorites = append(favorites, result...)
-	}
-
-	return favorites, nil
-}
-
-func GetUserPreferences(userID string) (*UserPreferencesJSON, error) {
-	var userPreferences UserPreferences
-	result := DB.Where("user_id = ?", userID).First(&userPreferences)
-
-	if result.Error != nil {
-		return nil, NoUserPreferencesInDB
-	}
-
-	// Deserialize the JSON strings to maps
-	var favorites []AllDataItem
-
-	if err := json.Unmarshal([]byte(userPreferences.Favorites), &favorites); err != nil {
-		return nil, fmt.Errorf("error deserializing favorites: %v", err)
-	}
-
-	// Return the deserialized maps as part of the user preferences
-	return &UserPreferencesJSON{
-		UserID:    userPreferences.UserID,
-		Favorites: favorites,
-	}, nil
-}
-
-func GetAllDataItems() ([]AllDataItem, error) {
+// GetAllDataItems retrieves all records from the all data table.
+//
+// Returns:
+// - []models.AllDataItem: A slice of AllDataItem objects.
+// - error: An error if no items are found or the query fails.
+func GetAllDataItems() ([]models.AllDataItem, error) {
 	var allDataItems []GormAllDataItem
 	result := DB.Find(&allDataItems)
 	if result.Error != nil {
@@ -291,38 +323,176 @@ func GetAllDataItems() ([]AllDataItem, error) {
 	}
 
 	// Convert the GormAllDataItem slice to an AllDataItem slice
-	var items []AllDataItem
+	var items []models.AllDataItem
 	for _, item := range allDataItems {
-		items = append(items, AllDataItem{Name: item.Name})
+		items = append(items, models.AllDataItem{Name: item.Name})
 	}
 
 	return items, nil
 }
 
-func GetAllDailyItems() ([]DailyItem, error) {
-	var dailyItems []GormDailyItem
-	result := DB.Find(&dailyItems)
+// GetLocationOperatingTimes retrieves all location operating times from the database.
+//
+// This function deserializes the stored JSON data into LocationOperatingTimes objects.
+//
+// Returns:
+// - []models.LocationOperatingTimes: A slice of LocationOperatingTimes objects.
+// - error: An error if no records are found or the query fails.
+func GetLocationOperatingTimes() ([]models.LocationOperatingTimes, error) {
+	var gormLocationOperatingTimes []GormLocationOperatingTimes
+	result := DB.Find(&gormLocationOperatingTimes)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	// Check if the dailyItems slice is empty
-	if len(dailyItems) == 0 {
-		return nil, NoItemsInDB
+	// Check if the gormLocationOperatingTimes slice is empty
+	if len(gormLocationOperatingTimes) == 0 {
+		return nil, errors.New("no locationOperatingTimes found")
 	}
 
-	// Convert the GormDailyItem slice to a DailyItem slice
-	var items []DailyItem
-	for _, item := range dailyItems {
+	// Convert the GormLocationOperatingTimes slice to a OperationHour slice
+	var locationOperatingTimesList []models.LocationOperatingTimes
+	for _, gormOperationHour := range gormLocationOperatingTimes {
+		var week []models.DailyOperatingTimes
+		err := json.Unmarshal(gormOperationHour.Week, &week)
+		if err != nil {
+			return nil, fmt.Errorf("failed to deserialize Week field: %v", err)
+		}
 
-		items = append(items, DailyItem{
-			Name:        item.Name,
-			Description: item.Description,
-			Date:        item.Date,
-			Location:    item.Location,
-			TimeOfDay:   item.TimeOfDay,
+		locationOperatingTimesList = append(locationOperatingTimesList, models.LocationOperatingTimes{
+			Name: gormOperationHour.Name,
+			Week: week,
 		})
 	}
 
+	return locationOperatingTimesList, nil
+}
+
+// GetUserPreferences fetches the user's saved preferences from the database.
+//
+// Parameters:
+// - userID: The ID of the user whose preferences are being retrieved.
+//
+// Returns:
+// - []models.AllDataItem: A slice of AllDataItem objects representing the user's favorites.
+// - error: An error if the preferences are not found or the query fails.
+func GetUserPreferences(userID string) ([]models.AllDataItem, error) {
+	var userPreferences GormUserPreferences
+
+	result := DB.Where("user_id = ?", userID).First(&userPreferences)
+
+	if result.Error != nil {
+		return nil, NoUserPreferencesInDB
+	}
+
+	// Deserialize the JSON strings to maps
+	var favorites []models.AllDataItem
+
+	if err := json.Unmarshal([]byte(userPreferences.Favorites), &favorites); err != nil {
+		return nil, fmt.Errorf("error deserializing favorites: %v", err)
+	}
+
+	// Return the deserialized maps as part of the user preferences
+	log.Println("User preferences:", favorites)
+	return favorites, nil
+}
+
+// FindFavoriteItemInDailyItems searches for a favorite item in the daily items table by its name.
+//
+// Parameters:
+// - favorite: The name of the favorite item to search for.
+//
+// Returns:
+// - []models.DailyItem: A slice of DailyItem objects matching the favorite name.
+// - error: An error if the search fails or no items are found.
+func FindFavoriteItemInDailyItems(favorite string) ([]models.DailyItem, error) {
+	var dailyItems []GormDailyItem
+	result := DB.Where("name = ?", favorite).Find(&dailyItems)
+	if result.Error != nil {
+		fmt.Println("Error finding favorite item:", result.Error)
+		return []models.DailyItem{}, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return []models.DailyItem{}, errors.New("no favorite item found")
+	}
+
+	rows, err := result.Rows()
+
+	if err != nil {
+		return []models.DailyItem{}, result.Error
+	}
+
+	defer rows.Close()
+
+	var items []models.DailyItem
+	for rows.Next() {
+		var item models.DailyItem
+		DB.ScanRows(rows, &item)
+		items = append(items, item)
+	}
+
 	return items, nil
+}
+
+// GetAvailableFavorites retrieves the user's favorite items that are available in the daily items table.
+//
+// Parameters:
+// - userID: The ID of the user whose available favorites are being retrieved.
+//
+// Returns:
+// - []models.DailyItem: A slice of DailyItem objects representing the available favorites.
+// - error: An error if no preferences are found or the query fails.
+func GetAvailableFavorites(userID string) ([]models.DailyItem, error) {
+	var favorites []models.DailyItem
+	userPreferences, err := GetUserPreferences(userID)
+	log.Println("User preferences:", userPreferences)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, favorite := range userPreferences {
+		result, err := FindFavoriteItemInDailyItems(favorite.Name)
+		if err != nil {
+			// Skip items that are not found
+			continue
+		}
+		favorites = append(favorites, result...)
+	}
+
+	log.Println("Available favorites:", favorites)
+	return favorites, nil
+}
+
+// DeleteDailyItems removes all records from the daily items table.
+//
+// Returns:
+// - error: An error if the deletion operation fails.
+func DeleteDailyItems() error {
+	// Attempt to delete all items from gorm_daily_items table
+	result := DB.Exec("DELETE FROM gorm_daily_items WHERE EXISTS (SELECT 1 FROM gorm_daily_items LIMIT 1)")
+	if result.Error != nil {
+		fmt.Println("Error deleting items:", result.Error)
+		return result.Error
+	}
+
+	fmt.Println("All items deleted")
+	return nil
+}
+
+// DeleteLocationOperatingTimes deletes all records from the location operating times table.
+//
+// Returns:
+// - error: An error if the deletion operation fails.
+func DeleteLocationOperatingTimes() error {
+	// Attempt to delete all items from gorm_location_operations table
+	result := DB.Exec("DELETE FROM gorm_location_operating_times WHERE EXISTS (SELECT 1 FROM gorm_location_operating_times  LIMIT 1)")
+	if result.Error != nil {
+		fmt.Println("Error deleting location operations:", result.Error)
+		return result.Error
+	}
+
+	fmt.Println("All location operations deleted")
+	return nil
 }

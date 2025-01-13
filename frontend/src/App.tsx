@@ -1,29 +1,38 @@
-// App.tsx
 import { Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import Favorites from './pages/PickFavorites';
-import MyNavbar from './components/myNavbar';
-import DisplayFavorites from './pages/CurrentFavorites';
+import { ThemeProvider } from './components/theme-provider'
+import { MyMUIThemeProvider } from './components/mui-theme-provider'
+import Layout from './components/layout';
 import DailyItems from './pages/DailyItems';
 import Login from './firebase/login';
 import SignOutButton from './firebase/signout';
-import Scrape from './pages/HiddenScrape';
+import AllItems from './pages/AllItems';
+import Preferences from './pages/Preferences';
+import ReactGA from 'react-ga4';
+import Banner from './components/banner';
+import OperationHours from './pages/OperationHours';
 
 function App() {
+  ReactGA.initialize(import.meta.env.VITE_GA_MEASUREMENT_ID);
+  ReactGA.send({ hitType: 'pageview', page: '/' });
+
   return (
-    <MyNavbar>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signout" element={<SignOutButton />} />
-        <Route path="/favorites" element={<Favorites />} />
-        <Route path="/current" element={<DisplayFavorites />} />
-        <Route path="/daily" element={<DailyItems />} />
-        <Route path="/scrape" element={<Scrape />} />
-      </Routes>
-    </MyNavbar>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <MyMUIThemeProvider>
+        <Layout>
+          <Banner />
+          <Routes>
+            <Route path="/" element={<DailyItems />} />
+            <Route path="/hours" element={<OperationHours />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signout" element={<SignOutButton />} />
+            <Route path="/preferences" element={<Preferences />} />
+            <Route path="/all" element={<AllItems />} />
+          </Routes>
+        </Layout>
+      </MyMUIThemeProvider>
+    </ThemeProvider>
   );
 }
 
-
 export default App;
+
