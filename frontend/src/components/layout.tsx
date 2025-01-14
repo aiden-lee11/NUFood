@@ -16,6 +16,7 @@ import { CalendarDays, Home, ListTodo, Menu, Moon, Heart, Sun, User } from 'luci
 import { useAuth } from '../context/AuthProvider'
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import BuyMeCoffee from './buy-me-a-coffee'
+import FeedbackButton from './feedback-button'
 
 // Utility function for conditional class names
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
@@ -88,8 +89,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="border-t p-4 space-y-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                <User className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" className="w-full justify-start">
+                <User className="h-4 w-4 mr-2" />
                 Account
               </Button>
             </DropdownMenuTrigger>
@@ -103,6 +104,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <FeedbackButton />
           <BuyMeCoffee className="w-full" />
         </div>
       </aside>
@@ -155,7 +157,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="border-t p-4 mt-auto space-y-4">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" size="sm" className="w-full justify-start">
                       <User className="mr-2 h-4 w-4" />
                       Account
                     </Button>
@@ -176,6 +178,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <FeedbackButton />
                 <BuyMeCoffee className="w-full" />
               </div>
             </SheetContent>

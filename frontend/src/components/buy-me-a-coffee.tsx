@@ -14,7 +14,7 @@ const BuyMeCoffee = ({ className }: BuyMeCoffeeProps) => {
           <Button
             variant="outline"
             size="sm"
-            className={`bg-background hover:bg-accent text-foreground border border-input transition-colors duration-200 ${className}`}
+            className={`w-full justify-start bg-background hover:bg-accent text-foreground border border-input transition-colors duration-200 ${className}`}
             onClick={() => window.open('https://buymeacoffee.com/aidenlee11', '_blank')}
           >
             <Coffee className="h-4 w-4 mr-2" />
