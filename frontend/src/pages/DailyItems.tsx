@@ -27,6 +27,7 @@ import AuthPopup from '../components/AuthPopup';
 import { getDailyLocationOperationTimes, getCurrentTimeOfDayWithLocations, isLocationOpenNow } from '../util/helper';
 import { DailyItem, Item, GeneralDataResponse, UserDataResponse } from '../types/ItemTypes';
 import { LocationOperatingTimes } from '../types/OperationTypes';
+import ErrorPopup from '../components/error-popup';
 
 
 const DailyItems: React.FC = () => {
@@ -36,6 +37,7 @@ const DailyItems: React.FC = () => {
   const [favorites, setFavorites] = useState<Item[]>([]);
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [locationOperationHours, setLocationOperationHours] = useState<LocationOperatingTimes>();
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
 
   // Data involved with fuse
   const [searchQuery, setSearchQuery] = useState('');
@@ -164,6 +166,17 @@ const DailyItems: React.FC = () => {
       .map(([location]) => location)
     : [];
 
+  // Determine if there is some location that is open, but no items are available
+  // If this is the case then there was an error in scraping data and we should display
+  // an error message popup to the user
+  const noExpectedData = !dailyItems.length && locationOperationHours;
+
+
+  useEffect(() => {
+    if (noExpectedData) {
+      setShowErrorPopup(true);
+    }
+  }, [noExpectedData]);
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -217,6 +230,7 @@ const DailyItems: React.FC = () => {
       {showPopup && (
         <AuthPopup isOpen={showPopup} onClose={() => setShowPopup(false)} />
       )}
+      <ErrorPopup isOpen={showErrorPopup} onClose={() => setShowErrorPopup(false)} />
     </div>
   );
 
