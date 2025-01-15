@@ -17,7 +17,6 @@ import { useAuth } from '../context/AuthProvider'
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import BuyMeCoffee from './buy-me-a-coffee'
 import FeedbackButton from './feedback-button'
-// import Banner from './forbidden-banner'
 
 // Utility function for conditional class names
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
@@ -50,7 +49,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/*<Banner />*/}
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar for desktop */}
         <aside className="hidden lg:flex w-56 flex-col bg-background">
