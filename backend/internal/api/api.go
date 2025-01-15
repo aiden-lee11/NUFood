@@ -5,6 +5,7 @@ import (
 	"backend/internal/models"
 	"backend/internal/scraper"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -71,7 +72,22 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		Config: scraper.DefaultConfig,
 	}
 
-	dItems, aItems, allClosed, err := scraper.ScrapeFood(time.Now().Format("2006-01-02"))
+	const MAX_RETRIES = 3
+
+	var dItems []models.DailyItem
+	var aItems []models.AllDataItem
+	var allClosed bool
+	var err error
+
+	for i := 0; i < MAX_RETRIES; i++ {
+		fmt.Printf("trying scrape for the %d time", i)
+		dItems, aItems, allClosed, err = scraper.ScrapeFood(time.Now().Format("2006-01-02"))
+		if err == nil {
+			fmt.Printf("successful scrape on the %d time", i)
+			err = nil
+			break
+		}
+	}
 
 	if err != nil {
 		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
@@ -377,5 +393,6 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the combined result as JSON
 	if err := json.NewEncoder(w).Encode(combinedData); err != nil {
 		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
