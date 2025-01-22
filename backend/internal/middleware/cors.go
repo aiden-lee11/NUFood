@@ -10,7 +10,6 @@ import (
 
 // CorsMiddleware handles CORS headers and preflight requests
 func CorsMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	fmt.Println("CORS Middleware")
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Always set CORS headers first
 		origin := r.Header.Get("Origin")

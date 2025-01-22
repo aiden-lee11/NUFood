@@ -94,3 +94,8 @@ type DailyItem struct {
 type AllDataItem struct {
 	Name string
 }
+
+type PreferenceReturn struct {
+	UserID      string
+	Preferences []DailyItem // json encoded arrays but are stored as strings in db
+}

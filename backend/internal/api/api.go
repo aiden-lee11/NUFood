@@ -201,7 +201,7 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	availableFavorites, err := db.GetAvailableFavorites(userID)
+	availableFavorites, err := db.GetAvailableFavoritesBatch(userID)
 
 	if err != nil {
 		http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
@@ -216,6 +216,33 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func SetUserMailing(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(string)
+
+	var req map[string]interface{}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Error decoding JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	mailing, ok := req["mailing"].(bool)
+
+	if !ok {
+		http.Error(w, "mailing field not found or not a boolean", http.StatusBadRequest)
+		return
+	}
+	err := db.UpdateMailingStatus(userID, mailing)
+
+	if err != nil {
+		http.Error(w, "Error updating mail value for user preferences: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("successful write")
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GetAllDataHandler retrieves and combines all relevant dining hall data for the user.
@@ -279,7 +306,7 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	if len(dailyItems) > 0 {
 		combinedData["dailyItems"] = dailyItems
 
-		availableFavorites, err := db.GetAvailableFavorites(userID)
+		availableFavorites, err := db.GetAvailableFavoritesBatch(userID)
 		if err == db.NoUserPreferencesInDB {
 			availableFavorites = []models.DailyItem{}
 		} else if err != nil {
