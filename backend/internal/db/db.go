@@ -32,6 +32,7 @@ type GormUserPreferences struct {
 	gorm.Model
 	UserID    string `gorm:"unique"` // Unique identifier for the user.
 	Favorites string // JSON-encoded array of item names marked as favorites.
+	Mailing   bool   //  Bool value to know if the user wants their available favorites in a daily email
 }
 
 // GormLocationOperatingTimes represents the operating times for a location.
@@ -246,6 +247,23 @@ func SaveUserPreferences(userID string, favorites []models.AllDataItem) error {
 	return DB.Save(&userPreferences).Error
 }
 
+func UpdateMailingStatus(userID string, mailing bool) error {
+	// Perform the update
+	result := DB.Model(&GormUserPreferences{}).Where("user_id = ?", userID).Update("mailing", mailing)
+
+	// Check for errors
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Check if any rows were affected
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no rows updated for user_id: %s", userID)
+	}
+
+	return nil
+}
+
 // ReturnDateOfDailyItems retrieves the date associated with the daily items in the database.
 //
 // Returns:
@@ -377,6 +395,7 @@ func GetLocationOperatingTimes() ([]models.LocationOperatingTimes, error) {
 func GetUserPreferences(userID string) ([]models.AllDataItem, error) {
 	var userPreferences GormUserPreferences
 
+	fmt.Println("userid in get pref", userID)
 	result := DB.Where("user_id = ?", userID).First(&userPreferences)
 
 	if result.Error != nil {
@@ -395,72 +414,61 @@ func GetUserPreferences(userID string) ([]models.AllDataItem, error) {
 	return favorites, nil
 }
 
-// FindFavoriteItemInDailyItems searches for a favorite item in the daily items table by its name.
-//
-// Parameters:
-// - favorite: The name of the favorite item to search for.
-//
-// Returns:
-// - []models.DailyItem: A slice of DailyItem objects matching the favorite name.
-// - error: An error if the search fails or no items are found.
-func FindFavoriteItemInDailyItems(favorite string) ([]models.DailyItem, error) {
-	var dailyItems []GormDailyItem
-	result := DB.Where("name = ?", favorite).Find(&dailyItems)
-	if result.Error != nil {
-		fmt.Println("Error finding favorite item:", result.Error)
-		return []models.DailyItem{}, result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return []models.DailyItem{}, errors.New("no favorite item found")
-	}
-
-	rows, err := result.Rows()
-
-	if err != nil {
-		return []models.DailyItem{}, result.Error
-	}
-
-	defer rows.Close()
-
-	var items []models.DailyItem
-	for rows.Next() {
-		var item models.DailyItem
-		DB.ScanRows(rows, &item)
-		items = append(items, item)
-	}
-
-	return items, nil
-}
-
-// GetAvailableFavorites retrieves the user's favorite items that are available in the daily items table.
-//
-// Parameters:
-// - userID: The ID of the user whose available favorites are being retrieved.
-//
-// Returns:
-// - []models.DailyItem: A slice of DailyItem objects representing the available favorites.
-// - error: An error if no preferences are found or the query fails.
-func GetAvailableFavorites(userID string) ([]models.DailyItem, error) {
-	var favorites []models.DailyItem
+func GetAvailableFavoritesBatch(userID string) ([]models.DailyItem, error) {
 	userPreferences, err := GetUserPreferences(userID)
-	log.Println("User preferences:", userPreferences)
 
 	if err != nil {
 		return nil, err
 	}
+	var search []string
 
-	for _, favorite := range userPreferences {
-		result, err := FindFavoriteItemInDailyItems(favorite.Name)
-		if err != nil {
-			// Skip items that are not found
-			continue
-		}
-		favorites = append(favorites, result...)
+	for _, pref := range userPreferences {
+		search = append(search, pref.Name)
+	}
+	var matchingItems []models.DailyItem
+	result := DB.Table("gorm_daily_items").
+		Where("name IN ?", search).
+		Find(&matchingItems)
+
+	if result.Error != nil {
+		fmt.Println("Error finding favorite items batch search:", result.Error)
+		return []models.DailyItem{}, result.Error
 	}
 
-	log.Println("Available favorites:", favorites)
-	return favorites, nil
+	return matchingItems, nil
+}
+
+func GetMailingList() ([]models.PreferenceReturn, error) {
+	rows, err := DB.Raw("SELECT user_id FROM gorm_user_preferences WHERE mailing = true").Rows()
+	if err != nil {
+		fmt.Println("Error executing query:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.PreferenceReturn
+	for rows.Next() {
+		var item models.PreferenceReturn
+		if err := rows.Scan(&item.UserID); err != nil {
+			fmt.Println("Error scanning row:", err)
+			return nil, err
+		}
+
+		fmt.Printf("User id found with id %s\n", item.UserID)
+
+		availFavorites, err := GetAvailableFavoritesBatch(item.UserID)
+
+		if err != nil {
+			fmt.Printf("Error getting favorites for user %s with err %v:\n", item.UserID, err)
+			return nil, err
+		}
+
+		item.Preferences = availFavorites
+
+		items = append(items, item)
+	}
+
+	return items, nil
 }
 
 // DeleteDailyItems removes all records from the daily items table.

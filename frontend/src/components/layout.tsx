@@ -17,6 +17,8 @@ import { useAuth } from '../context/AuthProvider'
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import BuyMeCoffee from './buy-me-a-coffee'
 import FeedbackButton from './feedback-button'
+import MailingSwitch from "./mailing-switch"
+import { updateMailing } from '../util/data'
 
 // Utility function for conditional class names
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
@@ -98,6 +100,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {loggedIn && <MailingSwitch token={token} updateMailing={updateMailing} setOpen={setOpen} />}
                 <DropdownMenuItem asChild>
                   {loggedIn ?
                     <Link to="/signout" className="w-full" onClick={() => setOpen(false)}>Sign Out</Link>
@@ -166,6 +169,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuLabel>My Account</DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      {loggedIn && <MailingSwitch token={token} updateMailing={updateMailing} setOpen={setOpen} />}
                       <DropdownMenuItem asChild>
                         {loggedIn ? (
                           <Link to="/signout" className="w-full" onClick={() => setOpen(false)}>
@@ -205,7 +209,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </div>
-      </div>
+      </div >
     </>
   )
 }

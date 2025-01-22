@@ -54,6 +54,10 @@ func main() {
 	http.HandleFunc("POST /api/userPreferences", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserPreferences)))
 	http.HandleFunc("OPTIONS /api/userPreferences", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 
+	// Post and response with new data
+	http.HandleFunc("POST /api/mailing", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserMailing)))
+	http.HandleFunc("OPTIONS /api/mailing", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
 	// Scrape and Save Data
 	http.HandleFunc("GET /api/scrapeDailyItems", middleware.CorsMiddleware(api.ScrapeDailyItemsHandler))
 	http.HandleFunc("OPTIONS /api/scrapeDailyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))

@@ -3,11 +3,12 @@ package db_test
 import (
 	"backend/internal/db"
 	"backend/internal/models"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"testing"
 )
 
 // Total functions in db.go
@@ -415,6 +416,14 @@ func TestAvailableFavorites(t *testing.T) {
 			TimeOfDay:   "Breakfast",
 		},
 		{
+			Name:        "Bacon",
+			Description: "Delicious bacon",
+			Date:        "2021-09-06",
+			Location:    "Sargent",
+			StationName: "Comfort",
+			TimeOfDay:   "Breakfast",
+		},
+		{
 			Name:        "Eggs",
 			Description: "Scrambled eggs",
 			Date:        "2021-09-06",
@@ -436,21 +445,112 @@ func TestAvailableFavorites(t *testing.T) {
 	err = db.SaveUserPreferences("test_user", initialPreferences)
 	require.NoError(t, err, "Error saving user preferences")
 
+	expectedAvailable := []models.AllDataItem{
+		{Name: "Bacon"},
+		{Name: "Bacon"},
+		{Name: "Eggs"},
+	}
+
 	// Fetch the available favorites based on user preferences
-	favorites, err := db.GetAvailableFavorites("test_user")
+	favorites, err := db.GetAvailableFavoritesBatch("test_user")
 	require.NoError(t, err, "Error fetching available favorites")
 
 	// Check if the favorites match the user preferences
-	assert.Len(t, favorites, 2, "Expected 2 favorite items, got %d", len(favorites))
+	assert.Len(t, favorites, 3, "Expected 3 available favorite items, got %d", len(favorites))
 
 	for i, favorite := range favorites {
-		assert.Equal(t, favorite.Name, initialPreferences[i].Name, "Expected favorite name %s, got %s", initialPreferences[i].Name, favorite.Name)
+		assert.Equal(t, favorite.Name, expectedAvailable[i].Name, "Expected favorite name %s, got %s", expectedAvailable[i].Name, favorite.Name)
 	}
 
 	// Delete the test data
 	err = db.DeleteDailyItems()
 	require.NoError(t, err, "Error deleting daily items")
 
-	favorites, err = db.GetAvailableFavorites("test_user")
+	favorites, err = db.GetAvailableFavoritesBatch("test_user")
+	assert.Len(t, favorites, 0, "Expected 0 favorite items, got %d", len(favorites))
+}
+
+func TestUserPreferencesMailing(t *testing.T) {
+	t.Log("Running TestUserPreferencesMailing")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	db.DB = testDB
+
+	// Insert daily items to be looked up
+	dailyItems := []models.DailyItem{
+		{
+			Name:        "Bacon",
+			Description: "Delicious bacon",
+			Date:        "2021-09-06",
+			Location:    "Allison",
+			StationName: "Comfort",
+			TimeOfDay:   "Breakfast",
+		},
+		{
+			Name:        "Bacon",
+			Description: "Delicious bacon",
+			Date:        "2021-09-06",
+			Location:    "Sargent",
+			StationName: "Comfort",
+			TimeOfDay:   "Breakfast",
+		},
+		{
+			Name:        "Eggs",
+			Description: "Scrambled eggs",
+			Date:        "2021-09-06",
+			Location:    "Allison",
+			StationName: "Comfort",
+			TimeOfDay:   "Breakfast",
+		},
+	}
+
+	err := db.InsertDailyItems(dailyItems, false)
+	require.NoError(t, err, "Error inserting daily items")
+
+	// Set up a user's preferences
+	initialPreferences := []models.AllDataItem{
+		{Name: "Bacon"},
+		{Name: "Eggs"},
+	}
+
+	err = db.SaveUserPreferences("test_user", initialPreferences)
+	require.NoError(t, err, "Error saving user preferences")
+	err = db.UpdateMailingStatus("test_user", true)
+
+	preferences, err := db.GetUserPreferences("test_user")
+
+	for i, pref := range preferences {
+		assert.Equal(t, pref.Name, initialPreferences[i].Name, "expected %s preference got %s", initialPreferences[i].Name, pref.Name)
+
+	}
+
+	expectedAvailable := []models.AllDataItem{
+		{Name: "Bacon"},
+		{Name: "Bacon"},
+		{Name: "Eggs"},
+	}
+
+	// Fetch the available favorites based on user preferences
+	mailingList, err := db.GetMailingList()
+	require.NoError(t, err, "Error fetching mailing list")
+
+	// Check if the favorites match the user preferences
+	assert.Len(t, mailingList, 1, "Expected 1 user in the mailing list, got %d", len(mailingList))
+
+	for _, user := range mailingList {
+		favorites := user.Preferences
+		for i, favorite := range favorites {
+			assert.Equal(t, favorite.Name, expectedAvailable[i].Name, "Expected favorite name %s, got %s", expectedAvailable[i].Name, favorite.Name)
+		}
+	}
+
+	// Delete the test data
+	err = db.DeleteDailyItems()
+	require.NoError(t, err, "Error deleting daily items")
+
+	favorites, err := db.GetAvailableFavoritesBatch("test_user")
 	assert.Len(t, favorites, 0, "Expected 0 favorite items, got %d", len(favorites))
 }

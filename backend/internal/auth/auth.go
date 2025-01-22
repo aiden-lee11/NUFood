@@ -151,5 +151,21 @@ func VerifyIDToken(authHeader string) (*auth.Token, error) {
 		fmt.Println("Error verifying ID token:", err)
 		return nil, errors.New("invalid token")
 	}
+
 	return token, nil
+
+}
+
+func GetEmailFromUID(uid string) (email string, err error) {
+	userRecord, err := firebaseAuth.GetUser(context.Background(), uid)
+	if err != nil {
+		fmt.Println("Error getting user from token:", err)
+		return "", errors.New("No user found for uid")
+	}
+
+	if userRecord == nil {
+		fmt.Printf("no user record for uid: %v", uid)
+	}
+
+	return userRecord.Email, nil
 }

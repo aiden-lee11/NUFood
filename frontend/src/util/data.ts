@@ -34,6 +34,28 @@ export const postUserPreferences = async (preferences: Item[], userToken: string
   }
 };
 
+export const updateMailing = async (mailing: boolean, userToken: string) => {
+  try {
+    // userPreferences returns an updated array of how these preferences changed the availableFavorites
+    const auth = `Bearer ${userToken}`;
+    const response = await fetch(`${API_URL}/api/mailing`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: auth,
+      },
+      body: JSON.stringify({ mailing }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+  } catch (error) {
+    console.error('Error updating mailing status:', error);
+  }
+};
+
 // Helper function to check if data was fetched today and retrieve it if available
 const getStoredData = (keys: string[]) => {
   const today = new Date().toISOString().split("T")[0];
