@@ -232,15 +232,12 @@ func SaveUserPreferences(userID string, favorites []models.AllDataItem) error {
 	// Check if the user preferences already exist
 	var userPreferences GormUserPreferences
 	if err := DB.Where("user_id = ?", userID).First(&userPreferences).Error; err != nil {
-		if err != nil {
-			// Create a new user preferences record if not found
-			userPreferences = GormUserPreferences{
-				UserID:    userID,
-				Favorites: string(favoritesJSON),
-			}
-			return DB.Create(&userPreferences).Error
+		// Create a new user preferences record if not found
+		userPreferences = GormUserPreferences{
+			UserID:    userID,
+			Favorites: string(favoritesJSON),
 		}
-		return err
+		return DB.Create(&userPreferences).Error
 	}
 
 	// If the user preferences exist, update the existing record
@@ -396,7 +393,6 @@ func GetLocationOperatingTimes() ([]models.LocationOperatingTimes, error) {
 func GetUserPreferences(userID string) ([]models.AllDataItem, error) {
 	var userPreferences GormUserPreferences
 
-	fmt.Println("userid in get pref", userID)
 	result := DB.Where("user_id = ?", userID).First(&userPreferences)
 
 	if result.Error != nil {
@@ -456,9 +452,8 @@ func GetMailingList() ([]models.PreferenceReturn, error) {
 		}
 
 		userID := strings.TrimSpace(item.UserID)
-		fmt.Printf("User id found with id %v\n", userID)
 
-		availFavorites, err := GetAvailableFavoritesBatch("test_user")
+		availFavorites, err := GetAvailableFavoritesBatch(userID)
 
 		if err != nil {
 			fmt.Printf("Error getting favorites for user %s with err %v:\n", item.UserID, err)
