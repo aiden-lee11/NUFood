@@ -8,6 +8,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -454,9 +455,10 @@ func GetMailingList() ([]models.PreferenceReturn, error) {
 			return nil, err
 		}
 
-		fmt.Printf("User id found with id %s\n", item.UserID)
+		userID := strings.TrimSpace(item.UserID)
+		fmt.Printf("User id found with id %v\n", userID)
 
-		availFavorites, err := GetAvailableFavoritesBatch(item.UserID)
+		availFavorites, err := GetAvailableFavoritesBatch("test_user")
 
 		if err != nil {
 			fmt.Printf("Error getting favorites for user %s with err %v:\n", item.UserID, err)

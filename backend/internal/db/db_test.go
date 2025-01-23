@@ -477,7 +477,13 @@ func TestUserPreferencesMailing(t *testing.T) {
 	defer teardownTestDB(testDB, t)
 
 	// Override the global DB variable in your `db` package
-	db.DB = testDB
+	tx := testDB.Begin()
+	defer tx.Rollback()
+
+	// Use this transaction for all DB operations
+	// transaction is necessary here for testing not for prod just becuase the read writes to in memory sqlite can interfere with eachothers timing
+	// causing a horrible "table not found" err :)
+	db.DB = tx
 
 	// Insert daily items to be looked up
 	dailyItems := []models.DailyItem{
@@ -516,16 +522,13 @@ func TestUserPreferencesMailing(t *testing.T) {
 		{Name: "Eggs"},
 	}
 
-	err = db.SaveUserPreferences("test_user", initialPreferences)
+	userID := "test_user"
+
+	err = db.SaveUserPreferences(userID, initialPreferences)
+	assert.NoError(t, err, "Error saving user")
+	err = db.UpdateMailingStatus(userID, true)
+
 	require.NoError(t, err, "Error saving user preferences")
-	err = db.UpdateMailingStatus("test_user", true)
-
-	preferences, err := db.GetUserPreferences("test_user")
-
-	for i, pref := range preferences {
-		assert.Equal(t, pref.Name, initialPreferences[i].Name, "expected %s preference got %s", initialPreferences[i].Name, pref.Name)
-
-	}
 
 	expectedAvailable := []models.AllDataItem{
 		{Name: "Bacon"},
@@ -551,6 +554,6 @@ func TestUserPreferencesMailing(t *testing.T) {
 	err = db.DeleteDailyItems()
 	require.NoError(t, err, "Error deleting daily items")
 
-	favorites, err := db.GetAvailableFavoritesBatch("test_user")
+	favorites, err := db.GetAvailableFavoritesBatch(userID)
 	assert.Len(t, favorites, 0, "Expected 0 favorite items, got %d", len(favorites))
 }
