@@ -12,7 +12,7 @@ import (
 )
 
 func SendEmails() {
-	preferencesData, err := db.GetAllUsersAndPreferences()
+	preferencesData, err := db.GetMailingList()
 
 	if err != nil {
 		log.Fatal("Error selecting all preferences in twilio attempt: ", err)
