@@ -156,9 +156,16 @@ func InsertAllDataItems(items []models.AllDataItem, allClosed bool) error {
 		return nil
 	}
 
+	cleanedItems, err := CleanAllData(items)
+
+	if err != nil {
+		log.Println("Error cleaning the items before inserting to all data table: ", err)
+		return nil
+	}
+
 	var gormItems []GormAllDataItem
 
-	for _, item := range items {
+	for _, item := range cleanedItems {
 		appendable := AllDataItemToGorm(item)
 		gormItems = append(gormItems, appendable)
 	}
@@ -487,6 +494,22 @@ func GetMailingList() ([]models.PreferenceReturn, error) {
 func DeleteDailyItems() error {
 	// Attempt to delete all items from gorm_daily_items table
 	result := DB.Exec("DELETE FROM gorm_daily_items WHERE EXISTS (SELECT 1 FROM gorm_daily_items LIMIT 1)")
+	if result.Error != nil {
+		fmt.Println("Error deleting items:", result.Error)
+		return result.Error
+	}
+
+	fmt.Println("All items deleted")
+	return nil
+}
+
+// DeleteAllDataItems removes all records from the allData items table.
+//
+// Returns:
+// - error: An error if the deletion operation fails.
+func DeleteAllDataItems() error {
+	// Attempt to delete all items from gorm_daily_items table
+	result := DB.Exec("DELETE FROM gorm_all_data_items WHERE EXISTS (SELECT 1 FROM gorm_daily_items LIMIT 1)")
 	if result.Error != nil {
 		fmt.Println("Error deleting items:", result.Error)
 		return result.Error

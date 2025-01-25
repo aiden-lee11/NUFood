@@ -557,3 +557,126 @@ func TestUserPreferencesMailing(t *testing.T) {
 	favorites, err := db.GetAvailableFavoritesBatch(userID)
 	assert.Len(t, favorites, 0, "Expected 0 favorite items, got %d", len(favorites))
 }
+
+func TestAllDataItemCleanFunc(t *testing.T) {
+	t.Log("Running TestAllDataItemCleanFunc")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	db.DB = testDB
+
+	allDataItems := []models.AllDataItem{
+		{Name: "Eggs"},
+		{Name: "Bacon"},
+		{Name: "Pancakes"},
+		{Name: "Chicken"},
+		{Name: "Stroganoff"},
+		{Name: "Beef"},
+	}
+
+	err := db.InsertAllDataItems(allDataItems, false)
+	require.NoError(t, err, "Error inserting all data items")
+
+	items, err := db.GetAllDataItems()
+	require.NoError(t, err, "Error fetching all data items")
+
+	assert.Len(t, items, 6, "Expected 2 all data items, got %d", len(items))
+
+	for i, item := range items {
+		assert.Equal(t, item.Name, allDataItems[i].Name, "Expected item name %s, got %s", allDataItems[i].Name, item.Name)
+	}
+
+	newItems := []models.AllDataItem{
+		{Name: "Eggs"},
+		{Name: "Stroganoff"},
+		{Name: "Turkey"},
+		{Name: "American Cheese"},
+	}
+
+	expectedItems := []models.AllDataItem{
+		{Name: "Turkey"},
+		{Name: "American Cheese"},
+	}
+
+	cleanedItems, err := db.CleanAllData(newItems)
+	require.NoError(t, err, "Error cleaning all data items")
+
+	for i, item := range cleanedItems {
+		assert.Equal(t, item.Name, expectedItems[i].Name, "Expected item name %s, got %s", expectedItems[i].Name, item.Name)
+	}
+
+	// Delete the test data
+	err = db.DeleteAllDataItems()
+	require.NoError(t, err, "Error deleting all data items")
+}
+
+func TestInsertDuplicatesAllData(t *testing.T) {
+	t.Log("Running TestInsertDuplicatesAllData")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	tx := testDB.Begin()
+	defer tx.Rollback()
+
+	// Use this transaction for all DB operations
+	// transaction is necessary here for testing not for prod just becuase the read writes to in memory sqlite can interfere with eachothers timing
+	// causing a horrible "table not found" err :)
+	db.DB = tx
+
+	allDataItems := []models.AllDataItem{
+		{Name: "Eggs"},
+		{Name: "Bacon"},
+		{Name: "Pancakes"},
+		{Name: "Chicken"},
+		{Name: "Stroganoff"},
+		{Name: "Beef"},
+	}
+
+	err := db.InsertAllDataItems(allDataItems, false)
+	require.NoError(t, err, "Error inserting all data items")
+
+	items, err := db.GetAllDataItems()
+	require.NoError(t, err, "Error fetching all data items")
+
+	assert.Len(t, items, 6, "Expected 2 all data items, got %d", len(items))
+
+	for i, item := range items {
+		assert.Equal(t, item.Name, allDataItems[i].Name, "Expected item name %s, got %s", allDataItems[i].Name, item.Name)
+	}
+
+	newItems := []models.AllDataItem{
+		{Name: "Eggs"},
+		{Name: "Stroganoff"},
+		{Name: "Turkey"},
+		{Name: "American Cheese"},
+	}
+
+	err = db.InsertAllDataItems(newItems, false)
+	require.NoError(t, err, "Error inserting all data items")
+
+	expectedItems := []models.AllDataItem{
+		{Name: "Eggs"},
+		{Name: "Bacon"},
+		{Name: "Pancakes"},
+		{Name: "Chicken"},
+		{Name: "Stroganoff"},
+		{Name: "Beef"},
+		{Name: "Turkey"},
+		{Name: "American Cheese"},
+	}
+
+	items, err = db.GetAllDataItems()
+	require.NoError(t, err, "Error fetching all data items")
+
+	for i, item := range items {
+		assert.Equal(t, item.Name, expectedItems[i].Name, "Expected item name %s, got %s", expectedItems[i].Name, item.Name)
+	}
+
+	// Delete the test data
+	err = db.DeleteAllDataItems()
+	require.NoError(t, err, "Error deleting all data items")
+}
