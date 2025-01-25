@@ -105,11 +105,11 @@ const fetchAndStoreData = async (endpoint: string, keys: string[], authToken?: s
 // Main function for fetching all data
 export const fetchAllData = async (userToken: string | null) => {
   try {
-    const storedData = getStoredData(["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes"]);
+    const storedData = getStoredData(["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes", "mailing"]);
     if (storedData) return storedData;
 
     console.log("New day... fetching new data");
-    return await fetchAndStoreData(`${API_URL}/api/allData`, ["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes"], userToken || undefined);
+    return await fetchAndStoreData(`${API_URL}/api/allData`, ["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes", "mailing"], userToken || undefined);
   } catch (error) {
     console.error("Error fetching all data:", error);
   }

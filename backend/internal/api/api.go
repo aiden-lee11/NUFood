@@ -72,7 +72,7 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		Config: scraper.DefaultConfig,
 	}
 
-	const MAX_RETRIES = 3
+	const MAX_RETRIES = 5
 
 	var dItems []models.DailyItem
 	var aItems []models.AllDataItem
@@ -295,11 +295,20 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mailing, err := db.GetUserMailing(userID)
+	if err != nil {
+		http.Error(w, "Error fetching user mailing: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("mailing is: ", *mailing)
+
 	combinedData := map[string]interface{}{
 		"date":                   date,
 		"allItems":               allItems,
 		"locationOperatingTimes": locationOperatingTimes,
 		"userPreferences":        userPreferences,
+		"mailing":                mailing,
 	}
 
 	// Data to only fetch if there exists dailyItems that day
