@@ -411,6 +411,18 @@ func GetUserPreferences(userID string) ([]models.AllDataItem, error) {
 	return favorites, nil
 }
 
+func GetUserMailing(userID string) (*bool, error) {
+	var userPreferences GormUserPreferences
+
+	result := DB.Where("user_id = ?", userID).First(&userPreferences)
+
+	if result.Error != nil {
+		return nil, NoUserPreferencesInDB
+	}
+
+	return &userPreferences.Mailing, nil
+}
+
 func GetAvailableFavoritesBatch(userID string) ([]models.DailyItem, error) {
 	userPreferences, err := GetUserPreferences(userID)
 

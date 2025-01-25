@@ -1,5 +1,6 @@
 
 import type React from "react"
+import { useState } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
@@ -14,7 +15,12 @@ const MailingSwitch: React.FC<MailingSwitchProps> = ({ token, updateMailing, set
   const handleSwitchChange = (checked: boolean) => {
     setOpen(false)
     updateMailing(checked, token)
+    setMailing(checked)
   }
+
+  const [mailing, setMailing] = useState<boolean>(
+    sessionStorage.getItem("mailing") == "true"
+  )
 
   return (
     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -25,7 +31,7 @@ const MailingSwitch: React.FC<MailingSwitchProps> = ({ token, updateMailing, set
         >
           Mailing List
         </Label>
-        <Switch id="mailing-switch" onCheckedChange={handleSwitchChange} />
+        <Switch checked={mailing} id="mailing-switch" onCheckedChange={handleSwitchChange} />
       </div>
     </DropdownMenuItem>
   )

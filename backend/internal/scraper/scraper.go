@@ -24,7 +24,7 @@ type ScrapeConfig struct {
 }
 
 // Maximum retries for failed visits
-const MAX_RETRIES = 3
+const MAX_RETRIES = 4
 
 var DefaultConfig = ScrapeConfig{
 	Locations: []models.Location{
