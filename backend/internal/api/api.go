@@ -72,7 +72,7 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		Config: scraper.DefaultConfig,
 	}
 
-	const MAX_RETRIES = 5
+	const MAX_RETRIES = 10
 
 	var dItems []models.DailyItem
 	var aItems []models.AllDataItem
@@ -241,7 +241,7 @@ func SetUserMailing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("successful write")
+	fmt.Println("Successful mailing update")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -300,8 +300,6 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error fetching user mailing: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Println("mailing is: ", *mailing)
 
 	combinedData := map[string]interface{}{
 		"date":                   date,

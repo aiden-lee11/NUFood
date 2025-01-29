@@ -51,7 +51,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* <Banner />*/}
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar for desktop */}
         <aside className="hidden lg:flex w-56 flex-col bg-background">
@@ -210,7 +209,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </div>
-      </div >
+      </div>
     </>
   )
 }

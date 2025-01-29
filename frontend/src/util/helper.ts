@@ -8,7 +8,7 @@ import { LocationOperatingTimes, OperationHoursData, OperatingTime } from "../ty
 export const getCurrentTimeOfDay = (): string => {
   const currentTime = new Date();
   const currentHour = currentTime.getHours();
-  if (currentHour >= 8 && currentHour <= 10) {
+  if (currentHour >= 7 && currentHour <= 10) {
     return "Breakfast";
   } else if (currentHour >= 11 && currentHour <= 16) {
     return "Lunch";

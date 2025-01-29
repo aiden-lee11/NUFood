@@ -186,8 +186,7 @@ const DailyItems: React.FC = () => {
       <button
         onClick={() => setShowPreferences(!showPreferences)}
         className="p-2 rounded-md mb-4 
-           bg-white-100 text-black 
-           dark:bg-[#030711] dark:text-white 
+          bg-background text-gray-900 dark:text-white
            border border-gray-300 dark:border-gray-700
            transition-colors duration-200"
       >

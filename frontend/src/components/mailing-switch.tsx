@@ -16,6 +16,7 @@ const MailingSwitch: React.FC<MailingSwitchProps> = ({ token, updateMailing, set
     setOpen(false)
     updateMailing(checked, token)
     setMailing(checked)
+    sessionStorage.setItem("mailing", checked ? "true" : "false")
   }
 
   const [mailing, setMailing] = useState<boolean>(
