@@ -96,7 +96,7 @@ const fetchAndStoreData = async (endpoint: string, keys: string[], authToken?: s
   sessionStorage.setItem("date", today);
 
   keys.forEach((key) => {
-    sessionStorage.setItem(key, JSON.stringify(result[key] || (key != "allClosed" ? [] : false)));
+    sessionStorage.setItem(key, JSON.stringify(result[key] || (!["allClosed", "mailing"].includes(key) ? [] : false)));
   });
 
   return result;
@@ -105,11 +105,12 @@ const fetchAndStoreData = async (endpoint: string, keys: string[], authToken?: s
 // Main function for fetching all data
 export const fetchAllData = async (userToken: string | null) => {
   try {
-    const storedData = getStoredData(["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes", "mailing"]);
+    const allDataItems = ["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes", "mailing"]
+    const storedData = getStoredData(allDataItems);
     if (storedData) return storedData;
 
     console.log("New day... fetching new data");
-    return await fetchAndStoreData(`${API_URL}/api/allData`, ["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes", "mailing"], userToken || undefined);
+    return await fetchAndStoreData(`${API_URL}/api/allData`, allDataItems, userToken || undefined);
   } catch (error) {
     console.error("Error fetching all data:", error);
   }
@@ -118,11 +119,12 @@ export const fetchAllData = async (userToken: string | null) => {
 // Main function for fetching general (non-user-exclusive) data
 export const fetchGeneralData = async () => {
   try {
-    const storedData = getStoredData(["allItems", "dailyItems", "allClosed", "locationOperatingTimes"]);
+    const generalDataItems = ["allItems", "dailyItems", "allClosed", "locationOperatingTimes"]
+    const storedData = getStoredData(generalDataItems);
     if (storedData) return storedData;
 
     console.log("New day... fetching new data");
-    return await fetchAndStoreData(`${API_URL}/api/generalData`, ["allItems", "dailyItems", "allClosed", "locationOperatingTimes"]);
+    return await fetchAndStoreData(`${API_URL}/api/generalData`, generalDataItems);
   } catch (error) {
     console.error("Error fetching general data:", error);
   }
