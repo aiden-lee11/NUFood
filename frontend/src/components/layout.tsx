@@ -1,27 +1,18 @@
 import * as React from "react"
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from "react-router-dom"
 import { Button } from "./ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu"
 import { ScrollArea } from "./ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "./ui/sheet"
 import { useTheme } from "./theme-provider"
-import { CalendarDays, Home, ListTodo, Menu, Moon, Heart, Sun, User } from 'lucide-react'
-import { useAuth } from '../context/AuthProvider'
+import { CalendarDays, Home, ListTodo, Menu, Moon, Heart, Sun, User } from "lucide-react"
+import { useAuth } from "../context/AuthProvider"
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
-import BuyMeCoffee from './buy-me-a-coffee'
-import FeedbackButton from './feedback-button'
-import MailingSwitch from "./mailing-switch"
-import { updateMailing } from '../util/data'
+import BuyMeCoffee from "./buy-me-a-coffee"
+import FeedbackButton from "./feedback-button"
+import AccountPopup from "./account-popup"
 
 // Utility function for conditional class names
-const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
+const cn = (...classes: string[]) => classes.filter(Boolean).join(" ")
 
 interface NavItem {
   title: string
@@ -43,6 +34,7 @@ const preferences: NavItem = {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false)
+  const [accountPopupOpen, setAccountPopupOpen] = React.useState(false)
   const { theme, setTheme } = useTheme()
   const location = useLocation()
   const { token } = useAuth()
@@ -67,47 +59,38 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   to={item.href}
                   className={cn(
                     "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent",
-                    location.pathname === item.href ? "bg-accent" : "transparent"
+                    location.pathname === item.href ? "bg-accent" : "transparent",
                   )}
                 >
                   {item.icon}
                   {item.title}
                 </Link>
               ))}
-              {loggedIn &&
+              {loggedIn && (
                 <Link
                   key={"preferences"}
                   to={preferences.href}
                   className={cn(
                     "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent",
-                    location.pathname === preferences.href ? "bg-accent" : "transparent"
+                    location.pathname === preferences.href ? "bg-accent" : "transparent",
                   )}
                 >
                   {preferences.icon}
                   {preferences.title}
                 </Link>
-              }
+              )}
             </nav>
           </ScrollArea>
           <div className="border-t p-4 space-y-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <User className="h-4 w-4 mr-2" />
-                  Account
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {loggedIn && <MailingSwitch token={token} updateMailing={updateMailing} setOpen={setOpen} />}
-                <DropdownMenuItem asChild>
-                  {loggedIn ?
-                    <Link to="/signout" className="w-full" onClick={() => setOpen(false)}>Sign Out</Link>
-                    : <Link to="/login" className="w-full" onClick={() => setOpen(false)}>Login</Link>}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => setAccountPopupOpen(true)}
+            >
+              <User className="h-4 w-4 mr-2" />
+              Account
+            </Button>
             <FeedbackButton />
             <BuyMeCoffee className="w-full" />
           </div>
@@ -135,7 +118,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       to={item.href}
                       className={cn(
                         "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent",
-                        location.pathname === item.href ? "bg-accent" : "transparent"
+                        location.pathname === item.href ? "bg-accent" : "transparent",
                       )}
                       onClick={() => setOpen(false)}
                     >
@@ -149,7 +132,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       to={preferences.href}
                       className={cn(
                         "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent",
-                        location.pathname === preferences.href ? "bg-accent" : "transparent"
+                        location.pathname === preferences.href ? "bg-accent" : "transparent",
                       )}
                       onClick={() => setOpen(false)}
                     >
@@ -159,30 +142,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   )}
                 </nav>
                 <div className="border-t p-4 mt-auto space-y-4">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full justify-start">
-                        <User className="mr-2 h-4 w-4" />
-                        Account
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {loggedIn && <MailingSwitch token={token} updateMailing={updateMailing} setOpen={setOpen} />}
-                      <DropdownMenuItem asChild>
-                        {loggedIn ? (
-                          <Link to="/signout" className="w-full" onClick={() => setOpen(false)}>
-                            Sign Out
-                          </Link>
-                        ) : (
-                          <Link to="/login" className="w-full" onClick={() => setOpen(false)}>
-                            Login
-                          </Link>
-                        )}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setAccountPopupOpen(true)
+                      setOpen(false)
+                    }}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Account
+                  </Button>
                   <FeedbackButton />
                   <BuyMeCoffee className="w-full" />
                 </div>
@@ -190,26 +161,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Sheet>
             <div className="flex-1">
               <h1 className="text-lg font-semibold">
-                {navItems.find(item => item.href === location.pathname)?.title
-                  || (preferences.href === location.pathname ? preferences.title : "Dashboard")}
+                {navItems.find((item) => item.href === location.pathname)?.title ||
+                  (preferences.href === location.pathname ? preferences.title : "Dashboard")}
               </h1>
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            >
+            <Button variant="outline" size="icon" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
               {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
               <span className="sr-only">Toggle theme</span>
             </Button>
           </header>
 
           {/* Page content */}
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-            {children}
-          </main>
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
         </div>
       </div>
+      <AccountPopup isOpen={accountPopupOpen} onClose={() => setAccountPopupOpen(false)} />
     </>
   )
 }
