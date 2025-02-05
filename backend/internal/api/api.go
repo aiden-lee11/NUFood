@@ -80,7 +80,7 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	for i := 0; i < MAX_RETRIES; i++ {
-		fmt.Printf("trying scrape for the %d time", i)
+		fmt.Printf("trying scrape for the %d time\n", i)
 		dItems, aItems, allClosed, err = scraper.ScrapeFood(time.Now().Format("2006-01-02"))
 		if err == nil {
 			fmt.Printf("successful scrape on the %d time", i)
@@ -91,10 +91,12 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	if dItems == nil {
 		http.Error(w, "Error scraping and saving: nil dItems", http.StatusInternalServerError)
+		return
 	}
 
 	// New valid data so delete old data
@@ -102,14 +104,17 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	if err := db.InsertDailyItems(dItems, allClosed); err != nil {
 		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	if err := db.InsertAllDataItems(aItems, allClosed); err != nil {
 		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Return success code
@@ -133,10 +138,23 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 		Config: scraper.DefaultConfig,
 	}
 	formattedDate := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
-	locationOperatingTimes, err := scraper.ScrapeLocationOperatingTimes(formattedDate)
 
-	if locationOperatingTimes == nil {
+	const MAX_RETRIES = 10
+	var locationOperatingTimes []models.LocationOperatingTimes
+	var err error
+
+	for i := 0; i < MAX_RETRIES; i++ {
+		fmt.Printf("trying scrape locations for the %d time\n", i)
+		locationOperatingTimes, err = scraper.ScrapeLocationOperatingTimes(formattedDate)
+		if err == nil {
+			fmt.Printf("successful scrape on the %d time", i)
+			err = nil
+			break
+		}
+	}
+	if locationOperatingTimes == nil || len(locationOperatingTimes) == 0 {
 		http.Error(w, "Error scraping and saving: nil locationOperatingTimes", http.StatusInternalServerError)
+		return
 	}
 
 	// New valid data so delete old data
@@ -144,15 +162,13 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 
 	if err != nil {
 		http.Error(w, "Error clearing location operating hours before scrape: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	err = db.InsertLocationOperatingTimes(locationOperatingTimes)
 	if err != nil {
 		http.Error(w, "Error inserting locationOperatingTimes: "+err.Error(), http.StatusInternalServerError)
-	}
-
-	if err != nil {
-		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Return success code
@@ -331,6 +347,7 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the combined result as JSON
 	if err := json.NewEncoder(w).Encode(combinedData); err != nil {
 		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -365,6 +382,7 @@ func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the combined result as JSON
 	if err := json.NewEncoder(w).Encode(labeledData); err != nil {
 		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
