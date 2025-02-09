@@ -13,9 +13,15 @@ jobs:
         id: day-of-week
         run: echo "DAY_OF_WEEK=$(date +'%u')" >> $GITHUB_ENV
       - name: Run daily item scraping
-        run: curl https://api.nufood.me/api/scrapeDailyItems
+        run: |
+          curl -X GET https://api.nufood.me/api/scrapeDailyItems \
+          -H "X-Custom-Auth: ${{ secrets.CRON_AUTH_TOKEN }}" \
+          -H "User-Agent: GitHub-Cron-Job"
       # Check if the day is Sunday if it is we need to scrape the new operating times data
       # day of week is index Monday (1) to Sunday (7)
       - name: Run operating times scraping (only on Sundays)
         if: ${{ env.DAY_OF_WEEK == '7' }}
-        run: curl https://api.nufood.me/api/scrapeOperatingTimes
+        run: |
+          curl -X GET https://api.nufood.me/api/scrapeOperatingTimes \
+          -H "X-Custom-Auth: ${{ secrets.CRON_AUTH_TOKEN }}" \
+          -H "User-Agent: GitHub-Cron-Job"
