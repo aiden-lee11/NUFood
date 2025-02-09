@@ -400,10 +400,16 @@ func GetLocationOperatingTimes() ([]models.LocationOperatingTimes, error) {
 func GetUserPreferences(userID string) ([]models.AllDataItem, error) {
 	var userPreferences GormUserPreferences
 
-	result := DB.Where("user_id = ?", userID).First(&userPreferences)
+	result := DB.Where(GormUserPreferences{UserID: userID}).Attrs(GormUserPreferences{Favorites: "[]", Mailing: false}).FirstOrCreate(&userPreferences)
+
+	// If we created a row that means that the user was not in our db before so there are no items
+	if result.RowsAffected == 1 {
+		return nil, NoUserPreferencesInDB
+	}
 
 	if result.Error != nil {
-		return nil, NoUserPreferencesInDB
+		log.Println("Error in get user preferences: ", result.Error)
+		return nil, result.Error
 	}
 
 	// Deserialize the JSON strings to maps

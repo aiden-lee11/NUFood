@@ -11,7 +11,6 @@ import (
 // CorsMiddleware handles CORS headers and preflight requests
 func CorsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Always set CORS headers first
 		origin := r.Header.Get("Origin")
 		fmt.Println("Origin: ", origin)
 		if origin == "http://localhost:5173" || origin == "https://www.nufood.me" {

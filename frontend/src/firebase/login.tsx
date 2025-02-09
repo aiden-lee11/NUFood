@@ -24,7 +24,6 @@ export default function Login() {
         throw new Error("Login failed: No user found");
       }
 
-      localStorage.setItem('t', 'true');
       toast({
         title: "Login Successful",
         description: "Welcome to NU Food Finder!",

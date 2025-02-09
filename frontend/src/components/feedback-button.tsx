@@ -1,5 +1,5 @@
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"  // Add useRef
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -30,11 +30,27 @@ const FeedbackButton = () => {
   const { token, user } = useAuth()
   const loggedIn = !!token
 
+  const emailInputRef = useRef<HTMLInputElement>(null)
+  const messageInputRef = useRef<HTMLTextAreaElement>(null)
+
   useEffect(() => {
     if (loggedIn && user?.email) {
       setSender(user.email)
     }
   }, [loggedIn, user])
+
+  useEffect(() => {
+    if (open) {
+      // Use a small timeout to ensure the dialog is fully rendered
+      setTimeout(() => {
+        if (loggedIn && messageInputRef.current) {
+          messageInputRef.current.focus()
+        } else if (!loggedIn && emailInputRef.current) {
+          emailInputRef.current.focus()
+        }
+      }, 0)
+    }
+  }, [open, loggedIn])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,11 +62,9 @@ const FeedbackButton = () => {
         console.error("Email failed to send:", error.text)
       },
     )
-
     setMessage("")
     setSender(loggedIn && user?.email ? user.email : "")
     setOpen(false)
-
     toast({
       title: "Feedback Sent",
       description: "Thank you for your feedback!",
@@ -77,6 +91,7 @@ const FeedbackButton = () => {
             <Label htmlFor="email">Email {!loggedIn && "(optional)"}</Label>
             <Input
               id="email"
+              ref={emailInputRef}
               type="email"
               value={sender}
               onChange={(e) => setSender(e.target.value)}
@@ -89,6 +104,7 @@ const FeedbackButton = () => {
             <Label htmlFor="message">Your Feedback</Label>
             <Textarea
               id="message"
+              ref={messageInputRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Your feedback here..."
@@ -108,4 +124,3 @@ const FeedbackButton = () => {
 }
 
 export default FeedbackButton
-
