@@ -105,7 +105,7 @@ const fetchAndStoreData = async (endpoint: string, keys: string[], authToken?: s
 // Main function for fetching all data
 export const fetchAllData = async (userToken: string | null) => {
   try {
-    const allDataItems = ["allItems", "dailyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes", "mailing"]
+    const allDataItems = ["allItems", "dailyItems", "weeklyItems", "availableFavorites", "userPreferences", "allClosed", "locationOperatingTimes", "mailing"]
     const storedData = getStoredData(allDataItems);
     if (storedData) return storedData;
 
@@ -119,7 +119,7 @@ export const fetchAllData = async (userToken: string | null) => {
 // Main function for fetching general (non-user-exclusive) data
 export const fetchGeneralData = async () => {
   try {
-    const generalDataItems = ["allItems", "dailyItems", "allClosed", "locationOperatingTimes"]
+    const generalDataItems = ["allItems", "weeklyItems", "dailyItems", "allClosed", "locationOperatingTimes"]
     const storedData = getStoredData(generalDataItems);
     if (storedData) return storedData;
 

@@ -9,6 +9,7 @@ interface PreferencesProps {
   visibleTimes: string[];
   expandFolders: boolean;
   togglePreferencesItem: (preferenceType: string, preference: string | boolean) => void;
+  setVisibleLocations: (locations: string[]) => void;
 }
 
 const Preferences: React.FC<PreferencesProps> = ({
@@ -19,7 +20,15 @@ const Preferences: React.FC<PreferencesProps> = ({
   visibleTimes,
   expandFolders,
   togglePreferencesItem,
+  setVisibleLocations,
 }) => {
+  const selectNorth = () => {
+    setVisibleLocations(["Sargent", "Elder"]);
+  };
+
+  const selectSouth = () => {
+    setVisibleLocations(["Allison", "Plex East", "Plex West"]);
+  };
   return (
     <>
       {showPreferences && (
@@ -33,6 +42,20 @@ const Preferences: React.FC<PreferencesProps> = ({
             <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
               Locations
             </h3>
+            <div className="flex gap-2 mb-2">
+              <button
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800 transition"
+                onClick={selectNorth}
+              >
+                North
+              </button>
+              <button
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800 transition"
+                onClick={selectSouth}
+              >
+                South
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {locations.map((location) => (
                 <div key={location} className="flex items-center gap-2">

@@ -112,7 +112,85 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.InsertAllDataItems(aItems, allClosed); err != nil {
+	if err := db.InsertAllDataItems(aItems); err != nil {
+		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return success code
+	w.WriteHeader(http.StatusOK)
+}
+
+// ScrapeWeeklyItemsHandler scrapes daily dining hall items for the coming week and updates the database.
+//
+// This handler expects no request body but requires no authorization for the request.
+// It responds with an HTTP status code indicating the result of the scraping operation.
+//
+// Expected Authorization:
+//   - No special authorization required.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
+func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
+	scraper := &scraper.DiningHallScraper{
+		Client: scraper.NewClient(),
+		Config: scraper.DefaultConfig,
+	}
+
+	const MAX_RETRIES = 10
+	var weeklyItems []models.WeeklyItem
+	var totalAllItems []models.AllDataItem
+
+	today := time.Now()
+	for i := 0; i < 7; i++ {
+		scrapeDate := today.AddDate(0, 0, i).Format("2006-01-02")
+
+		var dItems []models.DailyItem
+		var aItems []models.AllDataItem
+		var err error
+
+		for i := 0; i < MAX_RETRIES; i++ {
+			fmt.Printf("trying scrape on date %s for the %d time\n", scrapeDate, i)
+			dItems, aItems, _, err = scraper.ScrapeFood(scrapeDate)
+			if err == nil {
+				fmt.Printf("successful scrape on the %d time", i)
+				err = nil
+				break
+			}
+		}
+
+		if err != nil {
+			http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if dItems == nil {
+			http.Error(w, "Error scraping and saving: nil dItems", http.StatusInternalServerError)
+			return
+		}
+
+		for _, dItem := range dItems {
+			weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: dItem, DayIndex: i})
+		}
+
+		totalAllItems = append(totalAllItems, aItems...)
+	}
+
+	// New valid data so delete old data
+	err := db.DeleteWeeklyItems()
+
+	if err != nil {
+		http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := db.InsertWeeklyItems(weeklyItems); err != nil {
+		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := db.InsertAllDataItems(totalAllItems); err != nil {
 		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -291,6 +369,12 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	weeklyItems, err := db.GetAllWeeklyItems()
+	if err != nil {
+		http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	date, err := db.ReturnDateOfDailyItems()
 	if err != nil {
 		http.Error(w, "Error fetching date of daily items: "+err.Error(), http.StatusInternalServerError)
@@ -320,6 +404,7 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	combinedData := map[string]interface{}{
 		"date":                   date,
 		"allItems":               allItems,
+		"weeklyItems":            weeklyItems,
 		"locationOperatingTimes": locationOperatingTimes,
 		"userPreferences":        userPreferences,
 		"mailing":                mailing,
@@ -410,7 +495,13 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch all data items
 	allItems, err := db.GetAllDataItems()
 	if err != nil {
-		http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	weeklyItems, err := db.GetAllWeeklyItems()
+	if err != nil {
+		http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -430,6 +521,7 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	combinedData := map[string]interface{}{
 		"date":                   date,
 		"allItems":               allItems,
+		"weeklyItems":            weeklyItems,
 		"locationOperatingTimes": locationOperatingTimes,
 	}
 

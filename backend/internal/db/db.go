@@ -22,6 +22,12 @@ type GormDailyItem struct {
 	AllClosed        *bool `gorm:"column:all_closed"`
 }
 
+type GormWeeklyItem struct {
+	gorm.Model
+	models.DailyItem
+	DayIndex int `gorm:"index"`
+}
+
 // GormAllDataItem represents a unique menu item in the database.
 type GormAllDataItem struct {
 	gorm.Model
@@ -59,6 +65,10 @@ func DailyItemToGorm(item models.DailyItem) GormDailyItem {
 	return GormDailyItem{DailyItem: item}
 }
 
+func WeeklyItemToGorm(item models.WeeklyItem) GormWeeklyItem {
+	return GormWeeklyItem{DailyItem: item.DailyItem, DayIndex: item.DayIndex}
+}
+
 // InitDB initializes the PostgreSQL database connection and migrates the schema.
 //
 // It sets up the global database variable and performs schema migrations to
@@ -78,7 +88,7 @@ func InitDB(databasePath string) error {
 	}
 
 	// Auto migrate the schemas
-	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &GormUserPreferences{}, &GormLocationOperatingTimes{})
+	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &GormUserPreferences{}, &GormLocationOperatingTimes{}, &GormWeeklyItem{})
 	if err != nil {
 		return err
 	}
@@ -140,6 +150,29 @@ func InsertDailyItems(items []models.DailyItem, allClosed bool) error {
 	return nil
 }
 
+func InsertWeeklyItems(items []models.WeeklyItem) error {
+	if items == nil || len(items) == 0 {
+		log.Println("No weekly items, skipping insert")
+		return nil
+	}
+	var gormItems []GormWeeklyItem
+
+	for _, item := range items {
+		appendable := WeeklyItemToGorm(item)
+		gormItems = append(gormItems, appendable)
+	}
+
+	result := DB.Create(&gormItems)
+
+	if result.Error != nil {
+		log.Println("Error inserting weekly items:", result.Error)
+		return result.Error
+	}
+
+	log.Println("Weekly items inserted successfully")
+	return nil
+}
+
 // InsertAllDataItems inserts a list of AllDataItem objects into the all data table.
 //
 // This operation is skipped if the provided list is empty or if all locations are closed.
@@ -150,8 +183,8 @@ func InsertDailyItems(items []models.DailyItem, allClosed bool) error {
 //
 // Returns:
 // - error: An error if the insertion fails.
-func InsertAllDataItems(items []models.AllDataItem, allClosed bool) error {
-	if allClosed || items == nil {
+func InsertAllDataItems(items []models.AllDataItem) error {
+	if items == nil || len(items) == 0 {
 		log.Println("No available items, skipping all data insert")
 		return nil
 	}
@@ -321,6 +354,30 @@ func GetAllDailyItems() ([]models.DailyItem, error) {
 	var items []models.DailyItem
 	for _, item := range dailyItems {
 		items = append(items, item.DailyItem)
+	}
+
+	return items, nil
+}
+
+func GetAllWeeklyItems() ([]models.WeeklyItem, error) {
+	var weeklyItems []GormWeeklyItem
+	result := DB.Find(&weeklyItems)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if len(weeklyItems) == 0 {
+		return nil, NoItemsInDB
+	}
+
+	// Convert the GormWeeklyItem slice to a WeeklyItem slice
+	var items []models.WeeklyItem
+	for _, item := range weeklyItems {
+		cleanedItem := models.WeeklyItem{
+			DailyItem: item.DailyItem,
+			DayIndex:  item.DayIndex,
+		}
+		items = append(items, cleanedItem)
 	}
 
 	return items, nil
@@ -505,7 +562,23 @@ func DeleteDailyItems() error {
 		return result.Error
 	}
 
-	fmt.Println("All items deleted")
+	fmt.Println("All daily items deleted")
+	return nil
+}
+
+// DeleteWeeklyItems removes all records from the weekly items table.
+//
+// Returns:
+// - error: An error if the deletion operation fails.
+func DeleteWeeklyItems() error {
+	// Attempt to delete all items from gorm_weekly_items table
+	result := DB.Exec("DELETE FROM gorm_weekly_items WHERE EXISTS (SELECT 1 FROM gorm_weekly_items LIMIT 1)")
+	if result.Error != nil {
+		fmt.Println("Error deleting weekly items:", result.Error)
+		return result.Error
+	}
+
+	fmt.Println("All weekly items deleted")
 	return nil
 }
 
