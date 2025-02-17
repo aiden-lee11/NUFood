@@ -145,16 +145,17 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	today := time.Now()
 	for i := 0; i < 7; i++ {
 		scrapeDate := today.AddDate(0, 0, i).Format("2006-01-02")
+		scrapeInd := int(today.AddDate(0, 0, i).Weekday())
 
 		var dItems []models.DailyItem
 		var aItems []models.AllDataItem
 		var err error
 
-		for i := 0; i < MAX_RETRIES; i++ {
-			fmt.Printf("trying scrape on date %s for the %d time\n", scrapeDate, i)
+		for tryInd := 0; tryInd < MAX_RETRIES; tryInd++ {
+			fmt.Printf("trying scrape on date %s for the %d time\n", scrapeDate, tryInd)
 			dItems, aItems, _, err = scraper.ScrapeFood(scrapeDate)
 			if err == nil {
-				fmt.Printf("successful scrape on the %d time", i)
+				fmt.Printf("successful scrape on the %d time", tryInd)
 				err = nil
 				break
 			}
@@ -171,7 +172,7 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, dItem := range dItems {
-			weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: dItem, DayIndex: i})
+			weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: dItem, DayIndex: scrapeInd})
 		}
 
 		totalAllItems = append(totalAllItems, aItems...)

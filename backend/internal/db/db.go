@@ -359,7 +359,7 @@ func GetAllDailyItems() ([]models.DailyItem, error) {
 	return items, nil
 }
 
-func GetAllWeeklyItems() ([]models.WeeklyItem, error) {
+func GetAllWeeklyItems() ([][]models.DailyItem, error) {
 	var weeklyItems []GormWeeklyItem
 	result := DB.Find(&weeklyItems)
 	if result.Error != nil {
@@ -371,13 +371,9 @@ func GetAllWeeklyItems() ([]models.WeeklyItem, error) {
 	}
 
 	// Convert the GormWeeklyItem slice to a WeeklyItem slice
-	var items []models.WeeklyItem
+	items := make([][]models.DailyItem, 7)
 	for _, item := range weeklyItems {
-		cleanedItem := models.WeeklyItem{
-			DailyItem: item.DailyItem,
-			DayIndex:  item.DayIndex,
-		}
-		items = append(items, cleanedItem)
+		items[item.DayIndex] = append(items[item.DayIndex], item.DailyItem)
 	}
 
 	return items, nil

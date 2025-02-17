@@ -10,12 +10,21 @@ import { getDailyLocationOperationTimes, getCurrentTimeOfDayWithLocations, isLoc
 import { DailyItem, Item, GeneralDataResponse, UserDataResponse } from '../types/ItemTypes';
 import { LocationOperatingTimes } from '../types/OperationTypes';
 import ErrorPopup from '../components/error-popup';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 
 const DailyItems: React.FC = () => {
   // Data involved with API
   const [locations, setLocations] = useState(["Elder", "Sargent", "Allison", "Plex East", "Plex West"]);
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
+  const [weeklyItems, setWeeklyItems] = useState<DailyItem[][]>([[]]);
   const [favorites, setFavorites] = useState<Item[]>([]);
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [locationOperationHours, setLocationOperationHours] = useState<LocationOperatingTimes>();
@@ -32,6 +41,7 @@ const DailyItems: React.FC = () => {
   const [expandFolders, setExpandFolders] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Data involved with auth
   const [showPopup, setShowPopup] = useState(false);
@@ -108,7 +118,8 @@ const DailyItems: React.FC = () => {
       if (!data.allClosed) {
         const locations: string[] = Array.from(new Set(data.dailyItems?.map((item: DailyItem) => item.Location) || []));
         setLocations(locations);
-        setDailyItems(data.dailyItems || []);
+        setWeeklyItems(data.weeklyItems || [[]])
+        setDailyItems(data.weeklyItems[new Date().getDay()] || []);
 
         if ('userPreferences' in data) {
           setFavorites(data.userPreferences?.map((item: Item) => item) || []);
@@ -159,6 +170,9 @@ const DailyItems: React.FC = () => {
       setShowErrorPopup(true);
     }
   }, [noExpectedData]);
+
+  const totalPages = 7;
+
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -187,6 +201,56 @@ const DailyItems: React.FC = () => {
           setVisibleLocations={setVisibleLocations}
         />
       }
+
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (currentPage > 0) {
+                  setDailyItems(weeklyItems[currentPage - 1]);
+                  setCurrentPage(currentPage - 1);
+                }
+              }}
+              className={currentPage < 1 ? "pointer-events-none opacity-50" : ""}
+            />
+          </PaginationItem>
+
+          {["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"].map((pageDay, idx) => (
+            <PaginationItem key={idx}>
+              {(
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(idx);
+                    setDailyItems(weeklyItems[idx]);
+                  }}
+                  isActive={currentPage === idx}
+                >
+                  {pageDay}
+                </PaginationLink>
+              )}
+            </PaginationItem>
+          ))}
+
+          <PaginationItem>
+            <PaginationNext
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (currentPage < totalPages - 1) {
+                  setDailyItems(weeklyItems[currentPage + 1]);
+                  setCurrentPage(currentPage + 1);
+                }
+              }}
+              className={currentPage >= (totalPages - 1) ? "pointer-events-none opacity-50" : ""}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
 
       <Input
         type="text"

@@ -20,6 +20,7 @@ interface BaseDataResponse {
   allClosed: boolean | null;
   dailyItems: DailyItem[] | null;
   allItems: Item[];
+  weeklyItems: DailyItem[][];
   date: string;
   locationOperatingTimes: OperationHoursData[];
 }
