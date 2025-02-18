@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { fetchAllData, fetchGeneralData, postUserPreferences } from '../util/data';
+import { postUserPreferences } from '../util/data';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import Preferences from '../components/preferences'
 import LocationItemGrid from '../components/locationGrid'
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
-import { getDailyLocationOperationTimes, getCurrentTimeOfDayWithLocations, isLocationOpenNow } from '../util/helper';
-import { DailyItem, Item, GeneralDataResponse, UserDataResponse } from '../types/ItemTypes';
-import { LocationOperatingTimes } from '../types/OperationTypes';
+import { getCurrentTimeOfDayWithLocations, isLocationOpenNow } from '../util/helper';
+import { DailyItem, Item } from '../types/ItemTypes';
 import ErrorPopup from '../components/error-popup';
 import {
   Pagination,
@@ -18,17 +17,19 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { useDailyItems } from '@/hooks/useDailyItems';
 
 
 const DailyItems: React.FC = () => {
+  // Data involved with auth
+  const [showPopup, setShowPopup] = useState(false);
+  const { authLoading, token } = useAuth();
+
   // Data involved with API
-  const [locations, setLocations] = useState(["Elder", "Sargent", "Allison", "Plex East", "Plex West"]);
-  const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
-  const [weeklyItems, setWeeklyItems] = useState<DailyItem[][]>([[]]);
-  const [favorites, setFavorites] = useState<Item[]>([]);
-  const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
-  const [locationOperationHours, setLocationOperationHours] = useState<LocationOperatingTimes>();
+  const { locations, weeklyItems, locationOperationHours } = useDailyItems(token, authLoading);
+  var { favorites, availableFavorites } = useDailyItems(token, authLoading);
   const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
 
   // Data involved with fuse
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,26 +38,30 @@ const DailyItems: React.FC = () => {
 
   // Data involved with display of items
   const [visibleLocations, setVisibleLocations] = useState<string[]>(locations);
-  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
+  const [visibleTimes, setVisibleTimes] = useState<string[]>([]);
   const [expandFolders, setExpandFolders] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(false);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Data involved with auth
-  const [showPopup, setShowPopup] = useState(false);
-  const { authLoading, token } = useAuth();
+  const [showPreferences, setShowPreferences] = useState(() => {
+    return sessionStorage.getItem("showPreferences") !== "false";
+  });
 
   // Initialize selected times based on current time
   useEffect(() => {
     if (locationOperationHours) {
       const { timeOfDay } = getCurrentTimeOfDayWithLocations(locationOperationHours);
       if (timeOfDay) {
-        setSelectedTimes([timeOfDay]);
+        setVisibleTimes([timeOfDay]);
       }
     }
   }, [locationOperationHours])
 
+  useEffect(() => {
+    console.log(weeklyItems)
+    if (weeklyItems) {
+      setDailyItems(weeklyItems[new Date().getDay()]);
+    }
+  }, [weeklyItems])
 
   useEffect(() => {
     if (searchQuery) {
@@ -90,8 +95,8 @@ const DailyItems: React.FC = () => {
       tempAvailable = [...availableFavorites, ...dailyItems.filter(i => i.Name.toLowerCase().trim() === formattedItemName)];
     }
 
-    setFavorites(tempPreferences)
-    setAvailableFavorites(tempAvailable);
+    favorites = tempPreferences
+    availableFavorites = tempAvailable;
     postUserPreferences(tempPreferences, token as string);
   };
 
@@ -103,7 +108,7 @@ const DailyItems: React.FC = () => {
           : [...prev, preference as string]
       );
     } else if (preferenceType === 'time') {
-      setSelectedTimes(prev =>
+      setVisibleTimes(prev =>
         prev.includes(preference as string)
           ? prev.filter(t => t !== preference)
           : [...prev, preference as string]
@@ -112,45 +117,6 @@ const DailyItems: React.FC = () => {
       setExpandFolders(preference as boolean);
     }
   }
-
-  useEffect(() => {
-    const processData = (data: GeneralDataResponse | UserDataResponse) => {
-      if (!data.allClosed) {
-        const locations: string[] = Array.from(new Set(data.dailyItems?.map((item: DailyItem) => item.Location) || []));
-        setLocations(locations);
-        setWeeklyItems(data.weeklyItems || [[]])
-        setDailyItems(data.weeklyItems[new Date().getDay()] || []);
-
-        if ('userPreferences' in data) {
-          setFavorites(data.userPreferences?.map((item: Item) => item) || []);
-          setAvailableFavorites(data.availableFavorites || []);
-        }
-      }
-
-      setLocationOperationHours(getDailyLocationOperationTimes(data.locationOperatingTimes));
-    };
-
-    const fetchData = async () => {
-      try {
-        if (!authLoading) {
-          let data: GeneralDataResponse | UserDataResponse;
-          if (token) {
-            data = await fetchAllData(token);
-          } else {
-            data = await fetchGeneralData();
-          }
-
-          if (data) {
-            processData(data);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchData();
-  }, [authLoading, token]);
 
   // Calculate currently open locations for display
   const openLocations = locationOperationHours
@@ -164,6 +130,11 @@ const DailyItems: React.FC = () => {
   // an error message popup to the user
   const noExpectedData = !dailyItems.length && locationOperationHours;
 
+  const handleTogglePreferences = () => {
+    const newState = !showPreferences;
+    setShowPreferences(newState);
+    sessionStorage.setItem("showPreferences", newState.toString());
+  };
 
   useEffect(() => {
     if (noExpectedData) {
@@ -173,6 +144,20 @@ const DailyItems: React.FC = () => {
 
   const totalPages = 7;
 
+  const preferencesState = {
+    locations,
+    visibleLocations,
+    timesOfDay,
+    visibleTimes: visibleTimes,
+    expandFolders,
+  };
+
+  const preferencesActions = {
+    togglePreferencesItem,
+    setVisibleLocations,
+    setShowPreferences: handleTogglePreferences,
+  };
+
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -180,25 +165,20 @@ const DailyItems: React.FC = () => {
       </h1>
 
       <button
-        onClick={() => setShowPreferences(!showPreferences)}
+        onClick={handleTogglePreferences}
         className="p-2 rounded-md mb-4 
           bg-background text-gray-900 dark:text-white
            border border-gray-300 dark:border-gray-700
            transition-colors duration-200"
       >
-        {showPreferences ? "Hide Data Preferences" : "Show Data Preferences"}
+        {!showPreferences && "Change "}
       </button>
 
       {showPreferences &&
         <Preferences
           showPreferences={showPreferences}
-          locations={locations}
-          visibleLocations={visibleLocations}
-          timesOfDay={timesOfDay}
-          visibleTimes={selectedTimes}
-          expandFolders={expandFolders}
-          togglePreferencesItem={togglePreferencesItem}
-          setVisibleLocations={setVisibleLocations}
+          state={preferencesState}
+          actions={preferencesActions}
         />
       }
 
@@ -263,14 +243,18 @@ const DailyItems: React.FC = () => {
       />
 
       <LocationItemGrid
-        locationOperationHours={locationOperationHours}
-        visibleLocations={visibleLocations}
-        timesOfDay={timesOfDay}
-        visibleTimes={selectedTimes}
-        filteredItems={filteredItems}
-        availableFavorites={availableFavorites}
-        expandFolders={expandFolders}
-        handleItemClick={handleItemClick}
+        state={{
+          locationOperationHours,
+          visibleLocations,
+          timesOfDay,
+          visibleTimes,
+          filteredItems,
+          availableFavorites,
+          expandFolders
+        }}
+        actions={{
+          handleItemClick
+        }}
       />
 
       {showPopup && (
