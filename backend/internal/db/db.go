@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"log"
 	"strings"
 	"time"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 // Global database variable
@@ -54,6 +55,8 @@ var (
 	NoItemsInDB           = errors.New("no daily items found")
 	NoUserPreferencesInDB = errors.New("no user preferences found")
 )
+
+const NEWEST_DAY_INDEX = 3
 
 // AllDataItemToGorm converts an AllDataItem model to a GormAllDataItem.
 func AllDataItemToGorm(item models.AllDataItem) GormAllDataItem {
@@ -170,6 +173,42 @@ func InsertWeeklyItems(items []models.WeeklyItem) error {
 	}
 
 	log.Println("Weekly items inserted successfully")
+	return nil
+}
+
+// goal of this func is to test out the FIFO on db where we keep +- 3 days of item data
+// this func should be passed the items for the third day in the future ie if today is monday then pass the items for thursday
+func UpdateWeeklyItems(items []models.DailyItem) error {
+	if items == nil || len(items) == 0 {
+		log.Println("No available items, skipping all data insert")
+		return nil
+	}
+
+	// delete the oldest day that would now be 4 days old
+	if err := DB.Where("day_index = ?", -3).Delete(&models.WeeklyItem{}).Error; err != nil {
+		log.Println("Error deleting records:", err)
+		return err
+	}
+
+	// slide the window of days to be one older
+	if err := DB.Model(&models.WeeklyItem{}).Where("day_index > ?", -3).
+		Update("day_index", gorm.Expr("day_index - 1")).Error; err != nil {
+		log.Println("Error updating records:", err)
+		return err
+	}
+
+	var weeklyItems []models.WeeklyItem
+
+	for _, item := range items {
+		appendable := models.WeeklyItem{DailyItem: item, DayIndex: NEWEST_DAY_INDEX}
+		weeklyItems = append(weeklyItems, appendable)
+	}
+
+	if err := InsertWeeklyItems(weeklyItems); err != nil {
+		log.Println("Error inserting weekly items in update:", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -359,7 +398,7 @@ func GetAllDailyItems() ([]models.DailyItem, error) {
 	return items, nil
 }
 
-func GetAllWeeklyItems() ([][]models.DailyItem, error) {
+func GetAllWeeklyItems() (map[string][]models.DailyItem, error) {
 	var weeklyItems []GormWeeklyItem
 	result := DB.Find(&weeklyItems)
 	if result.Error != nil {
@@ -370,12 +409,18 @@ func GetAllWeeklyItems() ([][]models.DailyItem, error) {
 		return nil, NoItemsInDB
 	}
 
-	// Convert the GormWeeklyItem slice to a WeeklyItem slice
-	items := make([][]models.DailyItem, 7)
-	for _, item := range weeklyItems {
-		items[item.DayIndex] = append(items[item.DayIndex], item.DailyItem)
+	items := make(map[string][]models.DailyItem, 7)
+	today := time.Now()
+
+	for i := -3; i <= 3; i++ {
+		dateKey := today.AddDate(0, 0, i).Format("2006-01-02")
+		items[dateKey] = make([]models.DailyItem, 0)
 	}
 
+	for _, item := range weeklyItems {
+		dateKey := today.AddDate(0, 0, item.DayIndex).Format("2006-01-02")
+		items[dateKey] = append(items[dateKey], item.DailyItem)
+	}
 	return items, nil
 }
 

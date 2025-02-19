@@ -15,14 +15,15 @@ export interface Item {
 
 export interface FavoriteItem extends Item { }
 
+export interface WeeklyItemsMap {
+  [key: string]: DailyItem[];
+}
+
 // Base interface for shared properties
 interface BaseDataResponse {
-  allClosed: boolean | null;
-  dailyItems: DailyItem[] | null;
   allItems: Item[];
-  weeklyItems: DailyItem[][];
-  date: string;
-  locationOperatingTimes: OperationHoursData[];
+  weeklyItems: WeeklyItemsMap;
+  locationOperationHours: OperationHoursData[];
 }
 
 // Interface for general data without user-specific data
@@ -31,5 +32,5 @@ export interface GeneralDataResponse extends BaseDataResponse { }
 // Interface for data with user preferences
 export interface UserDataResponse extends BaseDataResponse {
   userPreferences: Item[] | null;
-  availableFavorites: DailyItem[] | null;
+  mailing: boolean;
 }

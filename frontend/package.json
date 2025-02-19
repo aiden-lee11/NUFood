@@ -43,7 +43,8 @@
     "react-table": "^7.8.0",
     "shadcn": "^2.1.8",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

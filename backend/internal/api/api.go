@@ -121,7 +121,54 @@ func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// ScrapeWeeklyItemsHandler scrapes daily dining hall items for the coming week and updates the database.
+func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
+	scraper := &scraper.DiningHallScraper{
+		Client: scraper.NewClient(),
+		Config: scraper.DefaultConfig,
+	}
+
+	const MAX_RETRIES = 10
+
+	var dItems []models.DailyItem
+	var aItems []models.AllDataItem
+	var err error
+
+	for i := 0; i < MAX_RETRIES; i++ {
+		fmt.Printf("trying scrape for the %d time\n", i)
+		advancedDay := time.Now().AddDate(0, 0, 3).Format("2006-01-02")
+		dItems, aItems, _, err = scraper.ScrapeFood(advancedDay)
+		if err == nil {
+			fmt.Printf("successful scrape on the %d time", i)
+			err = nil
+			break
+		}
+	}
+
+	if err != nil {
+		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if dItems == nil {
+		http.Error(w, "Error scraping and saving: nil dItems", http.StatusInternalServerError)
+		return
+	}
+
+	if err := db.UpdateWeeklyItems(dItems); err != nil {
+		http.Error(w, "Error updating weekly items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := db.InsertAllDataItems(aItems); err != nil {
+		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return success code
+	w.WriteHeader(http.StatusOK)
+}
+
+// ScrapeWeeklyItemsHandler scrapes daily dining hall items for +- 3 days from current day
 //
 // This handler expects no request body but requires no authorization for the request.
 // It responds with an HTTP status code indicating the result of the scraping operation.
@@ -143,9 +190,8 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	var totalAllItems []models.AllDataItem
 
 	today := time.Now()
-	for i := 0; i < 7; i++ {
-		scrapeDate := today.AddDate(0, 0, i).Format("2006-01-02")
-		scrapeInd := int(today.AddDate(0, 0, i).Weekday())
+	for scrapeInd := -3; scrapeInd <= 3; scrapeInd++ {
+		scrapeDate := today.AddDate(0, 0, scrapeInd).Format("2006-01-02")
 
 		var dItems []models.DailyItem
 		var aItems []models.AllDataItem
@@ -172,7 +218,8 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, dItem := range dItems {
-			weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: dItem, DayIndex: scrapeInd})
+			// Hacky way to save the ranges as 0 to 6 for the DayIndex ie 3 days in the past is the 0 ind not the -3 ind
+			weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: dItem, DayIndex: scrapeInd + 3})
 		}
 
 		totalAllItems = append(totalAllItems, aItems...)
@@ -357,11 +404,11 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(string)
 
 	// Fetch all daily items
-	dailyItems, err := db.GetAllDailyItems()
-	if err != nil {
-		http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// dailyItems, err := db.GetAllDailyItems()
+	// if err != nil {
+	// 	http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	// Fetch data that doesn't depend on `dailyItems`
 	allItems, err := db.GetAllDataItems()
@@ -412,20 +459,20 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Data to only fetch if there exists dailyItems that day
-	if len(dailyItems) > 0 {
-		combinedData["dailyItems"] = dailyItems
+	// if len(dailyItems) > 0 {
+	// 	combinedData["dailyItems"] = dailyItems
 
-		availableFavorites, err := db.GetAvailableFavoritesBatch(userID)
-		if err == db.NoUserPreferencesInDB {
-			availableFavorites = []models.DailyItem{}
-		} else if err != nil {
-			http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		combinedData["availableFavorites"] = availableFavorites
-	} else {
-		combinedData["allClosed"] = true
-	}
+	// 	availableFavorites, err := db.GetAvailableFavoritesBatch(userID)
+	// 	if err == db.NoUserPreferencesInDB {
+	// 		availableFavorites = []models.DailyItem{}
+	// 	} else if err != nil {
+	// 		http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
+	// 		return
+	// 	}
+	// 	combinedData["availableFavorites"] = availableFavorites
+	// } else {
+	// 	combinedData["allClosed"] = true
+	// }
 
 	// Set the response header to indicate JSON content
 	w.Header().Set("Content-Type", "application/json")
@@ -487,11 +534,11 @@ func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 //   - r: The HTTP request.
 func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch all daily items
-	dailyItems, err := db.GetAllDailyItems()
-	if err != nil {
-		http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// dailyItems, err := db.GetAllDailyItems()
+	// if err != nil {
+	// 	http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	// Fetch all data items
 	allItems, err := db.GetAllDataItems()
@@ -526,11 +573,11 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		"locationOperatingTimes": locationOperatingTimes,
 	}
 
-	if len(dailyItems) > 0 {
-		combinedData["dailyItems"] = dailyItems
-	} else {
-		combinedData["allClosed"] = true
-	}
+	// if len(dailyItems) > 0 {
+	// 	combinedData["dailyItems"] = dailyItems
+	// } else {
+	// 	combinedData["allClosed"] = true
+	// }
 
 	// Set the response header to indicate JSON content
 	w.Header().Set("Content-Type", "application/json")

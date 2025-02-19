@@ -65,6 +65,9 @@ func main() {
 	http.HandleFunc("GET /api/scrapeWeeklyItems", middleware.CorsMiddleware(api.ScrapeWeeklyItemsHandler))
 	http.HandleFunc("OPTIONS /api/scrapeWeeklyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 
+	http.HandleFunc("GET /api/updateWeeklyItems", middleware.CorsMiddleware(api.ScrapeUpdateWeekly))
+	http.HandleFunc("OPTIONS /api/updateWeeklyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
 	http.HandleFunc("GET /api/scrapeOperatingTimes", middleware.CorsMiddleware(api.ScrapeLocationOperatingTimesHandler))
 	http.HandleFunc("OPTIONS /api/scrapeOperatingTimes", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 

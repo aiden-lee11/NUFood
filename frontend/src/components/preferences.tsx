@@ -31,6 +31,10 @@ const Preferences: React.FC<PreferencesProps> = ({ showPreferences, state, actio
   const selectSouth = () => {
     setVisibleLocations(["Allison", "Plex East", "Plex West"]);
   };
+
+  const selectAll = () => {
+    setVisibleLocations(["Sargent", "Elder", "Allison", "Plex East", "Plex West"]);
+  };
   return (
     <>
       {showPreferences && (
@@ -61,6 +65,12 @@ const Preferences: React.FC<PreferencesProps> = ({ showPreferences, state, actio
                   onClick={selectSouth}
                 >
                   South
+                </button>
+                <button
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800 transition"
+                  onClick={selectAll}
+                >
+                  All
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">

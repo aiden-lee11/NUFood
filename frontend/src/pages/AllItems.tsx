@@ -21,7 +21,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import clsx from 'clsx';
-import { fetchAllData, fetchGeneralData, postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
 import { Item } from '../types/ItemTypes';
@@ -92,28 +91,6 @@ const AllItems: React.FC = () => {
     postUserPreferences(tempPreferences, token as string);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (!authLoading && token) {
-          const data = await fetchAllData(token);
-          if (data) {
-            setAllItems(data.allItems);
-            setUserPreferences(data.userPreferences.map((item: Item) => item));
-          }
-        } else if (!authLoading && !token) {
-          const data = await fetchGeneralData();
-          if (data) {
-            setAllItems(data.allItems);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchData();
-  }, [authLoading, token]);
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
