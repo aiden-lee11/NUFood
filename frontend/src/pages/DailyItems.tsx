@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { postUserPreferences } from '../util/data';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
@@ -26,7 +26,10 @@ const DailyItems: React.FC = () => {
   // Data involved with API
   const staticData = useDataStore((state) => state.UserDataResponse);
   const weeklyItems = staticData.weeklyItems;
-  const locationOperationHours = getDailyLocationOperationTimes(staticData.locationOperationHours);
+  const memoizedLocationHours = useMemo(
+    () => getDailyLocationOperationTimes(staticData.locationOperationHours),
+    [staticData.locationOperationHours]
+  );
   const userPreferences = staticData.userPreferences;
 
   const setUserPreferences = useDataStore((state) => state.setUserPreferences)
@@ -53,13 +56,13 @@ const DailyItems: React.FC = () => {
 
   // Initialize selected times based on current time
   useEffect(() => {
-    if (locationOperationHours) {
-      const { timeOfDay } = getCurrentTimeOfDayWithLocations(locationOperationHours);
+    if (memoizedLocationHours) {
+      const { timeOfDay } = getCurrentTimeOfDayWithLocations(memoizedLocationHours);
       if (timeOfDay) {
         setVisibleTimes([timeOfDay]);
       }
     }
-  }, [locationOperationHours])
+  }, [memoizedLocationHours]);
 
   useEffect(() => {
     if (weeklyItems && Object.keys(weeklyItems).length != 0) {
@@ -68,11 +71,12 @@ const DailyItems: React.FC = () => {
       // Determine if there is some location that is open, but no items are available
       // If this is the case then there was an error in scraping data and we should display
       // an error message popup to the user
-      setShowErrorPopup(!todaysItems && locationOperationHours);
+      setShowErrorPopup(!todaysItems && memoizedLocationHours);
 
       // Set available favorites based on items that match user preferences
       if (userPreferences && userPreferences.length > 0) {
-        const favorites = todaysItems.filter(item => userPreferences.includes(item));
+        const userPrefNames = new Set(userPreferences.map(pref => pref.Name));
+        const favorites = todaysItems.filter(item => userPrefNames.has(item.Name));
         setAvailableFavorites(favorites);
       }
 
@@ -138,8 +142,8 @@ const DailyItems: React.FC = () => {
   }
 
   // Calculate currently open locations for display
-  const openLocations = locationOperationHours
-    ? Object.entries(locationOperationHours)
+  const openLocations = memoizedLocationHours
+    ? Object.entries(memoizedLocationHours)
       .filter(([_, times]) => isLocationOpenNow(times))
       .map(([location]) => location)
     : [];
@@ -221,7 +225,7 @@ const DailyItems: React.FC = () => {
 
       <LocationItemGrid
         state={{
-          locationOperationHours,
+          locationOperationHours: memoizedLocationHours,
           visibleLocations,
           timesOfDay,
           visibleTimes,

@@ -17,16 +17,14 @@
  * - Improve the responsiveness for mobile views.
  */
 
-import React, { useEffect, useState } from 'react';
-import { fetchAllLocationOperatingTimes } from '../util/data';
 import { getWeekday, formatTime } from '../util/helper';
-import { OperationHoursData, Hour } from '../types/OperationTypes';
+import { Hour } from '../types/OperationTypes';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/Table'
+import { useDataStore } from '@/store';
 
 type locationMapping = { [key: string]: string[] }
 
 const OperationHours: React.FC = () => {
-  const [locationOperatingTimes, setLoctionOperatingTimes] = useState<OperationHoursData[]>([]);
   const locationGrouping: locationMapping = {
     "Dining Commons": ["Allison Dining Commons", "Sargent Dining Commons", "Foster Walker Plex East", "Foster Walker Plex West & Market", "Elder Dining Commons"],
     "Norris Center": ["847 Burger", "Buen Dia", "Shake Smart", "Chicken & Boba", "Wildcat Deli", "Starbucks", "MOD Pizza", "Market at Norris"],
@@ -36,11 +34,9 @@ const OperationHours: React.FC = () => {
     "Chicago Campus": ["Harry's Cafe", "SLICE Pizzeria", "Starbucks (Chicago Campus)"],
   }
 
-  useEffect(() => {
-    fetchAllLocationOperatingTimes().then((data) => {
-      setLoctionOperatingTimes(data.locationOperatingTimes);
-    });
-  }, []);
+  const staticData = useDataStore((state) => state.UserDataResponse);
+  const locationOperatingTimes = staticData.locationOperationHours;
+
   const formatHours = (hours: Hour[] | null) => {
     if (hours === null) return "Closed";
 

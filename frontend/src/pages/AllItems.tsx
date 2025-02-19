@@ -33,19 +33,24 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { useDataStore } from '@/store';
+import { postUserPreferences } from '@/util/data';
 
 const ITEMS_PER_PAGE = 100;
 
 const AllItems: React.FC = () => {
-  const [allItems, setAllItems] = useState<Item[]>([]);
-  const [userPreferences, setUserPreferences] = useState<Item[]>([]);
+  const staticData = useDataStore((state) => state.UserDataResponse);
+  var userPreferences = staticData.userPreferences;
+  const allItems = staticData.allItems;
+  const setUserPreferences = useDataStore((state) => state.setUserPreferences)
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showPopup, setShowPopup] = useState(false);
 
-  const { authLoading, token } = useAuth();
+  const { token } = useAuth();
 
   const fuse = new Fuse(allItems, {
     keys: ['Name'],
@@ -72,23 +77,27 @@ const AllItems: React.FC = () => {
   }, [currentPage]);
 
   const handleItemClick = (item: Item) => {
-    const formattedItemName = item.Name.toLowerCase().trim();
-
     if (!token) {
       setShowPopup(true);
       return;
     }
 
     let tempPreferences = userPreferences;
+    const formattedItemName = item.Name.toLowerCase().trim();
 
-    if (userPreferences.some((i) => i.Name.toLowerCase().trim() === formattedItemName)) {
-      tempPreferences = userPreferences.filter((i) => i.Name.toLowerCase().trim() !== formattedItemName);
-    } else {
-      tempPreferences = [...userPreferences, item];
+
+    if (userPreferences) {
+      if (userPreferences.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
+        tempPreferences = userPreferences.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
+      } else {
+        tempPreferences = [...userPreferences, item];
+      }
+
+
+      setUserPreferences(tempPreferences);
+      postUserPreferences(tempPreferences, token as string);
     }
 
-    setUserPreferences(tempPreferences);
-    postUserPreferences(tempPreferences, token as string);
   };
 
 
