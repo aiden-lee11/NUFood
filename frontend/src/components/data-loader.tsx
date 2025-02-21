@@ -3,7 +3,7 @@ import { useDataStore } from '../store';
 import { useAuth } from '@/context/AuthProvider';
 
 const DataLoader = ({ children }: { children: React.ReactNode }) => {
-  const { fetchAllData, fetchGeneralData, loading } = useDataStore();
+  const { fetchAllData, fetchGeneralData } = useDataStore();
   const { token, authLoading } = useAuth();
 
   useEffect(() => {
@@ -15,10 +15,6 @@ const DataLoader = ({ children }: { children: React.ReactNode }) => {
       }
     }
   }, [fetchAllData, token, authLoading]);
-
-  if (loading) {
-    return <div>Loading data...</div>;
-  }
 
   return <>{children}</>;
 };

@@ -9,13 +9,8 @@ import AuthPopup from '../components/AuthPopup';
 import { getCurrentTimeOfDayWithLocations, isLocationOpenNow, getDailyLocationOperationTimes } from '../util/helper';
 import { DailyItem, Item } from '../types/ItemTypes';
 import ErrorPopup from '../components/error-popup';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-} from "@/components/ui/pagination";
 import { useDataStore } from '@/store';
+import DatePicker from '@/components/calendar';
 
 
 const DailyItems: React.FC = () => {
@@ -47,11 +42,11 @@ const DailyItems: React.FC = () => {
   const [visibleTimes, setVisibleTimes] = useState<string[]>([]);
   const [expandFolders, setExpandFolders] = useState(false);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
-  const [currentPage, setCurrentPage] = useState(1);
   const [showPreferences, setShowPreferences] = useState(() => {
     return sessionStorage.getItem("showPreferences") !== "false";
   });
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>();
 
 
   // Initialize selected times based on current time
@@ -72,16 +67,17 @@ const DailyItems: React.FC = () => {
       // If this is the case then there was an error in scraping data and we should display
       // an error message popup to the user
       setShowErrorPopup(!todaysItems && memoizedLocationHours);
-
-      // Set available favorites based on items that match user preferences
-      if (userPreferences && userPreferences.length > 0) {
-        const userPrefNames = new Set(userPreferences.map(pref => pref.Name));
-        const favorites = todaysItems.filter(item => userPrefNames.has(item.Name));
-        setAvailableFavorites(favorites);
-      }
-
     }
   }, [weeklyItems])
+
+  useEffect(() => {
+    // Set available favorites based on items that match user preferences
+    if (userPreferences && userPreferences.length > 0) {
+      const userPrefNames = new Set(userPreferences.map(pref => pref.Name));
+      const favorites = dailyItems.filter(item => userPrefNames.has(item.Name));
+      setAvailableFavorites(favorites);
+    }
+  }, [dailyItems]);
 
   useEffect(() => {
     if (searchQuery) {
@@ -173,6 +169,12 @@ const DailyItems: React.FC = () => {
         </button>
       }
 
+      <DatePicker
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        setDailyItems={setDailyItems}
+      />
+
       {showPreferences &&
         <Preferences
           showPreferences={showPreferences}
@@ -190,28 +192,6 @@ const DailyItems: React.FC = () => {
           }}
         />
       }
-
-      <Pagination>
-        <PaginationContent className='gap-8'>
-          {Object.keys(weeklyItems).map((pageDay, idx) => (
-            <PaginationItem key={idx}>
-              {(
-                <PaginationLink
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCurrentPage(idx);
-                    setDailyItems(weeklyItems[pageDay]);
-                  }}
-                  isActive={currentPage === idx}
-                >
-                  {pageDay.slice(5)}
-                </PaginationLink>
-              )}
-            </PaginationItem>
-          ))}
-        </PaginationContent>
-      </Pagination>
 
       <Input
         type="text"

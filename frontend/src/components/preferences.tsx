@@ -112,7 +112,7 @@ const Preferences: React.FC<PreferencesProps> = ({ showPreferences, state, actio
               </div>
             </div>
 
-            {/* Time of Day Checkboxes */}
+            {/* Time of Day Check boxes */}
             <div>
               <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Times of Day

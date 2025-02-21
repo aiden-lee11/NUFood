@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
 import { FavoriteItem } from '../types/ItemTypes';

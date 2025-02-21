@@ -214,12 +214,12 @@ const AllItems: React.FC = () => {
               onClick={() => handleItemClick(item)}
               className={clsx(
                 'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none ',
-                userPreferences.some((fav) => fav.Name === item.Name)
+                (userPreferences && userPreferences.some((fav) => fav.Name === item.Name))
                   ? "bg-yellow-100 dark:bg-yellow-700 text-black dark:text-white border-yellow-300 dark:border-yellow-600 border"
                   : "bg-gray-300 dark:bg-[#1a1d24] text-black dark:text-white border-gray-400 dark:border-gray-600"
               )}
             >
-              {item.Name} {userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
+              {item.Name} {userPreferences && userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
             </button>
           </li>
         ))}

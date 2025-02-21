@@ -218,8 +218,7 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, dItem := range dItems {
-			// Hacky way to save the ranges as 0 to 6 for the DayIndex ie 3 days in the past is the 0 ind not the -3 ind
-			weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: dItem, DayIndex: scrapeInd + 3})
+			weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: dItem, DayIndex: scrapeInd})
 		}
 
 		totalAllItems = append(totalAllItems, aItems...)
