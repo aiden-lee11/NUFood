@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { postUserPreferences } from '../util/data';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
-import Preferences from '../components/preferences'
 import LocationItemGrid from '../components/locationGrid'
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
@@ -10,8 +9,7 @@ import { getCurrentTimeOfDayWithLocations, isLocationOpenNow, getDailyLocationOp
 import { DailyItem, Item } from '../types/ItemTypes';
 import ErrorPopup from '../components/error-popup';
 import { useDataStore } from '@/store';
-import DatePicker from '@/components/calendar';
-import { format } from "date-fns"
+import { HeaderControls } from "../components/header-controls"
 
 
 const DailyItems: React.FC = () => {
@@ -154,42 +152,24 @@ const DailyItems: React.FC = () => {
 
   return (
     <div className="p-6 min-h-screen bg-transparent">
-      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-        Daily Items for {format(selectedDate, "PP")}
-        <br />
-        {openLocations.length > 0 ? `(${openLocations.length} locations open)` : '(All locations closed)'}
-      </h1>
-
-      <button
-        onClick={handleTogglePreferences}
-        className="p-2 rounded-md mb-4 
-          bg-background text-gray-900 dark:text-white
-           border border-gray-300 dark:border-gray-700
-           transition-colors duration-200"
-      >
-        {"Change What You See"}
-      </button>
-
-      <DatePicker
+      <HeaderControls
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
         setDailyItems={setDailyItems}
-      />
-
-      <Preferences
         showPreferences={showPreferences}
-        state={{
+        preferencesState={{
           locations,
           visibleLocations,
           timesOfDay,
-          visibleTimes: visibleTimes,
+          visibleTimes,
           expandFolders,
         }}
-        actions={{
+        preferencesActions={{
           togglePreferencesItem,
           setVisibleLocations,
           setShowPreferences: handleTogglePreferences,
         }}
+        openLocations={openLocations}
       />
 
       <Input
@@ -210,19 +190,17 @@ const DailyItems: React.FC = () => {
           visibleTimes,
           filteredItems,
           availableFavorites,
-          expandFolders
+          expandFolders,
         }}
         actions={{
-          handleItemClick
+          handleItemClick,
         }}
       />
 
-      {showPopup && (
-        <AuthPopup isOpen={showPopup} onClose={() => setShowPopup(false)} />
-      )}
+      {showPopup && <AuthPopup isOpen={showPopup} onClose={() => setShowPopup(false)} />}
       <ErrorPopup isOpen={showErrorPopup} onClose={() => setShowErrorPopup(false)} />
     </div>
-  );
+  )
 
 };
 

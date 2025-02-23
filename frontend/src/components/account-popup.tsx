@@ -13,12 +13,6 @@ import { useAuth } from "../context/AuthProvider"
 import { Link } from "react-router-dom"
 import { Switch } from "@/components/ui/switch"
 import { updateMailing } from "@/util/data"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
 interface AccountPopupProps {
   isOpen: boolean

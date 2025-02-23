@@ -1,68 +1,56 @@
-import * as React from "react"
-import { format } from "date-fns"
+import { useState } from "react"
+import { format, addDays, subDays, isWithinInterval } from "date-fns"
 import { CalendarIcon } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useDataStore } from "@/store"
-import { DailyItem } from "@/types/ItemTypes"
 
 interface DatePickerProps {
-  selectedDate: Date | undefined;
-  setSelectedDate: (date: Date) => void;
-  setDailyItems: (dailyItems: DailyItem[]) => void;
+  selectedDate: Date
+  setSelectedDate: (date: Date) => void
+  setDailyItems: (items: any) => void
 }
 
-const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, setSelectedDate, setDailyItems }) => {
-
-  const staticData = useDataStore((state) => state.UserDataResponse);
-  const weeklyItems = staticData.weeklyItems;
+export function DatePicker({ selectedDate, setSelectedDate, setDailyItems }: DatePickerProps) {
+  const staticData = useDataStore((state) => state.UserDataResponse)
+  const weeklyItems = staticData.weeklyItems
+  const [isOpen, setIsOpen] = useState(false)
 
   function onSubmit(date: Date | undefined) {
-    if (date !== undefined) {
+    if (date) {
       setSelectedDate(date);
-      setDailyItems(weeklyItems[date.toISOString().split("T")[0]])
+      setDailyItems(weeklyItems[date.toISOString().split("T")[0]]);
+      setIsOpen(false);
     }
   }
 
-  // the midpoint of the weeklyitems should correspond to the current date with no offset
-  const currentDay = Math.floor(Object.keys(weeklyItems).length / 2)
-  const baseDate = new Date(Object.keys(weeklyItems)[currentDay] + "T00:00:00").getDate()
+  const currentDayIndex = Math.floor(Object.keys(weeklyItems).length / 2)
+  const baseDate = new Date(Object.keys(weeklyItems)[currentDayIndex])
+
+  const minDate = subDays(baseDate, currentDayIndex)
+  const maxDate = addDays(baseDate, currentDayIndex + 1)
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-[140px] justify-start text-left font-normal",
-            !selectedDate && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon />
-
-          {selectedDate ? format(selectedDate, "P") : <span>Pick a date</span>}
+        <Button variant="outline" size="sm" className={cn("mb-2 h-9 px-3", !selectedDate && "text-muted-foreground")}>
+          <CalendarIcon className="h-4 w-4" />
+          {selectedDate ? format(selectedDate, "PP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
+      <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
           selected={selectedDate}
           onSelect={onSubmit}
-          disabled={(date) =>
-            date.getDate() < (baseDate - 3) || date.getDate() > (baseDate + 3)
-          }
+          disabled={(date) => !isWithinInterval(date, { start: minDate, end: maxDate })}
           initialFocus
+          fromDate={minDate}
+          toDate={maxDate}
         />
       </PopoverContent>
     </Popover>
   )
 }
-
-export default DatePicker

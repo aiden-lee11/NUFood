@@ -235,6 +235,11 @@ func InsertAllDataItems(items []models.AllDataItem) error {
 		return nil
 	}
 
+	if cleanedItems == nil || len(cleanedItems) == 0 {
+		log.Println("No new items, skipping all data insert")
+		return nil
+	}
+
 	var gormItems []GormAllDataItem
 
 	for _, item := range cleanedItems {
