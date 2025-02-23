@@ -11,6 +11,7 @@ import { DailyItem, Item } from '../types/ItemTypes';
 import ErrorPopup from '../components/error-popup';
 import { useDataStore } from '@/store';
 import DatePicker from '@/components/calendar';
+import { format } from "date-fns"
 
 
 const DailyItems: React.FC = () => {
@@ -46,7 +47,7 @@ const DailyItems: React.FC = () => {
     return sessionStorage.getItem("showPreferences") !== "false";
   });
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
 
   // Initialize selected times based on current time
@@ -154,20 +155,20 @@ const DailyItems: React.FC = () => {
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-        Daily Items {openLocations.length > 0 ? `(${openLocations.length} locations open)` : '(All locations closed)'}
+        Daily Items for {format(selectedDate, "PP")}
+        <br />
+        {openLocations.length > 0 ? `(${openLocations.length} locations open)` : '(All locations closed)'}
       </h1>
 
-      {!showPreferences &&
-        <button
-          onClick={handleTogglePreferences}
-          className="p-2 rounded-md mb-4 
+      <button
+        onClick={handleTogglePreferences}
+        className="p-2 rounded-md mb-4 
           bg-background text-gray-900 dark:text-white
            border border-gray-300 dark:border-gray-700
            transition-colors duration-200"
-        >
-          {"Change What You See"}
-        </button>
-      }
+      >
+        {"Change What You See"}
+      </button>
 
       <DatePicker
         selectedDate={selectedDate}
@@ -175,23 +176,21 @@ const DailyItems: React.FC = () => {
         setDailyItems={setDailyItems}
       />
 
-      {showPreferences &&
-        <Preferences
-          showPreferences={showPreferences}
-          state={{
-            locations,
-            visibleLocations,
-            timesOfDay,
-            visibleTimes: visibleTimes,
-            expandFolders,
-          }}
-          actions={{
-            togglePreferencesItem,
-            setVisibleLocations,
-            setShowPreferences: handleTogglePreferences,
-          }}
-        />
-      }
+      <Preferences
+        showPreferences={showPreferences}
+        state={{
+          locations,
+          visibleLocations,
+          timesOfDay,
+          visibleTimes: visibleTimes,
+          expandFolders,
+        }}
+        actions={{
+          togglePreferencesItem,
+          setVisibleLocations,
+          setShowPreferences: handleTogglePreferences,
+        }}
+      />
 
       <Input
         type="text"

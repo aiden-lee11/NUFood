@@ -25,34 +25,8 @@ Live at: [nufood.me](https://nufood.me)
 
 ### Backend
 - Go (Golang) for API and scraping
-- PostgreSQL database (hosted on Railway)
+- PostgreSQL database 
 - Firebase Admin SDK for auth verification
-- Railway for backend hosting
-- Vercel for frontend hosting
-
-## Project Structure
-
-```
-.
-├── backend/           # Go backend application
-│   ├── internal/     # Internal packages
-│   │   ├── api/     # API handlers
-│   │   ├── auth/    # Authentication logic
-│   │   ├── db/      # Database operations
-│   │   ├── models/  # Data models
-│   │   └── scraper/ # Data scraping logic
-│   └── main.go      # Entry point
-└── frontend/         # React frontend application
-    ├── src/
-    │   ├── components/  # React components
-    │   ├── context/    # React context providers
-    │   ├── firebase/   # Firebase configuration
-    │   ├── hooks/      # Custom React hooks
-    │   ├── pages/      # Page components
-    │   ├── types/      # TypeScript types
-    │   └── util/       # Utility functions
-    └── public/         # Static assets
-```
 
 ## API Endpoints
 
@@ -66,79 +40,6 @@ POST   /api/scrapeOperatingTimes    # Trigger hours scrape
 DELETE /api/deleteDailyItems        # Clear daily items
 DELETE /api/deleteOperatingTimes    # Clear operating times
 ```
-
-## Setup
-
-### Prerequisites
-- Node.js and npm
-- Go 1.20+
-- PostgreSQL
-- Firebase account
-- Railway account (for deployment)
-
-### Frontend Environment Variables
-```
-VITE_FIREBASE_APIKEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGE_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-VITE_FIREBASE_MEASUREMENT_ID=
-VITE_BACKEND_URL=
-VITE_GA_MEASUREMENT_ID=
-```
-
-### Backend Environment Variables
-```
-POSTGRES_URL=
-RAILWAY=
-FIREBASE_TYPE=
-FIREBASE_PROJECT_ID=
-FIREBASE_PRIVATE_KEY_ID=
-FIREBASE_PRIVATE_KEY=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_CLIENT_ID=
-FIREBASE_AUTH_URI=
-FIREBASE_TOKEN_URI=
-FIREBASE_AUTH_PROVIDER_X509_CERT_URL=
-FIREBASE_CLIENT_X509_CERT_URL=
-FIREBASE_UNIVERSE_DOMAIN=
-```
-
-### Local Development
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/nufood.git
-cd nufood
-```
-
-2. Install frontend dependencies
-```bash
-cd frontend
-npm install
-```
-
-3. Install backend dependencies
-```bash
-cd backend
-go mod download
-```
-
-4. Set up environment variables
-- Create `.env` files in both frontend and backend directories
-- Add the required environment variables as listed above
-
-5. Start the development servers
-```bash
-# Frontend (in frontend directory)
-npm run dev
-
-# Backend (in backend directory)
-go run main.go
-```
-
 ## Deployment
 
 The application is deployed using:
@@ -175,7 +76,7 @@ This is primarily a personal project for Northwestern University students, but f
 
 MIT License
 
-Copyright (c) 2024 [Aiden Lee]
+Copyright (c) 2025 [Aiden Lee]
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

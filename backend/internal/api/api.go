@@ -4,6 +4,7 @@ import (
 	"backend/internal/db"
 	"backend/internal/models"
 	"backend/internal/scraper"
+	"backend/internal/twilio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -402,13 +403,6 @@ func SetUserMailing(w http.ResponseWriter, r *http.Request) {
 func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(string)
 
-	// Fetch all daily items
-	// dailyItems, err := db.GetAllDailyItems()
-	// if err != nil {
-	// 	http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
 	// Fetch data that doesn't depend on `dailyItems`
 	allItems, err := db.GetAllDataItems()
 	if err != nil {
@@ -456,22 +450,6 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		"userPreferences":        userPreferences,
 		"mailing":                mailing,
 	}
-
-	// Data to only fetch if there exists dailyItems that day
-	// if len(dailyItems) > 0 {
-	// 	combinedData["dailyItems"] = dailyItems
-
-	// 	availableFavorites, err := db.GetAvailableFavoritesBatch(userID)
-	// 	if err == db.NoUserPreferencesInDB {
-	// 		availableFavorites = []models.DailyItem{}
-	// 	} else if err != nil {
-	// 		http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// 	combinedData["availableFavorites"] = availableFavorites
-	// } else {
-	// 	combinedData["allClosed"] = true
-	// }
 
 	// Set the response header to indicate JSON content
 	w.Header().Set("Content-Type", "application/json")
@@ -532,13 +510,6 @@ func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
-	// Fetch all daily items
-	// dailyItems, err := db.GetAllDailyItems()
-	// if err != nil {
-	// 	http.Error(w, "Error fetching daily items: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
 	// Fetch all data items
 	allItems, err := db.GetAllDataItems()
 	if err != nil {
@@ -572,12 +543,6 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		"locationOperatingTimes": locationOperatingTimes,
 	}
 
-	// if len(dailyItems) > 0 {
-	// 	combinedData["dailyItems"] = dailyItems
-	// } else {
-	// 	combinedData["allClosed"] = true
-	// }
-
 	// Set the response header to indicate JSON content
 	w.Header().Set("Content-Type", "application/json")
 
@@ -586,4 +551,15 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func SendOutMailing(w http.ResponseWriter, r *http.Request) {
+	err := twilio.SendEmails()
+
+	if err != nil {
+		http.Error(w, "Error sending out emails: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

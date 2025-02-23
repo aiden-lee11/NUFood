@@ -15,7 +15,7 @@ import { DailyItem } from "@/types/ItemTypes"
 
 interface DatePickerProps {
   selectedDate: Date | undefined;
-  setSelectedDate: (date: Date | undefined) => void;
+  setSelectedDate: (date: Date) => void;
   setDailyItems: (dailyItems: DailyItem[]) => void;
 }
 
@@ -31,18 +31,23 @@ const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, setSelectedDate, 
     }
   }
 
+  // the midpoint of the weeklyitems should correspond to the current date with no offset
+  const currentDay = Math.floor(Object.keys(weeklyItems).length / 2)
+  const baseDate = new Date(Object.keys(weeklyItems)[currentDay] + "T00:00:00").getDate()
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
           className={cn(
-            "w-[280px] justify-start text-left font-normal",
+            "w-[140px] justify-start text-left font-normal",
             !selectedDate && "text-muted-foreground"
           )}
         >
           <CalendarIcon />
-          {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+
+          {selectedDate ? format(selectedDate, "P") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
@@ -51,7 +56,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, setSelectedDate, 
           selected={selectedDate}
           onSelect={onSubmit}
           disabled={(date) =>
-            date.getDate() < (new Date().getDate() - 3) || date.getDate() > (new Date().getDate() + 3)
+            date.getDate() < (baseDate - 3) || date.getDate() > (baseDate + 3)
           }
           initialFocus
         />

@@ -27,10 +27,10 @@ func SendEmails() error {
 	subject := "Available Favorites Today"
 
 	for _, userData := range preferencesData {
-		user_id := userData.UserID
+		userID := userData.UserID
 		preferences := userData.Preferences
 
-		email, err := auth.GetEmailFromUID(user_id)
+		email, err := auth.GetEmailFromUID(userID)
 
 		if err != nil {
 			log.Println("An error occurred:", err)
