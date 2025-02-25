@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/joho/godotenv"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -38,11 +40,9 @@ func TestFormatPreferencesForEmail(t *testing.T) {
 			TimeOfDay:   "Breakfast",
 		},
 	}
-	html, err := twilio.FormatPreferences(dailyItems)
+	_, err := twilio.FormatPreferences(dailyItems)
 
 	assert.NoError(t, err, "Error in formatting daily items")
-
-	fmt.Println(html)
 }
 
 func setupTestDB(t *testing.T) *gorm.DB {
@@ -81,10 +81,6 @@ func TestMailingList(t *testing.T) {
 	// Override the global DB variable in your `db` package
 	tx := testDB.Begin()
 	defer tx.Rollback()
-
-	if err := auth.InitFirebase(); err != nil {
-		log.Fatal("Init firebase failed: ", err)
-	}
 
 	// Use this transaction for all DB operations
 	// transaction is necessary here for testing not for prod just becuase the read writes to in memory sqlite can interfere with eachothers timing
@@ -131,17 +127,37 @@ func TestMailingList(t *testing.T) {
 	require.NoError(t, err, "Error inserting daily items")
 
 	// Set up a user's preferences
-	initialPreferences := []models.AllDataItem{
+	user1Preferences := []models.AllDataItem{
 		{Name: "Bacon"},
 		{Name: "Eggs"},
 		{Name: "Chicken Parmesan"},
 	}
 
-	userID := os.Getenv("TESTING_USER_ID")
+	user2Preferences := []models.AllDataItem{
+		{Name: "Eggs"},
+		{Name: "Chicken Parmesan"},
+		{Name: "Orange Chicken"},
+	}
 
-	err = db.SaveUserPreferences(userID, initialPreferences)
+	env_err := godotenv.Load()
+	if env_err != nil {
+		log.Printf("Error loading .env file: %v", env_err)
+	}
+	user1ID := os.Getenv("TESTING_USER_ID1")
+	user2ID := os.Getenv("TESTING_USER_ID2")
+
+	if err := auth.InitFirebase(); err != nil {
+		log.Fatal("Init firebase failed: ", err)
+	}
+
+	err = db.SaveUserPreferences(user1ID, user1Preferences)
 	assert.NoError(t, err, "Error saving user")
-	err = db.UpdateMailingStatus(userID, true)
+	err = db.UpdateMailingStatus(user1ID, true)
+	require.NoError(t, err, "Error saving user preferences")
+
+	err = db.SaveUserPreferences(user2ID, user2Preferences)
+	assert.NoError(t, err, "Error saving user")
+	err = db.UpdateMailingStatus(user2ID, true)
 
 	require.NoError(t, err, "Error saving user preferences")
 
