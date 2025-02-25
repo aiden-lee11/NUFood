@@ -41,7 +41,7 @@ export const getWeekday = (dateNum: number): string => {
 
 // Take in the data and return a mapping of location to operation times
 // TODO make a test for when its not closed and during open time 
-export const getDailyLocationOperationTimes = (data: OperationHoursData[]): LocationOperatingTimes => {
+export const getDailyLocationOperationTimes = (data: OperationHoursData[], date: Date): LocationOperatingTimes => {
   const locationNameMap: Record<string, string> = {
     "Elder Dining Commons": "Elder",
     "Sargent Dining Commons": "Sargent",
@@ -49,8 +49,7 @@ export const getDailyLocationOperationTimes = (data: OperationHoursData[]): Loca
     "Foster Walker Plex East": "Plex East",
     "Foster Walker Plex West & Market": "Plex West",
   };
-  const currentTime = new Date();
-  const currentDay = currentTime.getDay();
+  const currentDay = date.getDay();
 
   const res: LocationOperatingTimes = {}
 

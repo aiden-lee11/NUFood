@@ -19,12 +19,12 @@ export function LocationPreferences({
 }: LocationPreferencesProps) {
   const selectNorth = () => setVisibleLocations(["Sargent", "Elder"])
   const selectSouth = () => setVisibleLocations(["Allison", "Plex East", "Plex West"])
-  const selectAll = () => setVisibleLocations(locations)
+  const selectNone = () => setVisibleLocations([])
 
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-col md:flex-row gap-2 mb-4">
           <Button variant="secondary" size="sm" onClick={selectNorth}>
             <MapPin className="mr-2 h-4 w-4" />
             North Campus
@@ -33,12 +33,12 @@ export function LocationPreferences({
             <MapPin className="mr-2 h-4 w-4" />
             South Campus
           </Button>
-          <Button variant="secondary" size="sm" onClick={selectAll}>
-            All Locations
+          <Button variant="secondary" size="sm" onClick={selectNone}>
+            Clear Locations
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {locations.map((location) => (
             <div key={location} className="flex items-center space-x-2">
               <Checkbox
@@ -48,7 +48,7 @@ export function LocationPreferences({
               />
               <Label
                 htmlFor={location}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 w-full"
               >
                 {location}
               </Label>

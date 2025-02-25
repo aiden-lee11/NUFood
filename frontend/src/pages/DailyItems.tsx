@@ -5,7 +5,7 @@ import { Input } from '@headlessui/react';
 import LocationItemGrid from '../components/locationGrid'
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
-import { getCurrentTimeOfDayWithLocations, isLocationOpenNow, getDailyLocationOperationTimes } from '../util/helper';
+import { getCurrentTimeOfDayWithLocations, getDailyLocationOperationTimes } from '../util/helper';
 import { DailyItem, Item } from '../types/ItemTypes';
 import ErrorPopup from '../components/error-popup';
 import { useDataStore } from '@/store';
@@ -16,24 +16,6 @@ const DailyItems: React.FC = () => {
   // Data involved with auth
   const [showPopup, setShowPopup] = useState(false);
   const { token } = useAuth();
-
-  // Data involved with API
-  const staticData = useDataStore((state) => state.UserDataResponse);
-  const weeklyItems = staticData.weeklyItems;
-  const memoizedLocationHours = useMemo(
-    () => getDailyLocationOperationTimes(staticData.locationOperationHours),
-    [staticData.locationOperationHours]
-  );
-  const userPreferences = staticData.userPreferences;
-
-  const setUserPreferences = useDataStore((state) => state.setUserPreferences)
-  const [showErrorPopup, setShowErrorPopup] = useState(false);
-  const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
-
-  // Data involved with fuse
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredItems, setFilteredItems] = useState<DailyItem[]>([]);
-  const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
 
   // Data involved with display of items
   const locations = ["Sargent", "Elder", "Allison", "Plex East", "Plex West"];
@@ -46,14 +28,37 @@ const DailyItems: React.FC = () => {
   });
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [openLocations, setOpenLocations] = useState<string[]>([])
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+
+  // Data involved with API
+  const staticData = useDataStore((state) => state.UserDataResponse);
+  const weeklyItems = staticData.weeklyItems;
+  const memoizedLocationHours = useMemo(
+    () => getDailyLocationOperationTimes(staticData.locationOperationHours, new Date()),
+    [staticData.locationOperationHours, selectedDate]
+  );
+  const userPreferences = staticData.userPreferences;
+  const setUserPreferences = useDataStore((state) => state.setUserPreferences)
+  const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
+
+  // Data involved with fuse
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredItems, setFilteredItems] = useState<DailyItem[]>([]);
+  const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
+
 
 
   // Initialize selected times based on current time
   useEffect(() => {
     if (memoizedLocationHours) {
-      const { timeOfDay } = getCurrentTimeOfDayWithLocations(memoizedLocationHours);
+      const { timeOfDay, openLocations } = getCurrentTimeOfDayWithLocations(memoizedLocationHours);
       if (timeOfDay) {
         setVisibleTimes([timeOfDay]);
+      }
+
+      if (openLocations) {
+        setOpenLocations(openLocations)
       }
     }
   }, [memoizedLocationHours]);
@@ -115,7 +120,6 @@ const DailyItems: React.FC = () => {
       setAvailableFavorites(tempAvailable);
       postUserPreferences(tempPreferences, token as string);
     }
-
   };
 
   const togglePreferencesItem = (preferenceType: string, preference: string | boolean) => {
@@ -135,14 +139,6 @@ const DailyItems: React.FC = () => {
       setExpandFolders(preference as boolean);
     }
   }
-
-  // Calculate currently open locations for display
-  const openLocations = memoizedLocationHours
-    ? Object.entries(memoizedLocationHours)
-      .filter(([_, times]) => isLocationOpenNow(times))
-      .map(([location]) => location)
-    : [];
-
 
   const handleTogglePreferences = () => {
     const newState = !showPreferences;

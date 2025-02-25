@@ -15,7 +15,7 @@ export function VisualPreferences({ expandFolders, toggleExpandFolders }: Visual
           <Checkbox id="expandFolders" checked={expandFolders} onCheckedChange={toggleExpandFolders} />
           <Label
             htmlFor="expandFolders"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 w-full"
           >
             Expand All Folders by Default
           </Label>
