@@ -6,13 +6,15 @@ Live at: [nufood.me](https://nufood.me)
 
 ## Features
 
-- 🚀 Fast, responsive interface
-- 🍽️ Real-time dining hall operating hours
-- 🔍 Search through all available menu items
-- ⭐ Save favorite foods and get personalized recommendations
-- 📱 Mobile-friendly design
-- 🔐 User authentication via Firebase
-- 📊 Daily menu updates via automated scraping
+-  Fast, responsive interface
+-  Real-time dining hall items and operating hours
+-  View future and past daily menus within the week
+-  Search through all available menu items
+-  Save favorite foods and get personalized recommendations
+-  Mobile-friendly design
+-  User authentication via Firebase
+-  Daily menu updates via automated scraping
+-  Email notifications of where favorite foods are
 
 ## Tech Stack
 
@@ -28,18 +30,6 @@ Live at: [nufood.me](https://nufood.me)
 - PostgreSQL database 
 - Firebase Admin SDK for auth verification
 
-## API Endpoints
-
-```
-GET /api/userPreferences         # Get user's favorite items and return matching available items for today
-GET    /api/allData                 # Get all dining data
-GET    /api/generalData             # Get general dining info
-GET    /api/operatingTimes          # Get dining location hours
-POST   /api/scrapeDailyItems        # Trigger daily menu scrape
-POST   /api/scrapeOperatingTimes    # Trigger hours scrape
-DELETE /api/deleteDailyItems        # Clear daily items
-DELETE /api/deleteOperatingTimes    # Clear operating times
-```
 ## Deployment
 
 The application is deployed using:
@@ -49,24 +39,15 @@ The application is deployed using:
 
 ## Screenshots
 
+### Weekly Items View
+![Weekly Items View showing dining locations items and their current status](./frontend/public/images/main.png)
+
 ### Operation Hours
 ![Operation Hours View showing dining locations and their status](./frontend/public/images/operationTimes.png)
 
 ### Favorite Items Selection
 ![Favorite Items View showing how to select preferred menu items](./frontend/public/images/allItems.png)
 
-### Daily Items View
-![Daily Items View showing dining locations and their current status](./frontend/public/images/main.png)
-
-## Why Go?
-
-Go was chosen for the backend to explore its:
-- Excellent error handling system
-- Built-in testing capabilities
-- Strong typing and struct system
-- Clean syntax and organization
-
-While not all Go features (like goroutines for concurrency) were utilized, the language provided a solid foundation for building a reliable backend service.
 
 ## Contributing
 
