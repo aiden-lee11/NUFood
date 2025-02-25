@@ -17,7 +17,7 @@
  * 
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import clsx from 'clsx';
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/pagination";
 import { useDataStore } from '@/store';
 import { postUserPreferences } from '@/util/data';
+import { useBanner } from '@/context/BannerContext';
 
 const ITEMS_PER_PAGE = 100;
 
@@ -47,8 +48,8 @@ const AllItems: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const [showPopup, setShowPopup] = useState(false);
+  const { containerRef } = useBanner();
 
   const { token } = useAuth();
 
@@ -67,15 +68,6 @@ const AllItems: React.FC = () => {
     }
   }, [searchQuery, allItems]);
 
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  }, [currentPage]);
-
   const handleItemClick = (item: Item) => {
     if (!token) {
       setShowPopup(true);
@@ -93,11 +85,9 @@ const AllItems: React.FC = () => {
         tempPreferences = [...userPreferences, item];
       }
 
-
       setUserPreferences(tempPreferences);
       postUserPreferences(tempPreferences, token as string);
     }
-
   };
 
 
@@ -148,8 +138,17 @@ const AllItems: React.FC = () => {
     return pageNumbers;
   };
 
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  }, [currentPage]);
+
   return (
-    <div ref={containerRef} className="p-6 min-h-screen text-black bg-background dark:text-white transition-colors duration-200">
+    <div className="p-6 min-h-screen text-black bg-background dark:text-white transition-colors duration-200">
       <h1 className="text-2xl font-bold mb-4">Select Your Favorite Items</h1>
 
       {totalPages > 1 && (
