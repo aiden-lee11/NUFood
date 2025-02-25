@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 )
 
 // CorsMiddleware handles CORS headers and preflight requests
@@ -50,5 +51,18 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// Add userID to request context
 		ctx := context.WithValue(r.Context(), "userID", userID)
 		next(w, r.WithContext(ctx))
+	}
+}
+
+func AdminMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+
+		if authHeader != os.Getenv("ADMIN_TOKEN") {
+			http.Error(w, "Provided token does not have admin permission", http.StatusUnauthorized)
+			return
+		}
+
+		next(w, r)
 	}
 }

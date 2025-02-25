@@ -17,7 +17,7 @@ export const useAuthToken = () => {
 
       if (currentUser) {
         // Fetch a fresh token for the authenticated user
-        const freshToken = await currentUser.getIdToken();
+        const freshToken = await currentUser.getIdToken(true);
         setToken(freshToken);
 
         // Listen for token changes and refresh token when it changes

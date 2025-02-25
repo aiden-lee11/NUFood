@@ -17,11 +17,10 @@
  * 
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import clsx from 'clsx';
-import { fetchAllData, fetchGeneralData, postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
 import { Item } from '../types/ItemTypes';
@@ -34,19 +33,25 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { useDataStore } from '@/store';
+import { postUserPreferences } from '@/util/data';
+import { useBanner } from '@/context/BannerContext';
 
 const ITEMS_PER_PAGE = 100;
 
 const AllItems: React.FC = () => {
-  const [allItems, setAllItems] = useState<Item[]>([]);
-  const [userPreferences, setUserPreferences] = useState<Item[]>([]);
+  const staticData = useDataStore((state) => state.UserDataResponse);
+  var userPreferences = staticData.userPreferences;
+  const allItems = staticData.allItems;
+  const setUserPreferences = useDataStore((state) => state.setUserPreferences)
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const [showPopup, setShowPopup] = useState(false);
+  const { containerRef } = useBanner();
 
-  const { authLoading, token } = useAuth();
+  const { token } = useAuth();
 
   const fuse = new Fuse(allItems, {
     keys: ['Name'],
@@ -63,57 +68,28 @@ const AllItems: React.FC = () => {
     }
   }, [searchQuery, allItems]);
 
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  }, [currentPage]);
-
   const handleItemClick = (item: Item) => {
-    const formattedItemName = item.Name.toLowerCase().trim();
-
     if (!token) {
       setShowPopup(true);
       return;
     }
 
     let tempPreferences = userPreferences;
+    const formattedItemName = item.Name.toLowerCase().trim();
 
-    if (userPreferences.some((i) => i.Name.toLowerCase().trim() === formattedItemName)) {
-      tempPreferences = userPreferences.filter((i) => i.Name.toLowerCase().trim() !== formattedItemName);
-    } else {
-      tempPreferences = [...userPreferences, item];
+
+    if (userPreferences) {
+      if (userPreferences.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
+        tempPreferences = userPreferences.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
+      } else {
+        tempPreferences = [...userPreferences, item];
+      }
+
+      setUserPreferences(tempPreferences);
+      postUserPreferences(tempPreferences, token as string);
     }
-
-    setUserPreferences(tempPreferences);
-    postUserPreferences(tempPreferences, token as string);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (!authLoading && token) {
-          const data = await fetchAllData(token);
-          if (data) {
-            setAllItems(data.allItems);
-            setUserPreferences(data.userPreferences.map((item: Item) => item));
-          }
-        } else if (!authLoading && !token) {
-          const data = await fetchGeneralData();
-          if (data) {
-            setAllItems(data.allItems);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchData();
-  }, [authLoading, token]);
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -162,8 +138,17 @@ const AllItems: React.FC = () => {
     return pageNumbers;
   };
 
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  }, [currentPage]);
+
   return (
-    <div ref={containerRef} className="p-6 min-h-screen text-black bg-background dark:text-white transition-colors duration-200">
+    <div className="p-6 min-h-screen text-black bg-background dark:text-white transition-colors duration-200">
       <h1 className="text-2xl font-bold mb-4">Select Your Favorite Items</h1>
 
       {totalPages > 1 && (
@@ -228,12 +213,12 @@ const AllItems: React.FC = () => {
               onClick={() => handleItemClick(item)}
               className={clsx(
                 'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none ',
-                userPreferences.some((fav) => fav.Name === item.Name)
+                (userPreferences && userPreferences.some((fav) => fav.Name === item.Name))
                   ? "bg-yellow-100 dark:bg-yellow-700 text-black dark:text-white border-yellow-300 dark:border-yellow-600 border"
                   : "bg-gray-300 dark:bg-[#1a1d24] text-black dark:text-white border-gray-400 dark:border-gray-600"
               )}
             >
-              {item.Name} {userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
+              {item.Name} {userPreferences && userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
             </button>
           </li>
         ))}

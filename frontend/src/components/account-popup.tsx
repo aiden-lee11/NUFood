@@ -35,48 +35,48 @@ const AccountPopup: React.FC<AccountPopupProps> = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{loggedIn ? "Account Information" : "Sign In"}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[425px] w-[95vw] p-4 sm:p-6">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-xl">{loggedIn ? "Account Information" : "Sign In"}</DialogTitle>
+          <DialogDescription className="text-sm">
             {loggedIn ? "Manage your account settings and preferences." : "Get the best out of our app by signing in!"}
           </DialogDescription>
         </DialogHeader>
         {loggedIn ? (
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
-              <div className="col-span-3">
-                <p className="text-sm">{user?.email}</p>
-              </div>
+          <div className="space-y-8 py-2">
+            <div className="flex items-center justify-between gap-4">
+              <Label className="text-sm">Email</Label>
+              <p className="text-sm break-all text-right">{user?.email}</p>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mailing-switch" className="text-right">
-                Mailing List
-              </Label>
-              <div className="col-span-3">
-                <Switch id="mailing-switch" onCheckedChange={handleSwitchChange} checked={mailing} />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <Label className="text-sm">Notifications</Label>
+                <Switch
+                  id="mailing-switch"
+                  onCheckedChange={handleSwitchChange}
+                  checked={mailing}
+                  className="data-[state=checked]:bg-primary"
+                />
               </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Get emailed a list of where your favorites will be at the start of each day!
+              </p>
             </div>
           </div>
         ) : (
-          <div className="py-4">
-            <p className="text-sm text-center mb-4">
-              Sign in to save your preferences, access your favorites, and more!
-            </p>
+          <div className="py-6">
+            <p className="text-sm text-center">Sign in to save your preferences, access your favorites, and more!</p>
           </div>
         )}
-        <DialogFooter className="">
+        <DialogFooter className="pt-2">
           {loggedIn ? (
-            <Button asChild variant="destructive">
+            <Button asChild variant="destructive" className="w-full">
               <Link to="/signout" onClick={onClose}>
                 Sign Out
               </Link>
             </Button>
           ) : (
-            <Button asChild>
+            <Button asChild className="w-full">
               <Link to="/login" onClick={onClose}>
                 Sign In
               </Link>

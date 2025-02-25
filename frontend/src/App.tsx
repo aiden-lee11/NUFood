@@ -10,6 +10,8 @@ import Preferences from './pages/Preferences';
 import ReactGA from 'react-ga4';
 import Banner from './components/banner';
 import OperationHours from './pages/OperationHours';
+import DataLoader from './components/data-loader';
+import { BannerProvider } from './context/BannerContext';
 
 function App() {
   ReactGA.initialize(import.meta.env.VITE_GA_MEASUREMENT_ID);
@@ -18,19 +20,23 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <MyMUIThemeProvider>
-        <Layout>
-          <Banner />
-          <Routes>
-            <Route path="/" element={<DailyItems />} />
-            <Route path="/hours" element={<OperationHours />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signout" element={<SignOutButton />} />
-            <Route path="/preferences" element={<Preferences />} />
-            <Route path="/all" element={<AllItems />} />
-          </Routes>
-        </Layout>
+        <BannerProvider>
+          <Layout>
+            <Banner />
+            <DataLoader>
+              <Routes>
+                <Route path="/" element={<DailyItems />} />
+                <Route path="/hours" element={<OperationHours />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signout" element={<SignOutButton />} />
+                <Route path="/preferences" element={<Preferences />} />
+                <Route path="/all" element={<AllItems />} />
+              </Routes>
+            </DataLoader>
+          </Layout>
+        </BannerProvider>
       </MyMUIThemeProvider>
-    </ThemeProvider>
+    </ThemeProvider >
   );
 }
 

@@ -91,6 +91,11 @@ type DailyItem struct {
 	TimeOfDay   string // The time of day this item is available
 }
 
+type WeeklyItem struct {
+	DailyItem DailyItem
+	DayIndex  int
+}
+
 type AllDataItem struct {
 	Name string
 }

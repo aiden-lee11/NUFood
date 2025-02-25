@@ -62,13 +62,20 @@ func main() {
 	http.HandleFunc("GET /api/scrapeDailyItems", middleware.CorsMiddleware(api.ScrapeDailyItemsHandler))
 	http.HandleFunc("OPTIONS /api/scrapeDailyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 
+	http.HandleFunc("GET /api/scrapeWeeklyItems", middleware.CorsMiddleware(api.ScrapeWeeklyItemsHandler))
+	http.HandleFunc("OPTIONS /api/scrapeWeeklyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
+	http.HandleFunc("GET /api/updateWeeklyItems", middleware.CorsMiddleware(api.ScrapeUpdateWeekly))
+	http.HandleFunc("OPTIONS /api/updateWeeklyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+
 	http.HandleFunc("GET /api/scrapeOperatingTimes", middleware.CorsMiddleware(api.ScrapeLocationOperatingTimesHandler))
 	http.HandleFunc("OPTIONS /api/scrapeOperatingTimes", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 
-	// Delete Existing Data (used for development)
-	// http.HandleFunc("DELETE /api/deleteDailyItems", api.DeleteDailyItems)
-	// http.HandleFunc("DELETE /api/deleteOperatingTimes", api.DeleteLocationOperatingTimes)
+	http.HandleFunc("GET /api/sendMailing", middleware.CorsMiddleware(middleware.AdminMiddleware(api.SendOutMailing)))
+	http.HandleFunc("OPTIONS /api/sendMailing", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 
+	http.HandleFunc("GET /api/unsubscribe", middleware.CorsMiddleware(api.HandleUnsubscribe))
+	http.HandleFunc("OPTIONS /api/unsubscribe", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 	// Start the HTTP server on port 8080
 	http.ListenAndServe(":8081", nil)
 	fmt.Println("Server started on port 8081")

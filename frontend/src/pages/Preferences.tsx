@@ -1,52 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { fetchAllData, postUserPreferences } from '../util/data';
+import { postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
 import { FavoriteItem } from '../types/ItemTypes';
+import { useDataStore } from '@/store';
 
 
 const Preferences: React.FC = () => {
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  var userPreferences = useDataStore((state) => state.UserDataResponse.userPreferences)
+  const setUserPreferences = useDataStore((state) => state.setUserPreferences)
 
-  const { authLoading, token } = useAuth();
+  const { token } = useAuth();
 
 
   const handleItemClick = (item: FavoriteItem) => {
-    let tempPreferences = favorites;
-    const formattedItemName = item.Name.toLowerCase().trim();
-    if (favorites.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
-      tempPreferences = favorites.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
-    } else {
-      tempPreferences = [...favorites, item];
-    }
-    setFavorites(tempPreferences);
-    postUserPreferences(tempPreferences, token as string);
-  };
-
-  useEffect(() => {
-    // Define the async function inside useEffect
-    const fetchFavorites = async () => {
-      try {
-        if (!authLoading && token) {
-          // Fetch user favorites based on userID
-          const data = await fetchAllData(token as string);
-          setFavorites(data.userPreferences.map((item: FavoriteItem) => item));
-        }
-      } catch (error) {
-        console.error('Error fetching user favorites:', error);
+    if (userPreferences) {
+      let tempPreferences = userPreferences;
+      const formattedItemName = item.Name.toLowerCase().trim();
+      if (userPreferences.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
+        tempPreferences = userPreferences.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
+      } else {
+        tempPreferences = [...userPreferences, item];
       }
-    };
-
-    // Call the async function
-    fetchFavorites();
-  }, [authLoading, token]);
+      setUserPreferences(tempPreferences);
+      postUserPreferences(tempPreferences, token as string);
+    }
+  };
 
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <h1 className="text-2xl font-bold mb-4 text-black dark:text-white">Your Favorite Items</h1>
 
-      {favorites.length > 0 ? (
+      {(userPreferences && userPreferences.length > 0) ? (
         <ul className="space-y-2">
-          {favorites.map((item, index) => (
+          {userPreferences.map((item, index) => (
             <li
               key={index}
               className="flex justify-between items-center p-3 rounded-md bg-gray-200 dark:bg-[#1a1d24] text-black dark:text-white transition-transform duration-200 transform hover:translate-y-[-2px] hover:shadow-md"

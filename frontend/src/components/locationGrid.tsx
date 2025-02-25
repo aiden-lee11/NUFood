@@ -5,27 +5,37 @@ import { DailyItem } from "../types/ItemTypes";
 import Status from "./Status";
 
 
-interface LocationProps {
-  locationOperationHours: LocationOperatingTimes | undefined
+interface LocationState {
+  locationOperationHours: LocationOperatingTimes | undefined;
   visibleLocations: string[];
   timesOfDay: string[];
   visibleTimes: string[];
   filteredItems: DailyItem[];
   availableFavorites: DailyItem[];
   expandFolders: boolean;
+}
+
+interface LocationActions {
   handleItemClick: (item: DailyItem) => void;
 }
 
-const LocationItemGrid: React.FC<LocationProps> = ({
-  locationOperationHours,
-  visibleLocations,
-  timesOfDay,
-  visibleTimes,
-  filteredItems,
-  availableFavorites,
-  expandFolders,
-  handleItemClick,
-}) => {
+interface LocationProps {
+  state: LocationState;
+  actions: LocationActions;
+}
+
+const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
+  const {
+    locationOperationHours,
+    visibleLocations,
+    timesOfDay,
+    visibleTimes,
+    filteredItems,
+    availableFavorites,
+    expandFolders
+  } = state;
+
+  const { handleItemClick } = actions;
 
   return (
     <div className="min-h-screen p-6 bg-background transition-colors duration-300">
