@@ -6,14 +6,31 @@ import (
 	"backend/internal/models"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
 
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"github.com/joho/godotenv"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
+
+func GenerateUnsubscribeToken(userID string) (string, error) {
+	// Create a unique token using userID and a secret key
+	env_err := godotenv.Load()
+	if env_err != nil {
+		log.Printf("Error loading .env file: %v", env_err)
+	}
+
+	h := hmac.New(sha256.New, []byte(os.Getenv("SECRET_KEY")))
+	h.Write([]byte(userID))
+	token := hex.EncodeToString(h.Sum(nil))
+	return token, nil
+}
 
 func SendEmails() error {
 	preferencesData, err := db.GetMailingList()
@@ -29,6 +46,7 @@ func SendEmails() error {
 	}
 
 	apiKey := os.Getenv("SENDGRID_API_KEY")
+	baseURL := os.Getenv("BASE_URL")
 	from := mail.NewEmail("NUFood", "nufoodfinder11@gmail.com")
 	subject := "Available Favorites Today"
 
@@ -47,7 +65,15 @@ func SendEmails() error {
 		to := mail.NewEmail(name, email)
 
 		plainText := "Today's Favorites"
-		htmlContent, err := FormatPreferences(preferences)
+
+		unsubscribeToken, err := GenerateUnsubscribeToken(userID)
+		if err != nil {
+			return err
+		}
+		unsubscribeURL := fmt.Sprintf("%s/api/unsubscribe?user=%s&token=%s",
+			baseURL, url.QueryEscape(userID), url.QueryEscape(unsubscribeToken))
+
+		htmlContent, err := FormatPreferences(preferences, unsubscribeURL)
 		if err != nil {
 			// TODO for now if we see an error we just skip the user should prob implement retry
 			log.Println(err)
@@ -70,7 +96,7 @@ func SendEmails() error {
 
 }
 
-func FormatPreferences(preferences []models.DailyItem) (string, error) {
+func FormatPreferences(preferences []models.DailyItem, unsubscribeURL string) (string, error) {
 	// Organize items by dining hall
 	fmt.Printf("preferences: %v\n", preferences)
 	categories := make(map[string][]models.DailyItem)
@@ -153,6 +179,12 @@ func FormatPreferences(preferences []models.DailyItem) (string, error) {
 		}
 		htmlBuilder.WriteString("</ul>\n")
 	}
+
+	htmlBuilder.WriteString(`  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 12px;">
+    <p>If you no longer wish to receive these emails, <a href="`)
+	htmlBuilder.WriteString(unsubscribeURL)
+	htmlBuilder.WriteString(`">click here to unsubscribe</a>.</p>
+  </div>`)
 
 	// Close the container and HTML tags
 	htmlBuilder.WriteString(`  </div>

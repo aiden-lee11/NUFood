@@ -74,6 +74,8 @@ func main() {
 	http.HandleFunc("GET /api/sendMailing", middleware.CorsMiddleware(middleware.AdminMiddleware(api.SendOutMailing)))
 	http.HandleFunc("OPTIONS /api/sendMailing", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 
+	http.HandleFunc("GET /api/unsubscribe", middleware.CorsMiddleware(api.HandleUnsubscribe))
+	http.HandleFunc("OPTIONS /api/unsubscribe", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
 	// Start the HTTP server on port 8080
 	http.ListenAndServe(":8081", nil)
 	fmt.Println("Server started on port 8081")

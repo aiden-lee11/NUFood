@@ -40,7 +40,7 @@ func TestFormatPreferencesForEmail(t *testing.T) {
 			TimeOfDay:   "Breakfast",
 		},
 	}
-	_, err := twilio.FormatPreferences(dailyItems)
+	_, err := twilio.FormatPreferences(dailyItems, "localhost")
 
 	assert.NoError(t, err, "Error in formatting daily items")
 }
@@ -164,4 +164,89 @@ func TestMailingList(t *testing.T) {
 	err = twilio.SendEmails()
 
 	require.NoError(t, err, "Error sending email")
+}
+
+func TestUnsubscribe(t *testing.T) {
+	t.Log("Running TestMailingList")
+	// Set up the database
+	testDB := setupTestDB(t)
+	defer teardownTestDB(testDB, t)
+
+	// Override the global DB variable in your `db` package
+	tx := testDB.Begin()
+	defer tx.Rollback()
+
+	// Use this transaction for all DB operations
+	// transaction is necessary here for testing not for prod just becuase the read writes to in memory sqlite can interfere with eachothers timing
+	// causing a horrible "table not found" err :)
+	db.DB = tx
+
+	// Insert daily items to be looked up
+	dailyItems := []models.DailyItem{
+		{
+			Name:        "Bacon",
+			Description: "Delicious bacon",
+			Date:        "2021-09-06",
+			Location:    "Allison",
+			StationName: "Comfort",
+			TimeOfDay:   "Breakfast",
+		},
+		{
+			Name:        "Bacon",
+			Description: "Delicious bacon",
+			Date:        "2021-09-06",
+			Location:    "Sargent",
+			StationName: "Comfort",
+			TimeOfDay:   "Breakfast",
+		},
+		{
+			Name:        "Chicken Parmesan",
+			Description: "LeChicken",
+			Date:        "2021-09-06",
+			Location:    "Elder",
+			StationName: "Comfort",
+			TimeOfDay:   "Dinner",
+		},
+		{
+			Name:        "Orange Chicken",
+			Description: "LeChicken2",
+			Date:        "2021-09-06",
+			Location:    "Plex East",
+			StationName: "Comfort",
+			TimeOfDay:   "Lunch",
+		},
+	}
+
+	err := db.InsertDailyItems(dailyItems, false)
+	require.NoError(t, err, "Error inserting daily items")
+
+	// Set up a user's preferences
+	user1Preferences := []models.AllDataItem{
+		{Name: "Bacon"},
+		{Name: "Eggs"},
+		{Name: "Chicken Parmesan"},
+	}
+
+	env_err := godotenv.Load()
+	if env_err != nil {
+		log.Printf("Error loading .env file: %v", env_err)
+	}
+	user1ID := os.Getenv("TESTING_USER_ID1")
+
+	if err := auth.InitFirebase(); err != nil {
+		log.Fatal("Init firebase failed: ", err)
+	}
+
+	err = db.SaveUserPreferences(user1ID, user1Preferences)
+	assert.NoError(t, err, "Error saving user")
+	err = db.UpdateMailingStatus(user1ID, true)
+	require.NoError(t, err, "Error saving user preferences")
+
+	err = twilio.SendEmails()
+
+	token, err := twilio.GenerateUnsubscribeToken(user1ID)
+
+	require.NoError(t, err, "Error generating unsub token")
+
+	fmt.Printf("token: %v\n", token)
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -562,4 +563,46 @@ func SendOutMailing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
+	// Get user ID and token from query parameters
+	userID := r.URL.Query().Get("user")
+	token := r.URL.Query().Get("token")
+
+	// Validate token
+	expectedToken, err := twilio.GenerateUnsubscribeToken(userID)
+	if err != nil || token != expectedToken {
+		fmt.Printf("token: %v\n", token)
+		fmt.Printf("expectedToken: %v\n", expectedToken)
+		http.Error(w, "Invalid unsubscribe link", http.StatusBadRequest)
+		return
+	}
+
+	// Update database to set mailing=false for this user
+	err = db.UpdateMailingStatus(userID, false)
+	if err != nil {
+		log.Printf("Error unsubscribing user %s: %v", userID, err)
+		http.Error(w, "Failed to unsubscribe", http.StatusInternalServerError)
+		return
+	}
+
+	// Show success page
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(`
+		<html>
+		<head>
+			<title>Unsubscribed</title>
+			<style>
+				body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+				.success { color: green; }
+			</style>
+		</head>
+		<body>
+			<h1>Unsubscribed Successfully</h1>
+			<p class="success">You have been removed from our mailing list.</p>
+			<p>You can always resubscribe by updating your preferences in your account settings.</p>
+		</body>
+		</html>
+	`))
 }
