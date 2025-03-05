@@ -34,3 +34,17 @@ func CleanAllData(newItems []models.AllDataItem) ([]models.AllDataItem, error) {
 
 	return res, nil
 }
+
+func SanitizeUserPreferences(favorites []models.AllDataItem) []models.AllDataItem {
+	sanitized := []models.AllDataItem{}
+
+	for _, item := range favorites {
+		if len(item.Name) >= 75 {
+			continue
+		}
+
+		sanitized = append(sanitized, item)
+	}
+
+	return sanitized
+}
