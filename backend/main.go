@@ -6,6 +6,7 @@ import (
 	"backend/internal/db"
 	"backend/internal/middleware"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
@@ -13,11 +14,10 @@ import (
 )
 
 func main() {
-	// Load .env file only if not in production
+	// Load env if not in production
 	if os.Getenv("RENDER") != "true" && os.Getenv("RAILWAY") != "true" {
-		env_err := godotenv.Load()
-		if env_err != nil {
-			log.Printf("Error loading .env file: %v", env_err)
+		if err := godotenv.Load(); err != nil {
+			log.Printf("Error loading .env file: %v", err)
 		}
 	}
 
@@ -29,54 +29,34 @@ func main() {
 	if POSTGRES_URL == "" {
 		log.Fatal("POSTGRES_URL environment variable is not set")
 	}
-
-	err := db.InitDB(POSTGRES_URL)
-
-	if err != nil {
+	if err := db.InitDB(POSTGRES_URL); err != nil {
 		log.Fatalf("Error initializing database: %v", err)
 	}
-
 	fmt.Println("Database initialized successfully")
 
-	// Define API routes
+	// Create a new router
+	r := mux.NewRouter()
 
-	// Response Data
-	http.HandleFunc("GET /api/allData", middleware.CorsMiddleware(middleware.AuthMiddleware(api.GetAllDataHandler)))
-	http.HandleFunc("OPTIONS /api/allData", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Apply routes with CORS and Auth middleware
 
-	http.HandleFunc("GET /api/generalData", middleware.CorsMiddleware(api.GetGeneralDataHandler))
-	http.HandleFunc("OPTIONS /api/generalData", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Public Routes
+	r.HandleFunc("/api/generalData", middleware.CorsMiddleware(api.GetGeneralDataHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/operatingTimes", middleware.CorsMiddleware(api.GetLocationOperatingTimesHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/unsubscribe", middleware.CorsMiddleware(api.HandleUnsubscribe)).Methods("GET", "OPTIONS")
 
-	http.HandleFunc("GET /api/operatingTimes", middleware.CorsMiddleware(api.GetLocationOperatingTimesHandler))
-	http.HandleFunc("OPTIONS /api/operatingTimes", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Authenticated User Routes
+	r.HandleFunc("/api/allData", middleware.CorsMiddleware(middleware.AuthMiddleware(api.GetAllDataHandler))).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/userPreferences", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserPreferences))).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/mailing", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserMailing))).Methods("POST", "OPTIONS")
 
-	// Post and response with new data
-	http.HandleFunc("POST /api/userPreferences", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserPreferences)))
-	http.HandleFunc("OPTIONS /api/userPreferences", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Scraper Routes Admin Cloudflare
+	r.HandleFunc("/api/scrapeDailyItems", middleware.CorsMiddleware(api.ScrapeDailyItemsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/scrapeWeeklyItems", middleware.CorsMiddleware(api.ScrapeWeeklyItemsHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/updateWeeklyItems", middleware.CorsMiddleware(api.ScrapeUpdateWeekly)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/scrapeOperatingTimes", middleware.CorsMiddleware(api.ScrapeLocationOperatingTimesHandler)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/sendMailing", middleware.CorsMiddleware(api.SendOutMailing)).Methods("GET", "OPTIONS")
 
-	// Post and response with new data
-	http.HandleFunc("POST /api/mailing", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserMailing)))
-	http.HandleFunc("OPTIONS /api/mailing", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	// Scrape and Save Data
-	http.HandleFunc("GET /api/scrapeDailyItems", middleware.CorsMiddleware(api.ScrapeDailyItemsHandler))
-	http.HandleFunc("OPTIONS /api/scrapeDailyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	http.HandleFunc("GET /api/scrapeWeeklyItems", middleware.CorsMiddleware(api.ScrapeWeeklyItemsHandler))
-	http.HandleFunc("OPTIONS /api/scrapeWeeklyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	http.HandleFunc("GET /api/updateWeeklyItems", middleware.CorsMiddleware(api.ScrapeUpdateWeekly))
-	http.HandleFunc("OPTIONS /api/updateWeeklyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	http.HandleFunc("GET /api/scrapeOperatingTimes", middleware.CorsMiddleware(api.ScrapeLocationOperatingTimesHandler))
-	http.HandleFunc("OPTIONS /api/scrapeOperatingTimes", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	http.HandleFunc("GET /api/sendMailing", middleware.CorsMiddleware(middleware.AdminMiddleware(api.SendOutMailing)))
-	http.HandleFunc("OPTIONS /api/sendMailing", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	http.HandleFunc("GET /api/unsubscribe", middleware.CorsMiddleware(api.HandleUnsubscribe))
-	http.HandleFunc("OPTIONS /api/unsubscribe", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-	// Start the HTTP server on port 8080
-	http.ListenAndServe(":8081", nil)
+	// Start server
 	fmt.Println("Server started on port 8081")
+	log.Fatal(http.ListenAndServe(":8081", r))
 }
