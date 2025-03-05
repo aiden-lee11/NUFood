@@ -19,6 +19,7 @@ export function LocationPreferences({
 }: LocationPreferencesProps) {
   const selectNorth = () => setVisibleLocations(["Sargent", "Elder"])
   const selectSouth = () => setVisibleLocations(["Allison", "Plex East", "Plex West"])
+  const selectAll = () => setVisibleLocations(locations);
   const selectNone = () => setVisibleLocations([])
 
   return (
@@ -32,6 +33,9 @@ export function LocationPreferences({
           <Button variant="secondary" size="sm" onClick={selectSouth}>
             <MapPin className="mr-2 h-4 w-4" />
             South Campus
+          </Button>
+          <Button variant="secondary" size="sm" onClick={selectAll}>
+            All Locations
           </Button>
           <Button variant="secondary" size="sm" onClick={selectNone}>
             Clear Locations
