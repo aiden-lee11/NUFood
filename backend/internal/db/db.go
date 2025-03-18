@@ -377,7 +377,7 @@ func ReturnDateOfDailyItems() (date string, err error) {
 // Returns:
 // - []models.DailyItem: A slice of DailyItem objects.
 // - error: An error if no items are found or the query fails.
-func GetAllDailyItems() ([]models.DailyItem, error) {
+func GetAllDailyItems() (map[string][]models.DailyItem, error) {
 	var dailyItems []GormDailyItem
 	result := DB.Find(&dailyItems)
 	if result.Error != nil {
@@ -391,7 +391,7 @@ func GetAllDailyItems() ([]models.DailyItem, error) {
 
 	// If everything was closed there exists no error however there also exists no data so treat as such
 	if dailyItems[0].AllClosed != nil {
-		return []models.DailyItem{}, nil
+		return nil, nil
 	}
 
 	// Convert the GormDailyItem slice to a DailyItem slice
@@ -400,10 +400,22 @@ func GetAllDailyItems() ([]models.DailyItem, error) {
 		items = append(items, item.DailyItem)
 	}
 
-	return items, nil
+	locationMapping := mapLocations(items)
+
+	return locationMapping, nil
 }
 
-func GetAllWeeklyItems() (map[string][]models.DailyItem, error) {
+func mapLocations(items []models.DailyItem) map[string][]models.DailyItem {
+	locations := make(map[string][]models.DailyItem)
+
+	for _, item := range items {
+		locations[item.Location] = append(locations[item.Location], item)
+	}
+
+	return locations
+}
+
+func GetAllWeeklyItems() (map[string]map[string][]models.DailyItem, error) {
 	var weeklyItems []GormWeeklyItem
 	result := DB.Find(&weeklyItems)
 	if result.Error != nil {
@@ -426,7 +438,14 @@ func GetAllWeeklyItems() (map[string][]models.DailyItem, error) {
 		dateKey := today.AddDate(0, 0, item.DayIndex).Format("2006-01-02")
 		items[dateKey] = append(items[dateKey], item.DailyItem)
 	}
-	return items, nil
+
+	locationMapping := make(map[string]map[string][]models.DailyItem)
+
+	for dateKey, dailyItems := range items {
+		locationMapping[dateKey] = mapLocations(dailyItems)
+	}
+
+	return locationMapping, nil
 }
 
 // GetAllDataItems retrieves all records from the all data table.
