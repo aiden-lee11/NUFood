@@ -49,7 +49,7 @@ func main() {
 	r.HandleFunc("/api/userPreferences", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserPreferences))).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/mailing", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserMailing))).Methods("POST", "OPTIONS")
 
-	// Scraper Routes Admin Cloudflare
+	// Scraper Routes available to Admin only via Cloudflare
 	r.HandleFunc("/api/scrapeDailyItems", middleware.CorsMiddleware(api.ScrapeDailyItemsHandler)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/scrapeWeeklyItems", middleware.CorsMiddleware(api.ScrapeWeeklyItemsHandler)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/updateWeeklyItems", middleware.CorsMiddleware(api.ScrapeUpdateWeekly)).Methods("GET", "OPTIONS")

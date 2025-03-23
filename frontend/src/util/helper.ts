@@ -1,4 +1,4 @@
-import { LocationOperatingTimes, OperationHoursData, OperatingTime } from "../types/OperationTypes";
+import { LocationOperatingTimes, OperationHoursData, OperatingTime, Hour } from "../types/OperationTypes";
 
 // Returns
 // -- Breakfast if current time is between 7:00 AM and 10:59 AM
@@ -118,4 +118,3 @@ export const getCurrentTimeOfDayWithLocations = (
 
   return { timeOfDay, openLocations };
 };
-

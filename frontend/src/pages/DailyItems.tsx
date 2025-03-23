@@ -6,7 +6,7 @@ import LocationItemGrid from '../components/locationGrid'
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
 import { getCurrentTimeOfDayWithLocations, getDailyLocationOperationTimes } from '../util/helper';
-import { DailyItem, Item } from '../types/ItemTypes';
+import { DailyItem, Item, DailyItemsMap } from '../types/ItemTypes';
 import ErrorPopup from '../components/error-popup';
 import { useDataStore } from '@/store';
 import { HeaderControls } from "../components/header-controls"
@@ -40,7 +40,9 @@ const DailyItems: React.FC = () => {
   );
   const userPreferences = staticData.userPreferences;
   const setUserPreferences = useDataStore((state) => state.setUserPreferences)
+  const [dailyItemsMap, setDailyItemsMap] = useState<DailyItemsMap>({});
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
+
 
   // Data involved with fuse
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,8 +67,12 @@ const DailyItems: React.FC = () => {
 
   useEffect(() => {
     if (weeklyItems && Object.keys(weeklyItems).length != 0) {
-      const todaysItems = weeklyItems[new Date().toISOString().split("T")[0]] || []
-      setDailyItems(todaysItems);
+      const today = new Date().toISOString().split("T")[0]
+      console.log(today)
+      const todaysItems = weeklyItems[today] || []
+      const dailyItems: DailyItem[] = Object.values(dailyItemsMap).flat()
+      setDailyItems(dailyItems);
+      setDailyItemsMap(todaysItems);
       // Determine if there is some location that is open, but no items are available
       // If this is the case then there was an error in scraping data and we should display
       // an error message popup to the user
@@ -78,7 +84,7 @@ const DailyItems: React.FC = () => {
     // Set available favorites based on items that match user preferences
     if (userPreferences && userPreferences.length > 0) {
       const userPrefNames = new Set(userPreferences.map(pref => pref.Name));
-      const favorites = dailyItems.filter(item => userPrefNames.has(item.Name));
+      const favorites: DailyItem[] = dailyItems.filter(item => userPrefNames.has(item.Name));
       setAvailableFavorites(favorites);
     }
   }, [dailyItems]);

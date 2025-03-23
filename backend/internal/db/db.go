@@ -428,6 +428,7 @@ func GetAllWeeklyItems() (map[string]map[string][]models.DailyItem, error) {
 
 	items := make(map[string][]models.DailyItem, 7)
 	today := time.Now()
+	fmt.Printf("today: %v\n", today)
 
 	for i := -3; i <= 3; i++ {
 		dateKey := today.AddDate(0, 0, i).Format("2006-01-02")

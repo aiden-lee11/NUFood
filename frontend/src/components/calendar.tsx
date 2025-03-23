@@ -21,7 +21,8 @@ export function DatePicker({ selectedDate, setSelectedDate, setDailyItems }: Dat
   function onSubmit(date: Date | undefined) {
     if (date) {
       setSelectedDate(date);
-      setDailyItems(weeklyItems[date.toISOString().split("T")[0]]);
+      const dailyItems = Object.values(weeklyItems[date.toISOString().split("T")[0]]).flat()
+      setDailyItems(dailyItems);
       setIsOpen(false);
     }
   }

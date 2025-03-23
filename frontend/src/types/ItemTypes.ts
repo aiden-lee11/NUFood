@@ -15,8 +15,12 @@ export interface Item {
 
 export interface FavoriteItem extends Item { }
 
-export interface WeeklyItemsMap {
+export interface DailyItemsMap {
   [key: string]: DailyItem[];
+}
+
+export interface WeeklyItemsMap {
+  [key: string]: DailyItemsMap;
 }
 
 // Base interface for shared properties

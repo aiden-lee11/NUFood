@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LocationOperatingTimes } from "../types/OperationTypes";
+import { LocationOperatingTimes, Hour } from "../types/OperationTypes";
 
 const formatTimeToAmPm = (date: Date): string => {
   let hours = date.getHours();
