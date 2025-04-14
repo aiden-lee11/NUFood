@@ -48,6 +48,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const allData = await fetchData(`${API_URL}/api/allData`, userToken || undefined);
+      console.log(allData);
       set({
         UserDataResponse: {
           ...get().UserDataResponse,

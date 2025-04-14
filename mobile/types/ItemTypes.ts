@@ -11,6 +11,12 @@ export interface DailyItem {
 
 export interface Item {
 	Name: string;
+	Description?: string;
+	Location: string;
+	StationName?: string;
+	startTime: string;
+	endTime: string;
+	day: string;
 }
 
 export interface FavoriteItem extends Item { }
