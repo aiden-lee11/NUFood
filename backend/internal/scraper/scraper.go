@@ -4,10 +4,10 @@ import (
 	"backend/internal/models"
 	"encoding/json"
 	"fmt"
-	"github.com/gocolly/colly"
 	"log"
 	"net/http"
-	"strings"
+
+	"github.com/gocolly/colly"
 )
 
 // DiningHallScraper represents a scraper for dining hall information.
@@ -281,39 +281,55 @@ func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([
 //   - []models.AllDataItem: A list of parsed all data items.
 //   - error: An error, if any occurred during parsing.
 func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, error) {
-	categories := menu.Periods.Categories
-	date := menu.Date
-
 	var dailyItems []models.DailyItem
 	var allDataItems []models.AllDataItem
 
-	for _, category := range categories {
-		cleanedCategory := strings.ToLower(strings.TrimSpace(category.Name))
-		if contains(IngredientCategories, cleanedCategory) {
-			continue
+	// Ensure Periods is not nil
+	if menu.Periods.Categories == nil {
+		log.Println("No categories found for this menu period")
+		return dailyItems, allDataItems, nil // Return empty slices, not an error
+	}
+
+	for _, category := range menu.Periods.Categories {
+		// Ensure Items is not nil
+		if category.Items == nil {
+			continue // Skip this category if it has no items
 		}
-
 		for _, item := range category.Items {
-			cleanedItem := strings.ToLower(strings.TrimSpace(item.Name))
 
-			if contains(Ingredients, cleanedItem) {
-				continue
+			// Create AllDataItem first
+			allDataItem := models.AllDataItem{
+				Name: item.Name,
 			}
 
-			itemName := models.AllDataItem{Name: item.Name}
-			allDataItems = append(allDataItems, itemName)
-
-			menuItem := models.DailyItem{
+			// Create DailyItem
+			dailyItem := models.DailyItem{
 				Name:        item.Name,
 				Description: item.Description,
-				Date:        date,
+				Date:        menu.Date,
 				Location:    location,
 				StationName: category.Name,
 				TimeOfDay:   timeOfDay,
 			}
 
-			dailyItems = append(dailyItems, menuItem)
+			// Extract nutrient information
+			if item.Nutrients != nil {
+				for _, nutrient := range item.Nutrients {
+					switch nutrient.Name {
+					case "Calories":
+						dailyItem.Calories = nutrient.Value
+					case "Protein (g)":
+						dailyItem.Protein = nutrient.Value
+					case "Total Carbohydrates (g)":
+						dailyItem.Carbs = nutrient.Value
+					case "Total Fat (g)":
+						dailyItem.Fat = nutrient.Value
+					}
+				}
+			}
 
+			dailyItems = append(dailyItems, dailyItem)
+			allDataItems = append(allDataItems, allDataItem)
 		}
 	}
 

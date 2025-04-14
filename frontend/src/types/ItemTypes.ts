@@ -7,6 +7,10 @@ export interface DailyItem {
   StationName: string;
   Date: string;
   TimeOfDay: string;
+  calories?: string;
+  protein?: string;
+  carbs?: string;
+  fat?: string;
 }
 
 export interface Item {
@@ -23,6 +27,7 @@ export interface WeeklyItemsMap {
 interface BaseDataResponse {
   allItems: Item[];
   weeklyItems: WeeklyItemsMap;
+  dailyItemsWithNutrients: DailyItem[];
   locationOperationHours: OperationHoursData[];
 }
 

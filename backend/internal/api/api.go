@@ -411,15 +411,17 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	weeklyItems, err := db.GetAllWeeklyItems()
+	// Fetch daily items which now include nutrients
+	dailyItemsWithNutrients, err := db.GetAllDailyItems()
 	if err != nil {
-		http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching daily items with nutrients: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	date, err := db.ReturnDateOfDailyItems()
+	// Fetch weekly items (may not have nutrients depending on how GetAllWeeklyItems is implemented)
+	weeklyItems, err := db.GetAllWeeklyItems()
 	if err != nil {
-		http.Error(w, "Error fetching date of daily items: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -444,12 +446,12 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	combinedData := map[string]interface{}{
-		"date":                   date,
-		"allItems":               allItems,
-		"weeklyItems":            weeklyItems,
-		"locationOperatingTimes": locationOperatingTimes,
-		"userPreferences":        userPreferences,
-		"mailing":                mailing,
+		"allItems":                allItems,
+		"weeklyItems":             weeklyItems,
+		"dailyItemsWithNutrients": dailyItemsWithNutrients,
+		"locationOperatingTimes":  locationOperatingTimes,
+		"userPreferences":         userPreferences,
+		"mailing":                 mailing,
 	}
 
 	// Set the response header to indicate JSON content
@@ -497,6 +499,21 @@ func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetAllDailyItemsHandler retrieves all daily items (including nutrients) from the database.
+func GetAllDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
+	allItems, err := db.GetAllDailyItems()
+	if err != nil {
+		http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(allItems); err != nil {
+		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 // GetGeneralDataHandler retrieves general dining hall data.
 //
 // This handler expects no request body but responds with general data, including daily items, location operating times, and other relevant information in JSON format.
@@ -511,22 +528,24 @@ func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
-	// Fetch all data items
+	// Fetch all data items (names only for filter)
 	allItems, err := db.GetAllDataItems()
 	if err != nil {
 		http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	weeklyItems, err := db.GetAllWeeklyItems()
+	// Fetch daily items which now include nutrients
+	dailyItemsWithNutrients, err := db.GetAllDailyItems()
 	if err != nil {
-		http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching daily items with nutrients: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	date, err := db.ReturnDateOfDailyItems()
+	// Fetch weekly items (may not have nutrients)
+	weeklyItems, err := db.GetAllWeeklyItems()
 	if err != nil {
-		http.Error(w, "Error fetching date of daily items: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -538,10 +557,10 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
-		"date":                   date,
-		"allItems":               allItems,
-		"weeklyItems":            weeklyItems,
-		"locationOperatingTimes": locationOperatingTimes,
+		"allItems":                allItems,
+		"weeklyItems":             weeklyItems,
+		"dailyItemsWithNutrients": dailyItemsWithNutrients,
+		"locationOperatingTimes":  locationOperatingTimes,
 	}
 
 	// Set the response header to indicate JSON content
