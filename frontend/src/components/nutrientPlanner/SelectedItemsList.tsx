@@ -1,16 +1,25 @@
-import { Settings } from '@mui/icons-material';
-import {
-    Box,
-    Button,
-    IconButton,
-    Paper,
-    Typography
-} from '@mui/material';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Minus, Plus, Settings, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { useDataStore } from '../../store';
 import { DailyItem, NutritionGoals } from '../../types/ItemTypes';
 import { SelectedDailyItem } from '../../util/nutrientPlannerUtils';
 import NutritionGoalsDialog from './NutritionGoalsDialog';
+
+// Helper function to format nutrition values
+const formatNutritionValue = (value: string | number | undefined, quantity: number = 1): string => {
+    if (value === undefined || value === null) return '0';
+
+    // If it's already a string and contains "less than 1 gram"
+    if (typeof value === 'string' && value.toLowerCase().includes('less than 1 gram')) {
+        return value;
+    }
+
+    // For numeric values or string numbers, add 'g' suffix and apply quantity
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    return `${(numValue * quantity).toFixed(1)}g`;
+};
 
 interface SelectedItemsListProps {
     selectedItems: SelectedDailyItem[];
@@ -20,7 +29,7 @@ interface SelectedItemsListProps {
     totalFat: number;
     handleSelectItem: (item: DailyItem) => void;
     handleQuantityChange: (item: SelectedDailyItem, change: number) => void;
-    setActiveTab: (tab: number) => void;
+    setActiveTab: (tab: string) => void;
     nutritionGoals: NutritionGoals;
     handleSaveGoals: (goalsToSave: NutritionGoals) => Promise<void>;
 }
@@ -49,147 +58,150 @@ const SelectedItemsList: React.FC<SelectedItemsListProps> = ({
     };
 
     return (
-        <Paper sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            overflow: 'hidden'
-        }}>
-            <Box sx={{
-                p: 2,
-                borderBottom: 1,
-                borderColor: 'divider',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}>
-                <Typography variant="h6">My Food Plan</Typography>
-                <IconButton
+        <Card className="flex flex-col h-full overflow-hidden">
+            <CardHeader className="p-4 space-y-0 border-b flex justify-between items-center">
+                <h3 className="text-lg font-medium">My Food Plan</h3>
+                <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleOpenGoalsDialog}
-                    size="small"
-                    color="primary"
                     title="Set Nutrition Goals"
                 >
-                    <Settings />
-                </IconButton>
-            </Box>
+                    <Settings className="h-4 w-4" />
+                </Button>
+            </CardHeader>
 
-            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="subtitle2" gutterBottom>Daily Totals</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                    <Box>
-                        <Typography variant="body2" color="text.secondary">
+            <div className="p-4 border-b">
+                <h4 className="text-sm font-medium mb-2">Daily Totals</h4>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-sm text-muted-foreground">
                             Calories
-                        </Typography>
-                        <Typography>
+                        </p>
+                        <p className="font-medium">
                             {totalCalories.toFixed(1)} / {nutritionGoals.calories}
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="body2" color="text.secondary">
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">
                             Protein
-                        </Typography>
-                        <Typography>
+                        </p>
+                        <p className="font-medium">
                             {totalProtein.toFixed(1)}g / {nutritionGoals.protein}g
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="body2" color="text.secondary">
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">
                             Carbs
-                        </Typography>
-                        <Typography>
+                        </p>
+                        <p className="font-medium">
                             {totalCarbs.toFixed(1)}g / {nutritionGoals.carbs}g
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="body2" color="text.secondary">
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">
                             Fat
-                        </Typography>
-                        <Typography>
+                        </p>
+                        <p className="font-medium">
                             {totalFat.toFixed(1)}g / {nutritionGoals.fat}g
-                        </Typography>
-                    </Box>
-                </Box>
-            </Box>
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             {/* Selected Items List */}
-            <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+            <CardContent className="flex-grow overflow-y-auto p-4 min-h-0 pb-24">
                 {selectedItems.length === 0 ? (
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '100%',
-                        gap: 2
-                    }}>
-                        <Typography variant="body2" color="text.secondary" align="center">
+                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                        <p className="text-sm text-muted-foreground text-center">
                             No items in your plan yet
-                        </Typography>
+                        </p>
                         <Button
-                            variant="outlined"
-                            onClick={() => setActiveTab(0)}
-                            sx={{ display: { xs: 'block', md: 'none' } }}
+                            variant="outline"
+                            onClick={() => setActiveTab("food-items")}
+                            className="md:hidden"
                         >
                             Add Food Items
                         </Button>
-                    </Box>
+                    </div>
                 ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <div className="flex flex-col gap-4 max-h-full">
                         {selectedItems.map((item, index) => (
-                            <Paper
+                            <Card
                                 key={`${item.Name}-${item.Location}-${item.TimeOfDay}-${index}`}
-                                variant="outlined"
-                                sx={{ p: 2 }}
+                                className="p-4 mb-4"
                             >
-                                <Box sx={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'flex-start'
-                                }}>
-                                    <Box sx={{ flex: 1 }}>
-                                        <Typography variant="subtitle2">{item.Name}</Typography>
-                                        <Typography variant="caption" color="text.secondary" display="block">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                                    <div className="flex-1">
+                                        <h4 className="font-medium">{item.Name}</h4>
+                                        <p className="text-xs text-muted-foreground mb-2">
                                             {item.Location} ({item.TimeOfDay})
-                                        </Typography>
-                                        <Box sx={{ mt: 1 }}>
-                                            <Typography variant="body2">
-                                                Calories: {(parseFloat(item.calories || '0') * item.quantity).toFixed(1)} •
-                                                P: {(parseFloat(item.protein || '0') * item.quantity).toFixed(1)}g •
-                                                C: {(parseFloat(item.carbs || '0') * item.quantity).toFixed(1)}g •
-                                                F: {(parseFloat(item.fat || '0') * item.quantity).toFixed(1)}g
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <IconButton
-                                            size="small"
+                                        </p>
+                                        <div className="flex flex-col space-y-2 text-xs">
+                                            <div className="flex justify-between">
+                                                <span className="font-medium">Calories:</span>
+                                                <span>{(parseFloat(item.calories || '0') * item.quantity).toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="font-medium">Protein:</span>
+                                                <span>
+                                                    {item.protein && item.protein.toLowerCase().includes('less than 1 gram')
+                                                        ? item.protein
+                                                        : formatNutritionValue(item.protein, item.quantity)}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="font-medium">Carbs:</span>
+                                                <span>
+                                                    {item.carbs && item.carbs.toLowerCase().includes('less than 1 gram')
+                                                        ? item.carbs
+                                                        : formatNutritionValue(item.carbs, item.quantity)}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="font-medium">Fat:</span>
+                                                <span>
+                                                    {item.fat && item.fat.toLowerCase().includes('less than 1 gram')
+                                                        ? item.fat
+                                                        : formatNutritionValue(item.fat, item.quantity)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 self-end sm:self-start">
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8"
                                             onClick={() => handleQuantityChange(item, -1)}
                                             disabled={item.quantity <= 1}
                                         >
-                                            -
-                                        </IconButton>
-                                        <Typography>{item.quantity}</Typography>
-                                        <IconButton
-                                            size="small"
+                                            <Minus className="h-3 w-3" />
+                                        </Button>
+                                        <span className="w-6 text-center">{item.quantity}</span>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8"
                                             onClick={() => handleQuantityChange(item, 1)}
                                         >
-                                            +
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
+                                            <Plus className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 text-destructive"
                                             onClick={() => handleSelectItem(item)}
-                                            color="error"
                                         >
-                                            ×
-                                        </IconButton>
-                                    </Box>
-                                </Box>
-                            </Paper>
+                                            <X className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
                         ))}
-                    </Box>
+                    </div>
                 )}
-            </Box>
+            </CardContent>
 
             <NutritionGoalsDialog
                 open={showGoalsDialog}
@@ -197,7 +209,7 @@ const SelectedItemsList: React.FC<SelectedItemsListProps> = ({
                 goals={nutritionGoals}
                 onSave={handleSaveGoalsDialog}
             />
-        </Paper>
+        </Card>
     );
 };
 

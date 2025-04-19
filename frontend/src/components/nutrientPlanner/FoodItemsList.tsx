@@ -1,22 +1,19 @@
-import { FilterList, Search } from '@mui/icons-material';
-import {
-    Box,
-    Collapse,
-    FormControl,
-    InputAdornment,
-    InputLabel,
-    MenuItem,
-    Paper,
-    Select,
-    SelectChangeEvent,
-    TextField,
-    Typography
-} from '@mui/material';
-import IconButton from '@mui/material/IconButton';
+import { Filter, Search } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FixedSizeList } from 'react-window';
 import { DailyItem } from '../../types/ItemTypes';
-import { SelectedDailyItem, SortDirection, SortKey } from '../../util/caloriePlannerUtils';
+import { SelectedDailyItem, SortDirection, SortKey } from '../../util/nutrientPlannerUtils';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader } from '../ui/card';
+import { Collapsible, CollapsibleContent } from '../ui/collapsible';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../ui/select';
 import FoodItemRow from './FoodItemRow';
 
 // Debounce function to delay search updates
@@ -65,9 +62,10 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
 }) => {
     // Local state for the search input to avoid immediate updates
     const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+    const listRef = React.useRef<HTMLDivElement>(null);
 
-    // Debounce the search term to reduce API calls
-    const debouncedSearchTerm = useDebounce(localSearchTerm, 300);
+    // Use a faster debounce time
+    const debouncedSearchTerm = useDebounce(localSearchTerm, 150);
 
     // Update the parent's searchTerm only when debounced value changes
     useEffect(() => {
@@ -75,12 +73,12 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
     }, [debouncedSearchTerm, setSearchTerm]);
 
     // Memoize handlers to prevent recreation on each render
-    const handleSortKeyChange = useCallback((event: SelectChangeEvent<SortKey>) => {
-        setSortKey(event.target.value as SortKey);
+    const handleSortKeyChange = useCallback((value: string) => {
+        setSortKey(value as SortKey);
     }, [setSortKey]);
 
-    const handleSortDirectionChange = useCallback((event: SelectChangeEvent<SortDirection>) => {
-        setSortDirection(event.target.value as SortDirection);
+    const handleSortDirectionChange = useCallback((value: string) => {
+        setSortDirection(value as SortDirection);
     }, [setSortDirection]);
 
     const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,97 +97,96 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
     }), [sortedItems, selectedItems, handleSelectItem]);
 
     return (
-        <Paper sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            flexGrow: 1,
-            overflow: 'hidden'
-        }}>
-            {/* Search Bar */}
-            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <TextField
-                    fullWidth
-                    placeholder="Search food items..."
-                    variant="outlined"
-                    size="small"
-                    value={localSearchTerm}
-                    onChange={handleSearchChange}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Search fontSize="small" />
-                            </InputAdornment>
-                        ),
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <IconButton
-                                    size="small"
-                                    onClick={handleToggleFilters}
-                                    color={showFilters ? "primary" : "default"}
-                                >
-                                    <FilterList fontSize="small" />
-                                </IconButton>
-                            </InputAdornment>
-                        )
-                    }}
-                />
-
-                <Collapse in={showFilters}>
-                    <Box sx={{
-                        display: 'flex',
-                        gap: 1,
-                        mt: 2,
-                        flexWrap: { xs: 'nowrap', sm: 'wrap' }
-                    }}>
-                        <FormControl size="small" sx={{ flex: 1, minWidth: 110 }}>
-                            <InputLabel>Sort By</InputLabel>
-                            <Select value={sortKey} label="Sort By" onChange={handleSortKeyChange}>
-                                <MenuItem value="Name">Name</MenuItem>
-                                <MenuItem value="Calories">Calories</MenuItem>
-                                <MenuItem value="Protein">Protein</MenuItem>
-                                <MenuItem value="Carbs">Carbs</MenuItem>
-                                <MenuItem value="Fat">Fat</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <FormControl size="small" sx={{ flex: 1, minWidth: 80 }}>
-                            <InputLabel>Order</InputLabel>
-                            <Select value={sortDirection} label="Order" onChange={handleSortDirectionChange}>
-                                <MenuItem value="asc">Ascending</MenuItem>
-                                <MenuItem value="desc">Descending</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Box>
-                </Collapse>
-            </Box>
-
-            {/* Food Item List */}
-            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-                {sortedItems.length === 0 ? (
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '100%',
-                        p: 3
-                    }}>
-                        <Typography variant="body2" color="text.secondary" align="center">
-                            No food items match your search criteria.
-                        </Typography>
-                    </Box>
-                ) : (
-                    <FixedSizeList
-                        height={600}
-                        width="100%"
-                        itemSize={90}
-                        itemCount={sortedItems.length}
-                        overscanCount={5}
-                        itemData={rowData}
+        <Card className="flex flex-col flex-grow overflow-hidden h-full">
+            <CardHeader className="p-4 space-y-0 border-b flex-shrink-0">
+                <div className="flex items-center space-x-2">
+                    <div className="relative flex-grow">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            className="w-full pl-8 pr-8"
+                            placeholder="Search food items..."
+                            value={localSearchTerm}
+                            onChange={handleSearchChange}
+                        />
+                    </div>
+                    <Button
+                        variant={showFilters ? "default" : "outline"}
+                        size="icon"
+                        onClick={handleToggleFilters}
+                        className="flex-shrink-0"
+                        title="Toggle filters"
                     >
-                        {FoodItemRow}
-                    </FixedSizeList>
+                        <Filter className="h-4 w-4" />
+                    </Button>
+                </div>
+
+                <Collapsible open={showFilters} className="w-full">
+                    <CollapsibleContent className="mt-4 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="sort-by">Sort By</Label>
+                                <Select value={sortKey} onValueChange={handleSortKeyChange}>
+                                    <SelectTrigger id="sort-by">
+                                        <SelectValue placeholder="Select sort key" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Name">Name</SelectItem>
+                                        <SelectItem value="Calories">Calories</SelectItem>
+                                        <SelectItem value="Protein">Protein</SelectItem>
+                                        <SelectItem value="Carbs">Carbs</SelectItem>
+                                        <SelectItem value="Fat">Fat</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="sort-order">Order</Label>
+                                <Select value={sortDirection} onValueChange={handleSortDirectionChange}>
+                                    <SelectTrigger id="sort-order">
+                                        <SelectValue placeholder="Select sort direction" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="asc">Ascending</SelectItem>
+                                        <SelectItem value="desc">Descending</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
+            </CardHeader>
+
+            <CardContent className="flex-grow p-0 overflow-y-auto min-h-0 pb-24" ref={listRef}>
+                {sortedItems.length === 0 ? (
+                    <div className="flex items-center justify-center h-full p-6">
+                        <p className="text-muted-foreground text-center">
+                            No food items match your search criteria.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="w-full max-h-full">
+                        {sortedItems.map((item, index) => {
+                            // Create a style object that would normally be passed by react-window
+                            const style = {
+                                position: 'relative' as 'relative',
+                                width: '100%',
+                                height: 'auto'
+                            };
+
+                            return (
+                                <FoodItemRow
+                                    key={`${item.Name}-${item.Location}-${item.TimeOfDay}-${index}`}
+                                    index={index}
+                                    style={style}
+                                    data={rowData}
+                                />
+                            );
+                        })}
+                        {/* Extra space at the bottom */}
+                        <div className="h-16"></div>
+                    </div>
                 )}
-            </Box>
-        </Paper>
+            </CardContent>
+        </Card>
     );
 });
 

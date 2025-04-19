@@ -30,8 +30,6 @@ const OperationHours: React.FC = () => {
     "Norris Center": ["847 Burger", "Buen Dia", "Shake Smart", "Chicken & Boba", "Wildcat Deli", "Starbucks", "MOD Pizza", "Market at Norris"],
 
     "Retail Dining": ["Protein Bar", "847 Late Night at Fran's", "Tech Express", "Backlot at Kresge Cafe", "Cafe Coralie", "Lisa's Cafe", "Café Bergson"],
-
-    "Chicago Campus": ["Harry's Cafe", "SLICE Pizzeria", "Starbucks (Chicago Campus)"],
   }
 
   const staticData = useDataStore((state) => state.UserDataResponse);

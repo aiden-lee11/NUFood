@@ -1,8 +1,9 @@
-import { Box, Chip, ListItemButton, ListItemText, Typography } from '@mui/material';
 import React, { useCallback, useMemo } from 'react';
 import { ListChildComponentProps } from 'react-window';
+import { cn } from '../../lib/utils';
 import { DailyItem } from '../../types/ItemTypes';
 import { SelectedDailyItem } from '../../util/nutrientPlannerUtils';
+import { Badge } from '../ui/badge';
 
 // Define the structure of the data passed to each row
 export interface RowData {
@@ -13,6 +14,19 @@ export interface RowData {
 
 // Combine ListChildComponentProps with our custom data prop
 type RowProps = ListChildComponentProps<RowData>;
+
+// Helper function to format nutrition values
+const formatNutritionValue = (value: string | undefined): string => {
+    if (!value) return 'N/A';
+
+    // Check if the value contains "less than 1 gram"
+    if (value.toLowerCase().includes('less than 1 gram')) {
+        return value; // Return as is, without adding 'g'
+    }
+
+    // For numeric values, add 'g' suffix
+    return `${value}g`;
+};
 
 const FoodItemRow: React.FC<RowProps> = React.memo(({ index, style, data }) => {
     const { items, selectedItems, handleSelectItem } = data;
@@ -32,48 +46,46 @@ const FoodItemRow: React.FC<RowProps> = React.memo(({ index, style, data }) => {
     }, [handleSelectItem, item]);
 
     return (
-        <ListItemButton
+        <div
             style={style}
-            key={`${item.Name}-${item.Location}-${item.TimeOfDay}-${index}`}
+            className={cn(
+                "cursor-pointer border-b hover:bg-secondary/40 transition-colors p-4 mb-2",
+                isSelected && "bg-secondary/60"
+            )}
             onClick={handleClick}
-            selected={isSelected}
-            divider
-            sx={{
-                py: 1.5,
-                borderColor: 'divider',
-                '&.Mui-selected': {
-                    bgcolor: 'action.selected',
-                    '&:hover': {
-                        bgcolor: 'action.hover',
-                    }
-                }
-            }}
         >
-            <ListItemText
-                primary={
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="body2" sx={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
-                            {item.Name}
-                        </Typography>
-                        {isSelected && <Chip size="small" label="Added" color="primary" sx={{ height: 20, ml: 1 }} />}
-                    </Box>
-                }
-                secondary={
-                    <Box sx={{ display: 'flex', flexDirection: 'column', mt: 0.5 }}>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }} component="div">
-                            {item.Location} ({item.TimeOfDay})
-                        </Typography>
-                        <Typography variant="caption" sx={{ mt: 0.5 }} component="div">
-                            <Box component="span" sx={{ fontWeight: 'medium' }}>C:</Box> {item.calories || 'N/A'} •
-                            <Box component="span" sx={{ fontWeight: 'medium', ml: 1 }}>P:</Box> {item.protein || 'N/A'}g •
-                            <Box component="span" sx={{ fontWeight: 'medium', ml: 1 }}>C:</Box> {item.carbs || 'N/A'}g •
-                            <Box component="span" sx={{ fontWeight: 'medium', ml: 1 }}>F:</Box> {item.fat || 'N/A'}g
-                        </Typography>
-                    </Box>
-                }
-                secondaryTypographyProps={{ component: 'div' }}
-            />
-        </ListItemButton>
+            <div className="flex flex-col">
+                <div className="flex justify-between items-center mb-2">
+                    <div className={cn("font-medium", isSelected && "font-semibold")}>
+                        {item.Name}
+                    </div>
+                    {isSelected && <Badge variant="secondary" className="ml-1">Added</Badge>}
+                </div>
+
+                <span className="text-xs text-muted-foreground mb-3">
+                    {item.Location} ({item.TimeOfDay})
+                </span>
+
+                <div className="flex flex-col space-y-2 text-xs">
+                    <div className="flex justify-between">
+                        <span className="font-medium">Calories:</span>
+                        <span>{item.calories || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="font-medium">Protein:</span>
+                        <span>{formatNutritionValue(item.protein)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="font-medium">Carbs:</span>
+                        <span>{formatNutritionValue(item.carbs)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="font-medium">Fat:</span>
+                        <span>{formatNutritionValue(item.fat)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 });
 

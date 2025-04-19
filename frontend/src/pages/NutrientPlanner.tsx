@@ -1,8 +1,10 @@
-import { Box, Chip, CircularProgress, Grid, Tab, Tabs, Typography } from '@mui/material';
 import Fuse from 'fuse.js';
+import { Loader2 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import FoodItemsList from '../components/nutrientPlanner/FoodItemsList';
 import SelectedItemsList from '../components/nutrientPlanner/SelectedItemsList';
+import { Badge } from "../components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { useAuth } from '../context/AuthProvider';
 import { useDataStore } from '../store';
 import { DailyItem, NutritionGoals } from '../types/ItemTypes';
@@ -22,7 +24,7 @@ const NutrientPlanner: React.FC = () => {
     const [sortKey, setSortKey] = useState<SortKey>('Name');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [showFilters, setShowFilters] = useState<boolean>(true);
-    const [activeTab, setActiveTab] = useState<number>(0);
+    const [activeTab, setActiveTab] = useState<string>("food-items");
     // Track if initial load has completed
     const [isInitialized, setIsInitialized] = useState<boolean>(false);
     // Track if we've already fetched nutrition goals
@@ -119,22 +121,40 @@ const NutrientPlanner: React.FC = () => {
         setShowFilters(show);
     }, []);
 
-    const setActiveTabCallback = useCallback((tab: number) => {
+    const setActiveTabCallback = useCallback((tab: string) => {
         setActiveTab(tab);
     }, []);
 
     const allDailyItems = useMemo(() => UserDataResponse.dailyItemsWithNutrients || [], [UserDataResponse.dailyItemsWithNutrients]);
 
+    // Update Fuse.js implementation to be simpler like DailyItems page
     const fuse = useMemo(() => new Fuse(allDailyItems, {
-        keys: ['Name', 'Description', 'Location', 'StationName'],
+        keys: ['Name'],
         threshold: 0.3,
+        shouldSort: true,
+        includeScore: true,
+        minMatchCharLength: 2
     }), [allDailyItems]);
 
     const filteredItems = useMemo(() => {
         if (!searchTerm.trim()) {
             return allDailyItems;
         }
-        return fuse.search(searchTerm).map(result => result.item);
+
+        // For short search terms (1-2 chars), prefer exact matches first
+        if (searchTerm.length <= 2) {
+            const exactMatches = allDailyItems.filter(item =>
+                item.Name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            if (exactMatches.length > 0) {
+                return exactMatches;
+            }
+        }
+
+        // Use Fuse for fuzzy search, return results sorted by score
+        return fuse.search(searchTerm)
+            .sort((a, b) => (a.score || 1) - (b.score || 1))
+            .map(result => result.item);
     }, [searchTerm, allDailyItems, fuse]);
 
     const sortedItems = useMemo(() => {
@@ -172,10 +192,6 @@ const NutrientPlanner: React.FC = () => {
         });
     }, [filteredItems, sortKey, sortDirection]);
 
-    const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
-        setActiveTab(newValue);
-    }, []);
-
     // Add handleSaveGoals function
     const handleSaveGoals = useCallback(async (goalsToSave: NutritionGoals) => {
         if (user && token) {
@@ -192,70 +208,43 @@ const NutrientPlanner: React.FC = () => {
     }, [user, token, saveNutritionGoals]);
 
     if (loading) {
-        return <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh"><CircularProgress /></Box>;
+        return (
+            <div className="flex justify-center items-center min-h-[80vh]">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
     }
 
     if (error) {
-        return <Typography color="error" sx={{ p: 3 }}>Error loading data: {error}</Typography>;
+        return <p className="p-3 text-destructive">Error loading data: {error}</p>;
     }
 
     return (
-        <Box sx={{
-            p: { xs: 1, sm: 2, md: 3 },
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            maxWidth: '100vw',
-            overflow: 'hidden'
-        }}>
-            <Typography variant="h4" gutterBottom sx={{
-                flexShrink: 0,
-                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.25rem' },
-                mb: 2
-            }}>
+        <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col max-w-[100vw] overflow-hidden">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl mb-4 flex-shrink-0">
                 Nutrient Planner
-            </Typography>
+            </h1>
 
-            {/* Mobile tabs */}
-            <Box sx={{ width: '100%', display: { xs: 'block', md: 'none' }, mb: 2 }}>
-                <Tabs
-                    value={activeTab}
-                    onChange={handleTabChange}
-                    variant="fullWidth"
-                    sx={{
-                        mb: 2,
-                        '& .MuiTab-root': {
-                            textTransform: 'none',
-                            fontWeight: 'medium'
-                        }
-                    }}
-                >
-                    <Tab label="Food Items" />
-                    <Tab
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Typography>My Plan</Typography>
-                                {selectedItems.length > 0 && (
-                                    <Chip
-                                        label={selectedItems.length}
-                                        size="small"
-                                        color="primary"
-                                        sx={{ ml: 1, height: 20 }}
-                                    />
-                                )}
-                            </Box>
-                        }
-                    />
+            {/* Mobile tabs - only shown on small screens */}
+            <div className="w-full md:hidden mb-4">
+                <Tabs value={activeTab} onValueChange={setActiveTabCallback} className="w-full">
+                    <TabsList className="grid grid-cols-2 w-full">
+                        <TabsTrigger value="food-items">Food Items</TabsTrigger>
+                        <TabsTrigger value="my-plan" className="flex items-center">
+                            My Plan
+                            {selectedItems.length > 0 && (
+                                <Badge variant="secondary" className="ml-2">
+                                    {selectedItems.length}
+                                </Badge>
+                            )}
+                        </TabsTrigger>
+                    </TabsList>
                 </Tabs>
-            </Box>
+            </div>
 
-            <Grid container spacing={2} sx={{ flexGrow: 1, overflow: 'hidden' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow overflow-hidden">
                 {/* Available Items Section */}
-                <Grid item xs={12} md={6} sx={{
-                    display: activeTab === 0 ? 'flex' : { xs: 'none', md: 'flex' },
-                    flexDirection: 'column',
-                    height: { xs: 'calc(100vh - 180px)', md: '100%' }
-                }}>
+                <div className={`flex flex-col h-[calc(100vh-180px)] pb-12 md:h-full overflow-hidden ${activeTab === "food-items" ? "block" : "hidden md:flex"}`}>
                     <FoodItemsList
                         sortedItems={sortedItems}
                         selectedItems={selectedItems}
@@ -269,14 +258,10 @@ const NutrientPlanner: React.FC = () => {
                         setShowFilters={setShowFiltersCallback}
                         handleSelectItem={handleSelectItem}
                     />
-                </Grid>
+                </div>
 
                 {/* Selected Items Section */}
-                <Grid item xs={12} md={6} sx={{
-                    display: activeTab === 1 ? 'flex' : { xs: 'none', md: 'flex' },
-                    flexDirection: 'column',
-                    height: { xs: 'calc(100vh - 180px)', md: '100%' }
-                }}>
+                <div className={`flex flex-col h-[calc(100vh-180px)] pb-12 md:h-full overflow-hidden ${activeTab === "my-plan" ? "block" : "hidden md:flex"}`}>
                     <SelectedItemsList
                         selectedItems={selectedItems}
                         totalCalories={totalCalories}
@@ -289,9 +274,9 @@ const NutrientPlanner: React.FC = () => {
                         nutritionGoals={nutritionGoals}
                         handleSaveGoals={handleSaveGoals}
                     />
-                </Grid>
-            </Grid>
-        </Box>
+                </div>
+            </div>
+        </div>
     );
 };
 

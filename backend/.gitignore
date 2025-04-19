@@ -3,3 +3,5 @@
 firebase_keys.json
 .DS_Store
 coverage/
+.air.toml
+backend
