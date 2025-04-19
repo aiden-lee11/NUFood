@@ -9,7 +9,7 @@ import { BannerProvider } from './context/BannerContext';
 import Login from './firebase/login';
 import SignOutButton from './firebase/signout';
 import AllItems from './pages/AllItems';
-import CaloriePlanner from './pages/CaloriePlanner';
+import NutrientPlanner from './pages/NutrientPlanner';
 import DailyItems from './pages/DailyItems';
 import OperationHours from './pages/OperationHours';
 import Preferences from './pages/Preferences';
@@ -32,7 +32,7 @@ function App() {
                 <Route path="/signout" element={<SignOutButton />} />
                 <Route path="/preferences" element={<Preferences />} />
                 <Route path="/all" element={<AllItems />} />
-                <Route path="/planner" element={<CaloriePlanner />} />
+                <Route path="/planner" element={<NutrientPlanner />} />
               </Routes>
             </DataLoader>
           </Layout>

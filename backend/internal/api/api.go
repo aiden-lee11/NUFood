@@ -625,3 +625,87 @@ func HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 		</html>
 	`))
 }
+
+// SaveNutritionGoalsHandler handles requests to save a user's nutrition goals.
+//
+// This handler expects a JSON request body containing nutrition goals and requires user authentication.
+// It responds with an HTTP status code indicating the result of the operation.
+//
+// Expected Authorization:
+//   - A valid Firebase ID token in the Authorization header.
+//
+// Request Body:
+//   - JSON object with calories, protein, carbs, and fat.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
+func SaveNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context (set by AuthMiddleware)
+	userID := r.Context().Value("userID").(string)
+
+	// Read the request body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Parse the JSON request
+	var goals models.NutritionGoals
+	if err := json.Unmarshal(body, &goals); err != nil {
+		http.Error(w, "Error parsing request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Save the nutrition goals
+	if err := db.SaveNutritionGoals(userID, goals); err != nil {
+		http.Error(w, "Error saving nutrition goals: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return success code
+	w.WriteHeader(http.StatusOK)
+}
+
+// GetNutritionGoalsHandler handles requests to retrieve a user's nutrition goals.
+//
+// This handler requires user authentication and responds with a JSON object containing the user's
+// nutrition goals or an error status code.
+//
+// Expected Authorization:
+//   - A valid Firebase ID token in the Authorization header.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
+func GetNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context (set by AuthMiddleware)
+	userID := r.Context().Value("userID").(string)
+
+	// Get the nutrition goals
+	goals, err := db.GetNutritionGoals(userID)
+	if err != nil {
+		if err == db.NoUserGoalsInDB {
+			// Return default values if no goals are found
+			goals = models.NutritionGoals{
+				Calories: 2000,
+				Protein:  50,
+				Carbs:    275,
+				Fat:      78,
+			}
+		} else {
+			http.Error(w, "Error retrieving nutrition goals: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Set content type header
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode goals as JSON and send
+	if err := json.NewEncoder(w).Encode(goals); err != nil {
+		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}

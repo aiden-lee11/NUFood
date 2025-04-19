@@ -23,6 +23,14 @@ export interface WeeklyItemsMap {
   [key: string]: DailyItem[];
 }
 
+// Nutrition goals interface
+export interface NutritionGoals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 // Base interface for shared properties
 interface BaseDataResponse {
   allItems: Item[];

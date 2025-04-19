@@ -108,3 +108,11 @@ type PreferenceReturn struct {
 	UserID      string
 	Preferences []DailyItem // json encoded arrays but are stored as strings in db
 }
+
+// NutritionGoals represents user-defined nutrition goals
+type NutritionGoals struct {
+	Calories float64
+	Protein  float64
+	Carbs    float64
+	Fat      float64
+}

@@ -6,10 +6,13 @@ import (
 	"backend/internal/db"
 	"backend/internal/middleware"
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -38,49 +41,53 @@ func main() {
 
 	fmt.Println("Database initialized successfully")
 
-	// Define API routes
+	// Create a new router
+	r := mux.NewRouter()
 
-	// Response Data
-	http.HandleFunc("GET /api/allData", middleware.CorsMiddleware(middleware.AuthMiddleware(api.GetAllDataHandler)))
-	http.HandleFunc("OPTIONS /api/allData", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// API routes
+	apiRouter := r.PathPrefix("/api").Subrouter()
 
-	http.HandleFunc("GET /api/generalData", middleware.CorsMiddleware(api.GetGeneralDataHandler))
-	http.HandleFunc("OPTIONS /api/generalData", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Define handlers with appropriate middleware wrappers
+	// Convert http.HandlerFunc to http.Handler as needed for Gorilla Mux
 
-	http.HandleFunc("GET /api/operatingTimes", middleware.CorsMiddleware(api.GetLocationOperatingTimesHandler))
-	http.HandleFunc("OPTIONS /api/operatingTimes", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Response Data endpoints
+	apiRouter.HandleFunc("/allData", middleware.AuthMiddleware(api.GetAllDataHandler)).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/generalData", api.GetGeneralDataHandler).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/operatingTimes", api.GetLocationOperatingTimesHandler).Methods("GET", "OPTIONS")
 
-	// Post and response with new data
-	http.HandleFunc("POST /api/userPreferences", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserPreferences)))
-	http.HandleFunc("OPTIONS /api/userPreferences", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// User preferences endpoints
+	apiRouter.HandleFunc("/userPreferences", middleware.AuthMiddleware(api.SetUserPreferences)).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/mailing", middleware.AuthMiddleware(api.SetUserMailing)).Methods("POST", "OPTIONS")
 
-	// Post and response with new data
-	http.HandleFunc("POST /api/mailing", middleware.CorsMiddleware(middleware.AuthMiddleware(api.SetUserMailing)))
-	http.HandleFunc("OPTIONS /api/mailing", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Scrape and Save Data endpoints
+	apiRouter.HandleFunc("/scrapeDailyItems", api.ScrapeDailyItemsHandler).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/scrapeWeeklyItems", api.ScrapeWeeklyItemsHandler).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/updateWeeklyItems", api.ScrapeUpdateWeekly).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/scrapeOperatingTimes", api.ScrapeLocationOperatingTimesHandler).Methods("GET", "OPTIONS")
 
-	// Scrape and Save Data
-	http.HandleFunc("GET /api/scrapeDailyItems", middleware.CorsMiddleware(api.ScrapeDailyItemsHandler))
-	http.HandleFunc("OPTIONS /api/scrapeDailyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Mailing endpoints
+	apiRouter.HandleFunc("/sendMailing", middleware.AdminMiddleware(api.SendOutMailing)).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/unsubscribe", api.HandleUnsubscribe).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/allDailyItems", api.GetAllDailyItemsHandler).Methods("GET", "OPTIONS")
 
-	http.HandleFunc("GET /api/scrapeWeeklyItems", middleware.CorsMiddleware(api.ScrapeWeeklyItemsHandler))
-	http.HandleFunc("OPTIONS /api/scrapeWeeklyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Nutrition Goals endpoints - combine both methods on the same route pattern
+	nutritionGoalsRoute := apiRouter.PathPrefix("/nutritionGoals").Subrouter()
+	nutritionGoalsRoute.HandleFunc("", middleware.AuthMiddleware(api.SaveNutritionGoalsHandler)).Methods("POST", "OPTIONS")
+	nutritionGoalsRoute.HandleFunc("", middleware.AuthMiddleware(api.GetNutritionGoalsHandler)).Methods("GET", "OPTIONS")
 
-	http.HandleFunc("GET /api/updateWeeklyItems", middleware.CorsMiddleware(api.ScrapeUpdateWeekly))
-	http.HandleFunc("OPTIONS /api/updateWeeklyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Apply CORS middleware to all routes
+	corsRouter := middleware.CorsMiddleware(r)
 
-	http.HandleFunc("GET /api/scrapeOperatingTimes", middleware.CorsMiddleware(api.ScrapeLocationOperatingTimesHandler))
-	http.HandleFunc("OPTIONS /api/scrapeOperatingTimes", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
+	// Set up server with timeouts
+	server := &http.Server{
+		Addr:         ":8081",
+		Handler:      corsRouter,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 
-	http.HandleFunc("GET /api/sendMailing", middleware.CorsMiddleware(middleware.AdminMiddleware(api.SendOutMailing)))
-	http.HandleFunc("OPTIONS /api/sendMailing", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	http.HandleFunc("GET /api/unsubscribe", middleware.CorsMiddleware(api.HandleUnsubscribe))
-	http.HandleFunc("OPTIONS /api/unsubscribe", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	http.HandleFunc("GET /api/allDailyItems", middleware.CorsMiddleware(api.GetAllDailyItemsHandler))
-	http.HandleFunc("OPTIONS /api/allDailyItems", middleware.CorsMiddleware(func(w http.ResponseWriter, r *http.Request) {}))
-
-	// Start the HTTP server on port 8080
-	http.ListenAndServe(":8081", nil)
-	fmt.Println("Server started on port 8081")
+	// Start the server
+	fmt.Println("Server starting on port 8081")
+	log.Fatal(server.ListenAndServe())
 }
