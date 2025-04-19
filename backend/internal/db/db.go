@@ -50,10 +50,21 @@ type GormLocationOperatingTimes struct {
 	Week []byte `gorm:"type:jsonb"` // JSON-encoded weekly operating times.
 }
 
+// GormNutritionGoals represents user-defined nutrition goals
+type GormNutritionGoals struct {
+	gorm.Model
+	UserID   string `gorm:"unique"` // Unique identifier for the user
+	Calories float64
+	Protein  float64
+	Carbs    float64
+	Fat      float64
+}
+
 // Package-level errors for database operations.
 var (
 	NoItemsInDB           = errors.New("no daily items found")
 	NoUserPreferencesInDB = errors.New("no user preferences found")
+	NoUserGoalsInDB       = errors.New("no user nutrition goals found")
 )
 
 const NEWEST_DAY_INDEX = 3
@@ -91,7 +102,7 @@ func InitDB(databasePath string) error {
 	}
 
 	// Auto migrate the schemas
-	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &GormUserPreferences{}, &GormLocationOperatingTimes{}, &GormWeeklyItem{})
+	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &GormUserPreferences{}, &GormLocationOperatingTimes{}, &GormWeeklyItem{}, &GormNutritionGoals{})
 	if err != nil {
 		return err
 	}
@@ -658,4 +669,84 @@ func DeleteLocationOperatingTimes() error {
 
 	fmt.Println("All location operations deleted")
 	return nil
+}
+
+// SaveNutritionGoals saves a user's nutrition goals to the database.
+//
+// Parameters:
+// - userID: The unique identifier for the user.
+// - goals: The nutrition goals to save.
+//
+// Returns:
+// - error: An error if the operation fails.
+func SaveNutritionGoals(userID string, goals models.NutritionGoals) error {
+	var existingGoals GormNutritionGoals
+
+	// Check if goals already exist for this user
+	result := DB.Where("user_id = ?", userID).First(&existingGoals)
+
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return result.Error
+	}
+
+	// If goals already exist, update them
+	if result.RowsAffected > 0 {
+		existingGoals.Calories = goals.Calories
+		existingGoals.Protein = goals.Protein
+		existingGoals.Carbs = goals.Carbs
+		existingGoals.Fat = goals.Fat
+
+		result = DB.Save(&existingGoals)
+		if result.Error != nil {
+			return result.Error
+		}
+
+		return nil
+	}
+
+	// Otherwise, create new goals
+	newGoals := GormNutritionGoals{
+		UserID:   userID,
+		Calories: goals.Calories,
+		Protein:  goals.Protein,
+		Carbs:    goals.Carbs,
+		Fat:      goals.Fat,
+	}
+
+	result = DB.Create(&newGoals)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+// GetNutritionGoals retrieves a user's nutrition goals from the database.
+//
+// Parameters:
+// - userID: The unique identifier for the user.
+//
+// Returns:
+// - models.NutritionGoals: The user's nutrition goals.
+// - error: An error if the operation fails.
+func GetNutritionGoals(userID string) (models.NutritionGoals, error) {
+	var gormGoals GormNutritionGoals
+
+	result := DB.Where("user_id = ?", userID).First(&gormGoals)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return models.NutritionGoals{}, NoUserGoalsInDB
+		}
+		return models.NutritionGoals{}, result.Error
+	}
+
+	goals := models.NutritionGoals{
+		Calories: gormGoals.Calories,
+		Protein:  gormGoals.Protein,
+		Carbs:    gormGoals.Carbs,
+		Fat:      gormGoals.Fat,
+	}
+
+	return goals, nil
 }

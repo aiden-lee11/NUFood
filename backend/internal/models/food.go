@@ -59,14 +59,14 @@ type Item struct {
 	// portion string `json:"portion"`
 	// qty string `json:"qty"`
 	// ingredients string `json:"ingredients"`
-	// nutrients []Nutrient `json:"nutrients"`
+	Nutrients []Nutrient `json:"nutrients"`
 	// filters []Filter `json:"filters"`
 }
 
 type Nutrient struct {
 	// id string `json:"id"`
-	// name string `json:"name"`
-	// value string `json:"value"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
 	// uom string `json:"uom"`
 	// value_numeric string `json:"value_numeric"`
 }
@@ -89,6 +89,10 @@ type DailyItem struct {
 	Location    string // The dining hall location
 	StationName string // The station name
 	TimeOfDay   string // The time of day this item is available
+	Calories    string `json:"calories"`
+	Protein     string `json:"protein"`
+	Carbs       string `json:"carbs"`
+	Fat         string `json:"fat"`
 }
 
 type WeeklyItem struct {
@@ -103,4 +107,12 @@ type AllDataItem struct {
 type PreferenceReturn struct {
 	UserID      string
 	Preferences []DailyItem // json encoded arrays but are stored as strings in db
+}
+
+// NutritionGoals represents user-defined nutrition goals
+type NutritionGoals struct {
+	Calories float64
+	Protein  float64
+	Carbs    float64
+	Fat      float64
 }

@@ -1,15 +1,15 @@
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
+import { CalendarDays, Heart, Home, ListTodo, Menu, Moon, PieChart, Sun, User } from "lucide-react"
 import * as React from "react"
 import { Link, useLocation } from "react-router-dom"
-import { Button } from "./ui/button"
-import { ScrollArea } from "./ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "./ui/sheet"
-import { useTheme } from "./theme-provider"
-import { CalendarDays, Home, ListTodo, Menu, Moon, Heart, Sun, User } from "lucide-react"
 import { useAuth } from "../context/AuthProvider"
-import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
+import AccountPopup from "./account-popup"
 import BuyMeCoffee from "./buy-me-a-coffee"
 import FeedbackButton from "./feedback-button"
-import AccountPopup from "./account-popup"
+import { useTheme } from "./theme-provider"
+import { Button } from "./ui/button"
+import { ScrollArea } from "./ui/scroll-area"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "./ui/sheet"
 
 // Utility function for conditional class names
 const cn = (...classes: string[]) => classes.filter(Boolean).join(" ")
@@ -24,6 +24,7 @@ const navItems: NavItem[] = [
   { title: "Daily Items", href: "/", icon: <Home className="mr-2 h-4 w-4" /> },
   { title: "All Items", href: "/all", icon: <ListTodo className="mr-2 h-4 w-4" /> },
   { title: "Operation Hours", href: "/hours", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
+  { title: "Nutrient Planner", href: "/planner", icon: <PieChart className="mr-2 h-4 w-4" /> },
 ]
 
 const preferences: NavItem = {

@@ -7,6 +7,10 @@ export interface DailyItem {
   StationName: string;
   Date: string;
   TimeOfDay: string;
+  calories?: string;
+  protein?: string;
+  carbs?: string;
+  fat?: string;
 }
 
 export interface Item {
@@ -19,10 +23,19 @@ export interface WeeklyItemsMap {
   [key: string]: DailyItem[];
 }
 
+// Nutrition goals interface
+export interface NutritionGoals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 // Base interface for shared properties
 interface BaseDataResponse {
   allItems: Item[];
   weeklyItems: WeeklyItemsMap;
+  dailyItemsWithNutrients: DailyItem[];
   locationOperationHours: OperationHoursData[];
 }
 

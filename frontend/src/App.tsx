@@ -1,17 +1,18 @@
-import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from './components/theme-provider'
-import { MyMUIThemeProvider } from './components/mui-theme-provider'
+import ReactGA from 'react-ga4';
+import { Route, Routes } from 'react-router-dom';
+import Banner from './components/banner';
+import DataLoader from './components/data-loader';
 import Layout from './components/layout';
-import DailyItems from './pages/DailyItems';
+import { MyMUIThemeProvider } from './components/mui-theme-provider';
+import { ThemeProvider } from './components/theme-provider';
+import { BannerProvider } from './context/BannerContext';
 import Login from './firebase/login';
 import SignOutButton from './firebase/signout';
 import AllItems from './pages/AllItems';
-import Preferences from './pages/Preferences';
-import ReactGA from 'react-ga4';
-import Banner from './components/banner';
+import NutrientPlanner from './pages/NutrientPlanner';
+import DailyItems from './pages/DailyItems';
 import OperationHours from './pages/OperationHours';
-import DataLoader from './components/data-loader';
-import { BannerProvider } from './context/BannerContext';
+import Preferences from './pages/Preferences';
 
 function App() {
   ReactGA.initialize(import.meta.env.VITE_GA_MEASUREMENT_ID);
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/signout" element={<SignOutButton />} />
                 <Route path="/preferences" element={<Preferences />} />
                 <Route path="/all" element={<AllItems />} />
+                <Route path="/planner" element={<NutrientPlanner />} />
               </Routes>
             </DataLoader>
           </Layout>
