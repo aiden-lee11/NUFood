@@ -153,7 +153,9 @@ func InsertDailyItems(items []models.DailyItem, allClosed bool) error {
 		gormItems = append(gormItems, appendable)
 	}
 
-	result := DB.Create(&gormItems)
+	// Use CreateInBatches to insert items in chunks
+	batchSize := 500
+	result := DB.CreateInBatches(&gormItems, batchSize)
 
 	if result.Error != nil {
 		log.Println("Error inserting items:", result.Error)
@@ -176,7 +178,9 @@ func InsertWeeklyItems(items []models.WeeklyItem) error {
 		gormItems = append(gormItems, appendable)
 	}
 
-	result := DB.Create(&gormItems)
+	// Use CreateInBatches to insert items in chunks
+	batchSize := 500
+	result := DB.CreateInBatches(&gormItems, batchSize)
 
 	if result.Error != nil {
 		log.Println("Error inserting weekly items:", result.Error)
@@ -258,8 +262,9 @@ func InsertAllDataItems(items []models.AllDataItem) error {
 		gormItems = append(gormItems, appendable)
 	}
 
-	// Insert the unique item into the allData
-	result := DB.Create(&gormItems)
+	// Insert the unique item into the allData using batches
+	batchSize := 500
+	result := DB.CreateInBatches(&gormItems, batchSize)
 	if result.Error != nil {
 		log.Println("Error inserting items:", result.Error)
 		return result.Error
@@ -297,14 +302,14 @@ func InsertLocationOperatingTimes(locations []models.LocationOperatingTimes) err
 		gormLocationOperatingTimes = append(gormLocationOperatingTimes, record)
 	}
 
-	// Insert into the database
-	result := DB.Create(&gormLocationOperatingTimes)
+	// Insert into the database using batches
+	batchSize := 500
+	result := DB.CreateInBatches(&gormLocationOperatingTimes, batchSize)
 	if result.Error != nil {
 		return fmt.Errorf("failed to insert locationOperatingTimes: %v", result.Error)
 	}
 
 	return nil
-
 }
 
 // SaveUserPreferences saves user-specific preferences into the database.
