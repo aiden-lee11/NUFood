@@ -26,25 +26,42 @@ interface EditableNutritionGoals {
     fat: number | string;
 }
 
+// Default values for nutrition goals
+const defaultGoals: NutritionGoals = {
+    calories: 2000,
+    protein: 50,
+    carbs: 275,
+    fat: 78
+};
+
 const NutritionGoalsDialog: React.FC<NutritionGoalsDialogProps> = ({
     open,
     onClose,
     goals,
     onSave
 }) => {
+    // Use default values if goals is undefined or specific properties are missing
+    const safeGoals: NutritionGoals = {
+        calories: goals?.calories ?? defaultGoals.calories,
+        protein: goals?.protein ?? defaultGoals.protein,
+        carbs: goals?.carbs ?? defaultGoals.carbs,
+        fat: goals?.fat ?? defaultGoals.fat
+    };
+
     const [localGoals, setLocalGoals] = React.useState<EditableNutritionGoals>({
-        calories: goals.calories,
-        protein: goals.protein,
-        carbs: goals.carbs,
-        fat: goals.fat
+        calories: safeGoals.calories,
+        protein: safeGoals.protein,
+        carbs: safeGoals.carbs,
+        fat: safeGoals.fat
     });
 
     React.useEffect(() => {
+        // Update localGoals when goals prop changes, using default values for any undefined properties
         setLocalGoals({
-            calories: goals.calories,
-            protein: goals.protein,
-            carbs: goals.carbs,
-            fat: goals.fat
+            calories: goals?.calories ?? defaultGoals.calories,
+            protein: goals?.protein ?? defaultGoals.protein,
+            carbs: goals?.carbs ?? defaultGoals.carbs,
+            fat: goals?.fat ?? defaultGoals.fat
         });
     }, [goals]);
 
@@ -84,7 +101,7 @@ const NutritionGoalsDialog: React.FC<NutritionGoalsDialogProps> = ({
                             <Input
                                 id="calories"
                                 type="number"
-                                value={localGoals.calories.toString()}
+                                value={localGoals.calories?.toString() || '0'}
                                 onChange={handleChange('calories')}
                                 min={0}
                                 placeholder="0"
@@ -95,7 +112,7 @@ const NutritionGoalsDialog: React.FC<NutritionGoalsDialogProps> = ({
                             <Input
                                 id="protein"
                                 type="number"
-                                value={localGoals.protein.toString()}
+                                value={localGoals.protein?.toString() || '0'}
                                 onChange={handleChange('protein')}
                                 min={0}
                                 placeholder="0"
@@ -106,7 +123,7 @@ const NutritionGoalsDialog: React.FC<NutritionGoalsDialogProps> = ({
                             <Input
                                 id="carbs"
                                 type="number"
-                                value={localGoals.carbs.toString()}
+                                value={localGoals.carbs?.toString() || '0'}
                                 onChange={handleChange('carbs')}
                                 min={0}
                                 placeholder="0"
@@ -117,7 +134,7 @@ const NutritionGoalsDialog: React.FC<NutritionGoalsDialogProps> = ({
                             <Input
                                 id="fat"
                                 type="number"
-                                value={localGoals.fat.toString()}
+                                value={localGoals.fat?.toString() || '0'}
                                 onChange={handleChange('fat')}
                                 min={0}
                                 placeholder="0"

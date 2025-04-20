@@ -7,6 +7,7 @@ export interface DailyItem {
   StationName: string;
   Date: string;
   TimeOfDay: string;
+  portion?: string;
   calories?: string;
   protein?: string;
   carbs?: string;
@@ -46,4 +47,5 @@ export interface GeneralDataResponse extends BaseDataResponse { }
 export interface UserDataResponse extends BaseDataResponse {
   userPreferences: Item[] | null;
   mailing: boolean;
+  nutritionGoals: NutritionGoals;
 }

@@ -5,3 +5,4 @@ firebase_keys.json
 coverage/
 .air.toml
 backend
+example.json

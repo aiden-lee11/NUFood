@@ -310,6 +310,7 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyIte
 				Location:    location,
 				StationName: category.Name,
 				TimeOfDay:   timeOfDay,
+				PortionSize: item.Portion,
 			}
 
 			// Extract nutrient information

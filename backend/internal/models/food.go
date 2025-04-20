@@ -56,7 +56,7 @@ type Item struct {
 	Description string `json:"desc"`
 	// webtrition_id string `json:"webtrition_id"`
 	// sort_order int `json:"sort_order"`
-	// portion string `json:"portion"`
+	Portion string `json:"portion"`
 	// qty string `json:"qty"`
 	// ingredients string `json:"ingredients"`
 	Nutrients []Nutrient `json:"nutrients"`
@@ -89,6 +89,7 @@ type DailyItem struct {
 	Location    string // The dining hall location
 	StationName string // The station name
 	TimeOfDay   string // The time of day this item is available
+	PortionSize string `json:"portion"` // The portion size of the item
 	Calories    string `json:"calories"`
 	Protein     string `json:"protein"`
 	Carbs       string `json:"carbs"`

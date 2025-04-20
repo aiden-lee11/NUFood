@@ -68,6 +68,10 @@ const FoodItemRow: React.FC<RowProps> = React.memo(({ index, style, data }) => {
 
                 <div className="flex flex-col space-y-2 text-xs">
                     <div className="flex justify-between">
+                        <span className="font-medium">Portion Size:</span>
+                        <span>{item.portion || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
                         <span className="font-medium">Calories:</span>
                         <span>{item.calories || 'N/A'}</span>
                     </div>

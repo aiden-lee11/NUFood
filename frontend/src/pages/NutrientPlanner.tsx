@@ -8,10 +8,16 @@ import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { useAuth } from '../context/AuthProvider';
 import { useDataStore } from '../store';
 import { DailyItem, NutritionGoals } from '../types/ItemTypes';
-import { SelectedDailyItem, SortDirection, SortKey, calculateNutritionTotals, getSavedGoalsFromStorage, getSavedItemsFromStorage, saveGoalsToStorage } from '../util/nutrientPlannerUtils';
+import { SelectedDailyItem, SortDirection, SortKey, calculateNutritionTotals, getSavedItemsFromStorage, saveGoalsToStorage } from '../util/nutrientPlannerUtils';
 
 const NutrientPlanner: React.FC = () => {
-    const { UserDataResponse, loading, error, nutritionGoals, fetchNutritionGoals, saveNutritionGoals, updateNutritionGoals } = useDataStore();
+    // Select necessary data directly from the store
+    const UserDataResponse = useDataStore((state) => state.UserDataResponse);
+    const nutritionGoals = useDataStore((state) => state.UserDataResponse.nutritionGoals);
+    const loading = useDataStore((state) => state.loading);
+    const error = useDataStore((state) => state.error);
+    const saveNutritionGoals = useDataStore((state) => state.saveNutritionGoals);
+
     const { user, token } = useAuth();
 
     // State management
@@ -25,10 +31,9 @@ const NutrientPlanner: React.FC = () => {
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [showFilters, setShowFilters] = useState<boolean>(true);
     const [activeTab, setActiveTab] = useState<string>("food-items");
+    const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
     // Track if initial load has completed
     const [isInitialized, setIsInitialized] = useState<boolean>(false);
-    // Track if we've already fetched nutrition goals
-    const [hasLoadedGoals, setHasLoadedGoals] = useState<boolean>(false);
 
     // First useEffect to mark component as initialized after first render
     useEffect(() => {
@@ -41,23 +46,6 @@ const NutrientPlanner: React.FC = () => {
             sessionStorage.setItem('nutrientplannerItems', JSON.stringify(selectedItems));
         }
     }, [selectedItems, isInitialized]);
-
-    // Load user nutrition goals only once when component mounts or auth changes
-    useEffect(() => {
-        if (!hasLoadedGoals) {
-            if (user && token) {
-                // If user is authenticated, fetch goals from backend
-                fetchNutritionGoals(token)
-                    .then(() => setHasLoadedGoals(true))
-                    .catch(console.error);
-            } else {
-                // If not authenticated, load from localStorage and update store
-                const localGoals = getSavedGoalsFromStorage();
-                updateNutritionGoals(localGoals);
-                setHasLoadedGoals(true);
-            }
-        }
-    }, [user, token, fetchNutritionGoals, updateNutritionGoals, hasLoadedGoals]);
 
     // Calculate nutrition totals
     useEffect(() => {
@@ -125,7 +113,17 @@ const NutrientPlanner: React.FC = () => {
         setActiveTab(tab);
     }, []);
 
+    const setSelectedLocationCallback = useCallback((location: string | null) => {
+        setSelectedLocation(location);
+    }, []);
+
     const allDailyItems = useMemo(() => UserDataResponse.dailyItemsWithNutrients || [], [UserDataResponse.dailyItemsWithNutrients]);
+
+    // Derive available locations
+    const availableLocations = useMemo(() => {
+        const locations = new Set(allDailyItems.map(item => item.Location));
+        return Array.from(locations).sort();
+    }, [allDailyItems]);
 
     // Update Fuse.js implementation to be simpler like DailyItems page
     const fuse = useMemo(() => new Fuse(allDailyItems, {
@@ -137,13 +135,29 @@ const NutrientPlanner: React.FC = () => {
     }), [allDailyItems]);
 
     const filteredItems = useMemo(() => {
-        if (!searchTerm.trim()) {
-            return allDailyItems;
+        let itemsToFilter = allDailyItems;
+
+        // Apply location filter first if a location is selected
+        if (selectedLocation) {
+            itemsToFilter = itemsToFilter.filter(item => item.Location === selectedLocation);
         }
+
+        if (!searchTerm.trim()) {
+            return itemsToFilter; // Return location-filtered items if no search term
+        }
+
+        // Re-initialize Fuse with the potentially location-filtered items
+        const currentFuse = new Fuse(itemsToFilter, {
+            keys: ['Name'],
+            threshold: 0.3,
+            shouldSort: true,
+            includeScore: true,
+            minMatchCharLength: 2
+        });
 
         // For short search terms (1-2 chars), prefer exact matches first
         if (searchTerm.length <= 2) {
-            const exactMatches = allDailyItems.filter(item =>
+            const exactMatches = itemsToFilter.filter(item =>
                 item.Name.toLowerCase().includes(searchTerm.toLowerCase())
             );
             if (exactMatches.length > 0) {
@@ -151,11 +165,11 @@ const NutrientPlanner: React.FC = () => {
             }
         }
 
-        // Use Fuse for fuzzy search, return results sorted by score
-        return fuse.search(searchTerm)
+        // Use Fuse for fuzzy search on the (potentially location-filtered) items
+        return currentFuse.search(searchTerm)
             .sort((a, b) => (a.score || 1) - (b.score || 1))
             .map(result => result.item);
-    }, [searchTerm, allDailyItems, fuse]);
+    }, [searchTerm, allDailyItems, selectedLocation, fuse]); // Include selectedLocation in dependency array
 
     const sortedItems = useMemo(() => {
         return [...filteredItems].sort((a, b) => {
@@ -257,6 +271,9 @@ const NutrientPlanner: React.FC = () => {
                         showFilters={showFilters}
                         setShowFilters={setShowFiltersCallback}
                         handleSelectItem={handleSelectItem}
+                        availableLocations={availableLocations}
+                        selectedLocation={selectedLocation}
+                        setSelectedLocation={setSelectedLocationCallback}
                     />
                 </div>
 

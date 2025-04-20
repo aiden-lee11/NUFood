@@ -445,6 +445,23 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch nutrition goals
+	nutritionGoals, err := db.GetNutritionGoals(userID)
+	if err != nil && err != db.NoUserGoalsInDB {
+		http.Error(w, "Error fetching nutrition goals: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// If no goals are found, use default values
+	if err == db.NoUserGoalsInDB {
+		nutritionGoals = models.NutritionGoals{
+			Calories: 2000,
+			Protein:  50,
+			Carbs:    275,
+			Fat:      78,
+		}
+	}
+
 	combinedData := map[string]interface{}{
 		"allItems":                allItems,
 		"weeklyItems":             weeklyItems,
@@ -452,6 +469,7 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		"locationOperatingTimes":  locationOperatingTimes,
 		"userPreferences":         userPreferences,
 		"mailing":                 mailing,
+		"nutritionGoals":          nutritionGoals,
 	}
 
 	// Set the response header to indicate JSON content
@@ -555,12 +573,21 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Default nutrition goals for non-authenticated users
+	defaultNutritionGoals := models.NutritionGoals{
+		Calories: 2000,
+		Protein:  50,
+		Carbs:    275,
+		Fat:      78,
+	}
+
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
 		"allItems":                allItems,
 		"weeklyItems":             weeklyItems,
 		"dailyItemsWithNutrients": dailyItemsWithNutrients,
 		"locationOperatingTimes":  locationOperatingTimes,
+		"nutritionGoals":          defaultNutritionGoals,
 	}
 
 	// Set the response header to indicate JSON content

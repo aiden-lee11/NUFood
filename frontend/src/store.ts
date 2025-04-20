@@ -5,7 +5,6 @@ const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 interface DataState {
   UserDataResponse: UserDataResponse;
-  nutritionGoals: NutritionGoals;
   loading: boolean;
   error: string | null;
   hasFetchedAllData: boolean; // flag for all data fetch
@@ -30,6 +29,14 @@ const fetchData = async (endpoint: string, authToken?: string) => {
   return await response.json();
 };
 
+// Default nutrition goals
+const defaultNutritionGoals: NutritionGoals = {
+  calories: 2000,
+  protein: 50,
+  carbs: 275,
+  fat: 78
+};
+
 export const useDataStore = create<DataState>((set, get) => ({
   // initial state
   UserDataResponse: {
@@ -39,12 +46,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     userPreferences: [],
     locationOperationHours: [],
     mailing: false,
-  },
-  nutritionGoals: {
-    calories: 2000, // Default values
-    protein: 50,
-    carbs: 275,
-    fat: 78
+    nutritionGoals: defaultNutritionGoals,
   },
   loading: false,
   error: null,
@@ -59,6 +61,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const allData = await fetchData(`${API_URL}/api/allData`, userToken || undefined);
+
+      // Extract and map nutrition goals (PascalCase from backend to camelCase for frontend)
+      const rawGoals = allData.nutritionGoals;
+      const mappedGoals: NutritionGoals = {
+        calories: rawGoals?.Calories ?? defaultNutritionGoals.calories,
+        protein: rawGoals?.Protein ?? defaultNutritionGoals.protein,
+        carbs: rawGoals?.Carbs ?? defaultNutritionGoals.carbs,
+        fat: rawGoals?.Fat ?? defaultNutritionGoals.fat
+      };
+
       set({
         UserDataResponse: {
           ...get().UserDataResponse,
@@ -68,6 +80,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           userPreferences: allData.userPreferences || [],
           locationOperationHours: allData.locationOperatingTimes || [],
           mailing: allData.mailing ?? false,
+          nutritionGoals: mappedGoals, // Use the mapped goals
         },
         loading: false,
         hasFetchedAllData: true,
@@ -83,6 +96,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const generalData = await fetchData(`${API_URL}/api/generalData`);
+
+      // Extract and map nutrition goals (PascalCase from backend to camelCase for frontend)
+      const rawGoals = generalData.nutritionGoals;
+      const mappedGoals: NutritionGoals = {
+        calories: rawGoals?.Calories ?? defaultNutritionGoals.calories,
+        protein: rawGoals?.Protein ?? defaultNutritionGoals.protein,
+        carbs: rawGoals?.Carbs ?? defaultNutritionGoals.carbs,
+        fat: rawGoals?.Fat ?? defaultNutritionGoals.fat
+      };
+
       set({
         UserDataResponse: {
           ...get().UserDataResponse,
@@ -91,7 +114,8 @@ export const useDataStore = create<DataState>((set, get) => ({
           dailyItemsWithNutrients: generalData.dailyItemsWithNutrients || [],
           locationOperationHours: generalData.locationOperatingTimes || [],
           userPreferences: null,
-          mailing: false
+          mailing: false,
+          nutritionGoals: mappedGoals, // Use the mapped goals
         },
         loading: false,
         hasFetchedGeneralData: true,
@@ -109,14 +133,17 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       // Map backend PascalCase keys to frontend camelCase keys
       const mappedGoals: NutritionGoals = {
-        calories: response.Calories ?? get().nutritionGoals.calories, // Fallback to current state or defaults
-        protein: response.Protein ?? get().nutritionGoals.protein,
-        carbs: response.Carbs ?? get().nutritionGoals.carbs,
-        fat: response.Fat ?? get().nutritionGoals.fat,
+        calories: response.Calories ?? get().UserDataResponse.nutritionGoals.calories,
+        protein: response.Protein ?? get().UserDataResponse.nutritionGoals.protein,
+        carbs: response.Carbs ?? get().UserDataResponse.nutritionGoals.carbs,
+        fat: response.Fat ?? get().UserDataResponse.nutritionGoals.fat,
       };
 
       set({
-        nutritionGoals: mappedGoals, // Use the correctly mapped object
+        UserDataResponse: {
+          ...get().UserDataResponse,
+          nutritionGoals: mappedGoals,
+        },
         loading: false
       });
     } catch (error) {
@@ -142,7 +169,10 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
 
       set({
-        nutritionGoals: goals,
+        UserDataResponse: {
+          ...get().UserDataResponse,
+          nutritionGoals: goals,
+        },
         loading: false
       });
     } catch (error) {
@@ -161,7 +191,10 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   updateNutritionGoals: (goals: NutritionGoals) => {
     set({
-      nutritionGoals: goals,
+      UserDataResponse: {
+        ...get().UserDataResponse,
+        nutritionGoals: goals,
+      },
     });
   },
 }));

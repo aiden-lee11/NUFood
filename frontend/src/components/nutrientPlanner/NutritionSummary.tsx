@@ -17,7 +17,8 @@ const NutritionSummary: React.FC<NutritionSummaryProps> = ({
     totalCarbs,
     totalFat
 }) => {
-    const { nutritionGoals } = useDataStore();
+    const { UserDataResponse } = useDataStore();
+    const nutritionGoals = UserDataResponse.nutritionGoals;
 
     // Calculate nutrition percentage based on user goals
     const caloriesPercentage = calculateGoalPercentage(totalCalories, nutritionGoals, 'calories');

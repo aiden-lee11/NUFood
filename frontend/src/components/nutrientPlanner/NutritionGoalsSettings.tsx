@@ -9,17 +9,13 @@ import { getDefaultNutritionGoals, saveGoalsToStorage } from '../../util/nutrien
 const NutritionGoalsSettings: React.FC = () => {
     const [open, setOpen] = useState(false);
     const [goals, setGoals] = useState<NutritionGoals>(getDefaultNutritionGoals());
-    const { nutritionGoals, saveNutritionGoals, fetchNutritionGoals } = useDataStore();
+    const { UserDataResponse, saveNutritionGoals } = useDataStore();
     const { user, token } = useAuth();
 
     // Load goals from store when component mounts
     useEffect(() => {
-        setGoals(nutritionGoals);
-        // If the user is authenticated, fetch their goals
-        if (user && token) {
-            fetchNutritionGoals(token);
-        }
-    }, [nutritionGoals, user, token, fetchNutritionGoals]);
+        setGoals(UserDataResponse.nutritionGoals);
+    }, [UserDataResponse.nutritionGoals]);
 
     const handleOpen = () => {
         setOpen(true);

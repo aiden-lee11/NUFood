@@ -45,6 +45,9 @@ interface FoodItemsListProps {
     showFilters: boolean;
     setShowFilters: (show: boolean) => void;
     handleSelectItem: (item: DailyItem) => void;
+    availableLocations: string[];
+    selectedLocation: string | null;
+    setSelectedLocation: (location: string | null) => void;
 }
 
 const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
@@ -59,6 +62,9 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
     showFilters,
     setShowFilters,
     handleSelectItem,
+    availableLocations,
+    selectedLocation,
+    setSelectedLocation,
 }) => {
     // Local state for the search input to avoid immediate updates
     const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
@@ -80,6 +86,10 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
     const handleSortDirectionChange = useCallback((value: string) => {
         setSortDirection(value as SortDirection);
     }, [setSortDirection]);
+
+    const handleLocationChange = useCallback((value: string) => {
+        setSelectedLocation(value === "all" ? null : value);
+    }, [setSelectedLocation]);
 
     const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalSearchTerm(e.target.value);
@@ -150,6 +160,22 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
                                     </SelectContent>
                                 </Select>
                             </div>
+                        </div>
+                        <div className="space-y-2 pt-4">
+                            <Label htmlFor="location-filter">Filter by Location</Label>
+                            <Select value={selectedLocation ?? "all"} onValueChange={handleLocationChange}>
+                                <SelectTrigger id="location-filter">
+                                    <SelectValue placeholder="Select location" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Locations</SelectItem>
+                                    {availableLocations.map(location => (
+                                        <SelectItem key={location} value={location}>
+                                            {location}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
