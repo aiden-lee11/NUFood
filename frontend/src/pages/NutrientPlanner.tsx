@@ -10,10 +10,6 @@ import { useDataStore } from '../store';
 import { DailyItem, NutritionGoals } from '../types/ItemTypes';
 import { SelectedDailyItem, SortDirection, SortKey, calculateNutritionTotals, getSavedItemsFromStorage, saveGoalsToStorage } from '../util/nutrientPlannerUtils';
 
-// Helper function to get current day name
-const getCurrentDayName = () => {
-    return new Date().toLocaleDateString('en-US', { weekday: 'long' });
-};
 
 // Helper function to get current date formatted as YYYY-MM-DD
 const getCurrentDateFormatted = () => {
