@@ -1,10 +1,10 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Settings } from "lucide-react"
 import { LocationPreferences } from "./location-preferences"
 import { TimePreferences } from "./time-preferences"
 import { VisualPreferences } from "./visual-preferences"
-import { Settings } from "lucide-react"
 
 interface PreferencesProps {
   showPreferences: boolean
@@ -31,19 +31,36 @@ const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state,
       </Button >
 
       <Dialog open={showPreferences} onOpenChange={actions.setShowPreferences}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent
+          className="
+          sm:max-w-[600px] 
+          focus:outline-none 
+          focus-visible:outline-none 
+          focus-visible:ring-0 
+          focus-visible:ring-offset-0
+          "
+        >
           <DialogHeader>
             <DialogTitle>Display Settings</DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="locations" className="w-full">
+          <Tabs defaultValue="locations" className="w-full" >
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="locations">Locations</TabsTrigger>
               <TabsTrigger value="times">Times</TabsTrigger>
               <TabsTrigger value="visual">Visual</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="locations" className="mt-4">
+            <TabsContent
+              value="locations"
+              className="
+              mt-4
+              focus:outline-none 
+              focus-visible:outline-none
+              focus-visible:ring-0 
+              focus-visible:ring-offset-0
+              "
+            >
               <LocationPreferences
                 locations={state.locations}
                 visibleLocations={state.visibleLocations}
@@ -52,7 +69,7 @@ const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state,
               />
             </TabsContent>
 
-            <TabsContent value="times" className="mt-4">
+            <TabsContent value="times" className="mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
               <TimePreferences
                 timesOfDay={state.timesOfDay}
                 visibleTimes={state.visibleTimes}
@@ -60,7 +77,7 @@ const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state,
               />
             </TabsContent>
 
-            <TabsContent value="visual" className="mt-4">
+            <TabsContent value="visual" className="mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
               <VisualPreferences
                 expandFolders={state.expandFolders}
                 toggleExpandFolders={() => actions.togglePreferencesItem("expandFolders", !state.expandFolders)}

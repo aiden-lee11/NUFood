@@ -36,7 +36,6 @@ export interface NutritionGoals {
 interface BaseDataResponse {
   allItems: Item[];
   weeklyItems: WeeklyItemsMap;
-  dailyItemsWithNutrients: DailyItem[];
   locationOperationHours: OperationHoursData[];
 }
 

@@ -102,7 +102,7 @@ func InitDB(databasePath string) error {
 	}
 
 	// Auto migrate the schemas
-	err = DB.AutoMigrate(&GormDailyItem{}, &GormAllDataItem{}, &GormUserPreferences{}, &GormLocationOperatingTimes{}, &GormWeeklyItem{}, &GormNutritionGoals{})
+	err = DB.AutoMigrate(&GormAllDataItem{}, &GormUserPreferences{}, &GormLocationOperatingTimes{}, &GormWeeklyItem{}, &GormNutritionGoals{})
 	if err != nil {
 		return err
 	}
@@ -111,63 +111,8 @@ func InitDB(databasePath string) error {
 	return nil
 }
 
-// InsertDailyItems inserts a list of DailyItem objects into the daily items table.
-//
-// If all locations are closed, a special record is inserted to reflect this.
-//
-// Parameters:
-// - items: A slice of DailyItem objects to be inserted.
-// - allClosed: A boolean indicating whether all locations are closed.
-//
-// Returns:
-// - error: An error if the insertion fails.
-func InsertDailyItems(items []models.DailyItem, allClosed bool) error {
-	// If all locations are closed we will use a hacky fix to insert a single record with allClosed set to true to avoid the no items in db error
-	if allClosed {
-		item := GormDailyItem{
-			DailyItem: models.DailyItem{
-				Name:        "All locations are closed",
-				Description: "All locations are closed",
-				Date:        time.Now().Format("2006-01-02"),
-				Location:    "All locations are closed",
-				StationName: "All locations are closed",
-				TimeOfDay:   "All locations are closed",
-			},
-			AllClosed: &allClosed,
-		}
-
-		result := DB.Create(&item)
-
-		if result.Error != nil {
-			log.Println("Error inserting allClosedItem:", result.Error)
-			return result.Error
-		}
-
-		return nil
-	}
-
-	var gormItems []GormDailyItem
-
-	for _, item := range items {
-		appendable := DailyItemToGorm(item)
-		gormItems = append(gormItems, appendable)
-	}
-
-	// Use CreateInBatches to insert items in chunks
-	batchSize := 500
-	result := DB.CreateInBatches(&gormItems, batchSize)
-
-	if result.Error != nil {
-		log.Println("Error inserting items:", result.Error)
-		return result.Error
-	}
-
-	log.Println("All items inserted successfully")
-	return nil
-}
-
 func InsertWeeklyItems(items []models.WeeklyItem) error {
-	if items == nil || len(items) == 0 {
+	if len(items) == 0 {
 		log.Println("No weekly items, skipping insert")
 		return nil
 	}
@@ -194,7 +139,7 @@ func InsertWeeklyItems(items []models.WeeklyItem) error {
 // goal of this func is to test out the FIFO on db where we keep +- 3 days of item data
 // this func should be passed the items for the third day in the future ie if today is monday then pass the items for thursday
 func UpdateWeeklyItems(items []models.DailyItem) error {
-	if items == nil || len(items) == 0 {
+	if len(items) == 0 {
 		log.Println("No available items, skipping all data insert")
 		return nil
 	}
@@ -238,7 +183,7 @@ func UpdateWeeklyItems(items []models.DailyItem) error {
 // Returns:
 // - error: An error if the insertion fails.
 func InsertAllDataItems(items []models.AllDataItem) error {
-	if items == nil || len(items) == 0 {
+	if len(items) == 0 {
 		log.Println("No available items, skipping all data insert")
 		return nil
 	}
@@ -250,7 +195,7 @@ func InsertAllDataItems(items []models.AllDataItem) error {
 		return nil
 	}
 
-	if cleanedItems == nil || len(cleanedItems) == 0 {
+	if len(cleanedItems) == 0 {
 		log.Println("No new items, skipping all data insert")
 		return nil
 	}
@@ -363,60 +308,30 @@ func UpdateMailingStatus(userID string, mailing bool) error {
 }
 
 // ReturnDateOfDailyItems retrieves the date associated with the daily items in the database.
+// Should index into the weeklyItems table and return the date of an item with the day index field of 0
 //
 // Returns:
 // - string: The date of the daily items.
 // - error: An error if no items are found or the query fails.
-// BUG Still returning a string of words and not a date for when theyre all closed for some reason?
 func ReturnDateOfDailyItems() (date string, err error) {
-	var dailyItems []GormDailyItem
-	result := DB.Find(&dailyItems)
+	var weeklyItems []GormWeeklyItem
+	result := DB.Find(&weeklyItems)
 	if result.Error != nil {
-		fmt.Println("Error getting all items")
 		return "", result.Error
 	}
 
-	// Check if the dailyItems slice is empty
-	if len(dailyItems) == 0 {
-		fmt.Println("No items found")
+	if len(weeklyItems) == 0 {
 		return "", NoItemsInDB
 	}
 
-	date = dailyItems[0].Date
-	log.Println("Date of daily items:", date)
-
-	return date, nil
-}
-
-// GetAllDailyItems retrieves all records from the daily items table.
-//
-// Returns:
-// - []models.DailyItem: A slice of DailyItem objects.
-// - error: An error if no items are found or the query fails.
-func GetAllDailyItems() ([]models.DailyItem, error) {
-	var dailyItems []GormDailyItem
-	result := DB.Find(&dailyItems)
-	if result.Error != nil {
-		return nil, result.Error
+	// Find the item with the day index of 0
+	for _, item := range weeklyItems {
+		if item.DayIndex == 0 {
+			return item.Date, nil
+		}
 	}
 
-	// Check if the dailyItems slice is empty
-	if len(dailyItems) == 0 {
-		return nil, NoItemsInDB
-	}
-
-	// If everything was closed there exists no error however there also exists no data so treat as such
-	if dailyItems[0].AllClosed != nil {
-		return []models.DailyItem{}, nil
-	}
-
-	// Convert the GormDailyItem slice to a DailyItem slice
-	var items []models.DailyItem
-	for _, item := range dailyItems {
-		items = append(items, item.DailyItem)
-	}
-
-	return items, nil
+	return "", errors.New("no item with day index 0 found")
 }
 
 func GetAllWeeklyItems() (map[string][]models.DailyItem, error) {
@@ -567,9 +482,11 @@ func GetAvailableFavoritesBatch(userID string) ([]models.DailyItem, error) {
 		search = append(search, pref.Name)
 	}
 	var matchingItems []models.DailyItem
-	result := DB.Table("gorm_daily_items").
-		Where("name IN ?", search).
+	// search instead in weeklyItems table where day_index = 0
+	result := DB.Table("gorm_weekly_items").
+		Where("name IN ? AND day_index = 0", search).
 		Find(&matchingItems)
+	
 
 	if result.Error != nil {
 		fmt.Println("Error finding favorite items batch search:", result.Error)
@@ -610,22 +527,6 @@ func GetMailingList() ([]models.PreferenceReturn, error) {
 	}
 
 	return items, nil
-}
-
-// DeleteDailyItems removes all records from the daily items table.
-//
-// Returns:
-// - error: An error if the deletion operation fails.
-func DeleteDailyItems() error {
-	// Attempt to delete all items from gorm_daily_items table
-	result := DB.Exec("DELETE FROM gorm_daily_items WHERE EXISTS (SELECT 1 FROM gorm_daily_items LIMIT 1)")
-	if result.Error != nil {
-		fmt.Println("Error deleting items:", result.Error)
-		return result.Error
-	}
-
-	fmt.Println("All daily items deleted")
-	return nil
 }
 
 // DeleteWeeklyItems removes all records from the weekly items table.

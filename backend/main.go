@@ -60,7 +60,6 @@ func main() {
 	apiRouter.HandleFunc("/mailing", middleware.AuthMiddleware(api.SetUserMailing)).Methods("POST", "OPTIONS")
 
 	// Scrape and Save Data endpoints
-	apiRouter.HandleFunc("/scrapeDailyItems", api.ScrapeDailyItemsHandler).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/scrapeWeeklyItems", api.ScrapeWeeklyItemsHandler).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/updateWeeklyItems", api.ScrapeUpdateWeekly).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/scrapeOperatingTimes", api.ScrapeLocationOperatingTimesHandler).Methods("GET", "OPTIONS")
@@ -68,7 +67,6 @@ func main() {
 	// Mailing endpoints
 	apiRouter.HandleFunc("/sendMailing", middleware.AdminMiddleware(api.SendOutMailing)).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/unsubscribe", api.HandleUnsubscribe).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/allDailyItems", api.GetAllDailyItemsHandler).Methods("GET", "OPTIONS")
 
 	// Nutrition Goals endpoints - combine both methods on the same route pattern
 	nutritionGoalsRoute := apiRouter.PathPrefix("/nutritionGoals").Subrouter()

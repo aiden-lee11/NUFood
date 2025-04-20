@@ -42,7 +42,6 @@ export const useDataStore = create<DataState>((set, get) => ({
   UserDataResponse: {
     allItems: [],
     weeklyItems: {},
-    dailyItemsWithNutrients: [],
     userPreferences: [],
     locationOperationHours: [],
     mailing: false,
@@ -76,7 +75,6 @@ export const useDataStore = create<DataState>((set, get) => ({
           ...get().UserDataResponse,
           allItems: allData.allItems || [],
           weeklyItems: allData.weeklyItems || {},
-          dailyItemsWithNutrients: allData.dailyItemsWithNutrients || [],
           userPreferences: allData.userPreferences || [],
           locationOperationHours: allData.locationOperatingTimes || [],
           mailing: allData.mailing ?? false,
@@ -111,7 +109,6 @@ export const useDataStore = create<DataState>((set, get) => ({
           ...get().UserDataResponse,
           allItems: generalData.allItems || [],
           weeklyItems: generalData.weeklyItems || {},
-          dailyItemsWithNutrients: generalData.dailyItemsWithNutrients || [],
           locationOperationHours: generalData.locationOperatingTimes || [],
           userPreferences: null,
           mailing: false,

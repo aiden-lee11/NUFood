@@ -10,6 +10,20 @@ import { useDataStore } from '../store';
 import { DailyItem, NutritionGoals } from '../types/ItemTypes';
 import { SelectedDailyItem, SortDirection, SortKey, calculateNutritionTotals, getSavedItemsFromStorage, saveGoalsToStorage } from '../util/nutrientPlannerUtils';
 
+// Helper function to get current day name
+const getCurrentDayName = () => {
+    return new Date().toLocaleDateString('en-US', { weekday: 'long' });
+};
+
+// Helper function to get current date formatted as YYYY-MM-DD
+const getCurrentDateFormatted = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const NutrientPlanner: React.FC = () => {
     // Select necessary data directly from the store
     const UserDataResponse = useDataStore((state) => state.UserDataResponse);
@@ -117,25 +131,33 @@ const NutrientPlanner: React.FC = () => {
         setSelectedLocation(location);
     }, []);
 
-    const allDailyItems = useMemo(() => UserDataResponse.dailyItemsWithNutrients || [], [UserDataResponse.dailyItemsWithNutrients]);
+    // Get today's items from weeklyItems
+    const todaysItems = useMemo(() => {
+        // const dayName = getCurrentDayName(); // Old way using day name
+        const currentDate = getCurrentDateFormatted(); // New way using YYYY-MM-DD
+        console.log("Fetching items for date:", currentDate); // Log the date being used
+        console.log("Available keys in weeklyItems:", UserDataResponse.weeklyItems ? Object.keys(UserDataResponse.weeklyItems) : 'weeklyItems is undefined'); // Log available keys
+        return UserDataResponse.weeklyItems?.[currentDate] || [];
+    }, [UserDataResponse.weeklyItems]);
 
-    // Derive available locations
+    // Derive available locations from today's items
     const availableLocations = useMemo(() => {
-        const locations = new Set(allDailyItems.map(item => item.Location));
+        console.log(todaysItems);
+        const locations = new Set(todaysItems.map(item => item.Location));
         return Array.from(locations).sort();
-    }, [allDailyItems]);
+    }, [todaysItems]);
 
-    // Update Fuse.js implementation to be simpler like DailyItems page
-    const fuse = useMemo(() => new Fuse(allDailyItems, {
+    // Update Fuse.js implementation to use today's items
+    const fuse = useMemo(() => new Fuse(todaysItems, {
         keys: ['Name'],
         threshold: 0.3,
         shouldSort: true,
         includeScore: true,
         minMatchCharLength: 2
-    }), [allDailyItems]);
+    }), [todaysItems]);
 
     const filteredItems = useMemo(() => {
-        let itemsToFilter = allDailyItems;
+        let itemsToFilter = todaysItems;
 
         // Apply location filter first if a location is selected
         if (selectedLocation) {
@@ -169,7 +191,7 @@ const NutrientPlanner: React.FC = () => {
         return currentFuse.search(searchTerm)
             .sort((a, b) => (a.score || 1) - (b.score || 1))
             .map(result => result.item);
-    }, [searchTerm, allDailyItems, selectedLocation, fuse]); // Include selectedLocation in dependency array
+    }, [searchTerm, todaysItems, selectedLocation, fuse]); // Updated dependency to todaysItems
 
     const sortedItems = useMemo(() => {
         return [...filteredItems].sort((a, b) => {
@@ -257,11 +279,12 @@ const NutrientPlanner: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow overflow-hidden">
-                {/* Available Items Section */}
-                <div className={`flex flex-col h-[calc(100vh-180px)] pb-12 md:h-full overflow-hidden ${activeTab === "food-items" ? "block" : "hidden md:flex"}`}>
+                {/* Left Column: Food Items List (visible on medium+ or when 'food-items' tab is active) */}
+                <div className={`flex-1 flex-col ${activeTab === 'food-items' ? 'flex' : 'hidden'} md:flex overflow-y-auto`}>
                     <FoodItemsList
                         sortedItems={sortedItems}
                         selectedItems={selectedItems}
+                        handleSelectItem={handleSelectItem}
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTermCallback}
                         sortKey={sortKey}
@@ -270,7 +293,6 @@ const NutrientPlanner: React.FC = () => {
                         setSortDirection={setSortDirectionCallback}
                         showFilters={showFilters}
                         setShowFilters={setShowFiltersCallback}
-                        handleSelectItem={handleSelectItem}
                         availableLocations={availableLocations}
                         selectedLocation={selectedLocation}
                         setSelectedLocation={setSelectedLocationCallback}

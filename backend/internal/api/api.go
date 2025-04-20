@@ -13,28 +13,6 @@ import (
 	"time"
 )
 
-// DeleteDailyItems deletes all daily items from the database.
-//
-// This handler expects no request body and no special authorization.
-// It responds with an HTTP status code indicating the result of the operation.
-//
-// Expected Authorization:
-//   - No special authorization required.
-//
-// Parameters:
-//   - w: The HTTP response writer.
-//   - r: The HTTP request.
-func DeleteDailyItems(w http.ResponseWriter, r *http.Request) {
-	err := db.DeleteDailyItems()
-	if err != nil {
-		http.Error(w, "Error deleting daily items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Return success code
-	w.WriteHeader(http.StatusOK)
-}
-
 // DeleteLocationOperatingTimes deletes all location operating times from the database.
 //
 // This handler expects no request body and no special authorization.
@@ -57,72 +35,13 @@ func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// ScrapeDailyItemsHandler scrapes daily dining hall items and updates the database.
+// ScrapeUpdateWeekly scrapes the weekly items and updates the database.
 //
-// This handler expects no request body but requires no authorization for the request.
-// It responds with an HTTP status code indicating the result of the scraping operation.
+// This handler expects no request body and no special authorization.
+// It responds with an HTTP status code indicating the result of the operation.
 //
 // Expected Authorization:
 //   - No special authorization required.
-//
-// Parameters:
-//   - w: The HTTP response writer.
-//   - r: The HTTP request.
-func ScrapeDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
-	scraper := &scraper.DiningHallScraper{
-		Client: scraper.NewClient(),
-		Config: scraper.DefaultConfig,
-	}
-
-	const MAX_RETRIES = 10
-
-	var dItems []models.DailyItem
-	var aItems []models.AllDataItem
-	var allClosed bool
-	var err error
-
-	for i := 0; i < MAX_RETRIES; i++ {
-		fmt.Printf("trying scrape for the %d time\n", i)
-		dItems, aItems, allClosed, err = scraper.ScrapeFood(time.Now().Format("2006-01-02"))
-		if err == nil {
-			fmt.Printf("successful scrape on the %d time", i)
-			err = nil
-			break
-		}
-	}
-
-	if err != nil {
-		http.Error(w, "Error scraping and saving: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if dItems == nil {
-		http.Error(w, "Error scraping and saving: nil dItems", http.StatusInternalServerError)
-		return
-	}
-
-	// New valid data so delete old data
-	err = db.DeleteDailyItems()
-
-	if err != nil {
-		http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := db.InsertDailyItems(dItems, allClosed); err != nil {
-		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := db.InsertAllDataItems(aItems); err != nil {
-		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Return success code
-	w.WriteHeader(http.StatusOK)
-}
-
 func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 	scraper := &scraper.DiningHallScraper{
 		Client: scraper.NewClient(),
@@ -279,7 +198,7 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 			break
 		}
 	}
-	if locationOperatingTimes == nil || len(locationOperatingTimes) == 0 {
+	if len(locationOperatingTimes) == 0 {
 		http.Error(w, "Error scraping and saving: nil locationOperatingTimes", http.StatusInternalServerError)
 		return
 	}
@@ -343,22 +262,8 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error saving user preferences: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	availableFavorites, err := db.GetAvailableFavoritesBatch(userID)
-
-	if err != nil {
-		http.Error(w, "Error fetching favorites: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Set the response header to indicate JSON content
-	w.Header().Set("Content-Type", "application/json")
-
-	// Return the result as JSON (example: return the received favorites back)
-	if err := json.NewEncoder(w).Encode(availableFavorites); err != nil {
-		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// Return success status without a body
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func SetUserMailing(w http.ResponseWriter, r *http.Request) {
@@ -411,13 +316,6 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch daily items which now include nutrients
-	dailyItemsWithNutrients, err := db.GetAllDailyItems()
-	if err != nil {
-		http.Error(w, "Error fetching daily items with nutrients: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Fetch weekly items (may not have nutrients depending on how GetAllWeeklyItems is implemented)
 	weeklyItems, err := db.GetAllWeeklyItems()
 	if err != nil {
@@ -463,13 +361,12 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	combinedData := map[string]interface{}{
-		"allItems":                allItems,
-		"weeklyItems":             weeklyItems,
-		"dailyItemsWithNutrients": dailyItemsWithNutrients,
-		"locationOperatingTimes":  locationOperatingTimes,
-		"userPreferences":         userPreferences,
-		"mailing":                 mailing,
-		"nutritionGoals":          nutritionGoals,
+		"allItems":               allItems,
+		"weeklyItems":            weeklyItems,
+		"locationOperatingTimes": locationOperatingTimes,
+		"userPreferences":        userPreferences,
+		"mailing":                mailing,
+		"nutritionGoals":         nutritionGoals,
 	}
 
 	// Set the response header to indicate JSON content
@@ -517,21 +414,6 @@ func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetAllDailyItemsHandler retrieves all daily items (including nutrients) from the database.
-func GetAllDailyItemsHandler(w http.ResponseWriter, r *http.Request) {
-	allItems, err := db.GetAllDailyItems()
-	if err != nil {
-		http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(allItems); err != nil {
-		http.Error(w, "Error encoding JSON response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
 // GetGeneralDataHandler retrieves general dining hall data.
 //
 // This handler expects no request body but responds with general data, including daily items, location operating times, and other relevant information in JSON format.
@@ -550,13 +432,6 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	allItems, err := db.GetAllDataItems()
 	if err != nil {
 		http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Fetch daily items which now include nutrients
-	dailyItemsWithNutrients, err := db.GetAllDailyItems()
-	if err != nil {
-		http.Error(w, "Error fetching daily items with nutrients: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -583,11 +458,10 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
-		"allItems":                allItems,
-		"weeklyItems":             weeklyItems,
-		"dailyItemsWithNutrients": dailyItemsWithNutrients,
-		"locationOperatingTimes":  locationOperatingTimes,
-		"nutritionGoals":          defaultNutritionGoals,
+		"allItems":               allItems,
+		"weeklyItems":            weeklyItems,
+		"locationOperatingTimes": locationOperatingTimes,
+		"nutritionGoals":         defaultNutritionGoals,
 	}
 
 	// Set the response header to indicate JSON content

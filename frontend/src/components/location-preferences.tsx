@@ -22,8 +22,8 @@ export function LocationPreferences({
   const selectNone = () => setVisibleLocations([])
 
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <Card className="focus:ring-0 focus:ring-transparent focus:ring-offset-0">
+      <CardContent className="pt-6 focus:ring-0 focus:ring-transparent focus:ring-offset-0">
         <div className="flex flex-col md:flex-row gap-2 mb-4">
           <Button variant="secondary" size="sm" onClick={selectNorth}>
             <MapPin className="mr-2 h-4 w-4" />

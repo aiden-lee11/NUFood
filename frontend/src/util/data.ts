@@ -21,14 +21,6 @@ export const postUserPreferences = async (preferences: Item[], userToken: string
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const result = await response.json();
-
-    // Update sessionStorage with the new userPreferences
-    sessionStorage.setItem("userPreferences", JSON.stringify(preferences));
-
-    // Update sessionStorage with the new availableFavorites
-    sessionStorage.setItem("availableFavorites", JSON.stringify(result));
-
   } catch (error) {
     console.error('Error posting userPreferences:', error);
   }
