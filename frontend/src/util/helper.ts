@@ -39,40 +39,44 @@ export const getWeekday = (dateNum: number): string => {
   }
 }
 
+// 4/28/2025 encountered Plex West as "Foster Walker Plex West" instead of "Foster Walker Plex West & Market"
+// To avoid breaking the app, we will add an alias for it and iterate over which one we find
+const locationAliases: Record<string, string[]> = {
+  Elder: ["Elder Dining Commons"],
+  Sargent: ["Sargent Dining Commons"],
+  Allison: ["Allison Dining Commons"],
+  "Plex East": ["Foster Walker Plex East"],
+  "Plex West": [
+    "Foster Walker Plex West & Market",
+    "Foster Walker Plex West",
+  ],
+};
+
 // Take in the data and return a mapping of location to operation times
-// TODO make a test for when its not closed and during open time 
-export const getDailyLocationOperationTimes = (data: OperationHoursData[], date: Date): LocationOperatingTimes => {
-  const locationNameMap: Record<string, string> = {
-    "Elder Dining Commons": "Elder",
-    "Sargent Dining Commons": "Sargent",
-    "Allison Dining Commons": "Allison",
-    "Foster Walker Plex East": "Plex East",
-    "Foster Walker Plex West & Market": "Plex West",
-  };
+export function getDailyLocationOperationTimes(
+  data: OperationHoursData[],
+  date: Date
+): LocationOperatingTimes {
   const currentDay = date.getDay();
+  const res: LocationOperatingTimes = {};
 
-  const res: LocationOperatingTimes = {}
-
-  Object.entries(locationNameMap).forEach(([fullName, shortName]) => {
-    const locationData = data.find((loc) => loc.Name === fullName);
-    if (!locationData) {
-      console.warn(`Location data not found for: ${fullName}`);
-      res[shortName] = null; // Handle missing data gracefully
-      return;
+  for (const [shortName, aliases] of Object.entries(locationAliases)) {
+    // find the *first* matching alias
+    const loc = data.find(d => aliases.includes(d.Name));
+    if (!loc) {
+      console.warn(`No data for any of: ${aliases.join(", ")}`);
+      res[shortName] = null;
+      continue;
     }
-    const locationDay = locationData.Week[currentDay]
 
-    // If the location is closed we set it to closed else the operation hours else null 
-    if (locationDay.Status === "closed") {
-      res[shortName] = null
-    } else if (locationDay.Hours) {
-      res[shortName] = locationDay.Hours
-    } else {
-      res[shortName] = null
-    }
+    const dayInfo = loc.Week[currentDay];
+    res[shortName] =
+      dayInfo.Status === "closed" || !dayInfo.Hours
+        ? null
+        : dayInfo.Hours;
   }
-  )
-  return res
+
+  return res;
 }
 
 

@@ -64,6 +64,7 @@ const Status: React.FC<LocationOperatingTimes> = ({ operatingTimes }) => {
             : `Closed until ${formatTimeToAmPm(nextOpenTime)}`;
         }
       }
+
       return "Closed";
     };
 
