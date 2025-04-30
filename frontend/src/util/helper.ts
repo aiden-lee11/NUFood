@@ -61,7 +61,6 @@ export function getDailyLocationOperationTimes(
   const res: LocationOperatingTimes = {};
 
   for (const [shortName, aliases] of Object.entries(locationAliases)) {
-    // find the *first* matching alias
     const loc = data.find(d => aliases.includes(d.Name));
     if (!loc) {
       console.warn(`No data for any of: ${aliases.join(", ")}`);

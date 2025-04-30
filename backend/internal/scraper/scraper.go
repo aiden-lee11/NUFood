@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gocolly/colly"
 )
@@ -291,11 +292,17 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyIte
 	}
 
 	for _, category := range menu.Periods.Categories {
-		// Ensure Items is not nil
-		if category.Items == nil {
-			continue // Skip this category if it has no items
+		// Ensure Items is not nil and check for ingredient categories
+		cleanedCategory := strings.ToLower(strings.TrimSpace(category.Name))
+		if category.Items == nil || contains(IngredientCategories, cleanedCategory) {
+			continue
 		}
+
 		for _, item := range category.Items {
+			cleanedItem := strings.ToLower(strings.TrimSpace(item.Name))
+			if contains(Ingredients, cleanedItem) {
+				continue
+			}
 
 			// Create AllDataItem first
 			allDataItem := models.AllDataItem{
