@@ -41,7 +41,7 @@ export const getWeekday = (dateNum: number): string => {
 
 // 4/28/2025 encountered Plex West as "Foster Walker Plex West" instead of "Foster Walker Plex West & Market"
 // To avoid breaking the app, we will add an alias for it and iterate over which one we find
-const locationAliases: Record<string, string[]> = {
+export const locationAliases: Record<string, string[]> = {
   Elder: ["Elder Dining Commons"],
   Sargent: ["Sargent Dining Commons"],
   Allison: ["Allison Dining Commons"],
