@@ -33,6 +33,11 @@ const Status: React.FC<LocationOperatingTimes> = ({ operatingTimes }) => {
         start.setHours(parseInt(StartHour, 10), parseInt(StartMinutes, 10), 0);
         end.setHours(parseInt(EndHour, 10), parseInt(EndMinutes, 10), 0);
 
+        // if end ≤ start, assume closing after midnight
+        if (end.getTime() <= start.getTime()) {
+          end.setDate(end.getDate() + 1)
+        }
+
         if (now >= start && now < end) {
           currentlyOpen = true;
           if (!nextCloseTime || end < nextCloseTime) {
