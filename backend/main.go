@@ -54,6 +54,7 @@ func main() {
 	apiRouter.HandleFunc("/allData", middleware.AuthMiddleware(api.GetAllDataHandler)).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/generalData", api.GetGeneralDataHandler).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/operatingTimes", api.GetLocationOperatingTimesHandler).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/weeklyData", api.GetWeeklyDataHandler).Methods("GET", "OPTIONS")
 
 	// User preferences endpoints
 	apiRouter.HandleFunc("/userPreferences", middleware.AuthMiddleware(api.SetUserPreferences)).Methods("POST", "OPTIONS")

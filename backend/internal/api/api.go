@@ -293,19 +293,26 @@ func SetUserMailing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetWeeklyDataHandler handles requests to retrieve weekly menu data.
+// This endpoint should be called only when needed, typically when the user interacts with the calendar.
+func GetWeeklyDataHandler(w http.ResponseWriter, r *http.Request) {
+	weeklyItems, err := db.GetAllWeeklyItems()
+	if err != nil {
+		http.Error(w, "Error fetching weekly items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set content type header
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode weekly items as JSON and send
+	if err := json.NewEncoder(w).Encode(weeklyItems); err != nil {
+		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 // GetAllDataHandler retrieves and combines all relevant dining hall data for the user.
-//
-// This handler expects an Authorization header containing a valid Firebase ID token. It combines daily items, location operating times, and user preferences into a single JSON response.
-//
-// Expected Authorization:
-//   - Authorization header containing a Firebase ID token (Bearer token).
-//
-// Expected Body:
-//   - No body is expected in this request.
-//
-// Parameters:
-//   - w: The HTTP response writer.
-//   - r: The HTTP request.
 func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(string)
 
@@ -316,11 +323,17 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch weekly items (may not have nutrients depending on how GetAllWeeklyItems is implemented)
-	weeklyItems, err := db.GetAllWeeklyItems()
-	if err != nil {
-		http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
+	// Fetch only today's items instead of weekly items
+	todayItems, err := db.GetTodayItems()
+	if err != nil && err != db.NoItemsInDB {
+		http.Error(w, "Error fetching today's items: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Create a map with just today's date
+	today := time.Now().Format("2006-01-02")
+	weeklyItems := map[string][]models.DailyItem{
+		today: todayItems,
 	}
 
 	locationOperatingTimes, err := db.GetLocationOperatingTimes()
@@ -415,18 +428,6 @@ func GetLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetGeneralDataHandler retrieves general dining hall data.
-//
-// This handler expects no request body but responds with general data, including daily items, location operating times, and other relevant information in JSON format.
-//
-// Expected Authorization:
-//   - No special authorization required.
-//
-// Expected Body:
-//   - No body is expected in this request.
-//
-// Parameters:
-//   - w: The HTTP response writer.
-//   - r: The HTTP request.
 func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch all data items (names only for filter)
 	allItems, err := db.GetAllDataItems()
@@ -435,11 +436,17 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch weekly items (may not have nutrients)
-	weeklyItems, err := db.GetAllWeeklyItems()
-	if err != nil {
-		http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
+	// Fetch only today's items instead of weekly items
+	todayItems, err := db.GetTodayItems()
+	if err != nil && err != db.NoItemsInDB {
+		http.Error(w, "Error fetching today's items: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Create a map with just today's date
+	today := time.Now().Format("2006-01-02")
+	weeklyItems := map[string][]models.DailyItem{
+		today: todayItems,
 	}
 
 	locationOperatingTimes, err := db.GetLocationOperatingTimes()

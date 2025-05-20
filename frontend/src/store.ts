@@ -16,6 +16,7 @@ interface DataState {
   saveNutritionGoals: (userToken: string, goals: NutritionGoals) => Promise<void>;
   setUserPreferences: (userPreferences: Item[]) => void;
   updateNutritionGoals: (goals: NutritionGoals) => void;
+  fetchWeeklyData: () => Promise<void>;
 }
 
 const fetchData = async (endpoint: string, authToken?: string) => {
@@ -52,6 +53,22 @@ export const useDataStore = create<DataState>((set, get) => ({
   hasFetchedAllData: false,
   hasFetchedGeneralData: false,
   hasFetchedOperatingTimes: false,
+
+  fetchWeeklyData: async () => {
+    set({ loading: true, error: null });
+    try {
+      const weeklyData = await fetchData(`${API_URL}/api/weeklyData`);
+      set({
+        UserDataResponse: {
+          ...get().UserDataResponse,
+          weeklyItems: weeklyData || {},
+        },
+        loading: false,
+      });
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+    }
+  },
 
   fetchAllData: async (userToken: string | null) => {
     // If data is already fetched, exit early

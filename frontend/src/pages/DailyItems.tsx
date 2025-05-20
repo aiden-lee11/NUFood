@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { postUserPreferences } from '../util/data';
-import Fuse from 'fuse.js';
-import { Input } from '@headlessui/react';
-import LocationItemGrid from '../components/locationGrid'
-import { useAuth } from '../context/AuthProvider';
-import AuthPopup from '../components/AuthPopup';
-import { getCurrentTimeOfDayWithLocations, getDailyLocationOperationTimes } from '../util/helper';
-import { DailyItem, Item } from '../types/ItemTypes';
-import ErrorPopup from '../components/error-popup';
 import { useDataStore } from '@/store';
-import { HeaderControls } from "../components/header-controls"
+import { Input } from '@headlessui/react';
+import Fuse from 'fuse.js';
+import React, { useEffect, useMemo, useState } from 'react';
+import AuthPopup from '../components/AuthPopup';
+import ErrorPopup from '../components/error-popup';
+import { HeaderControls } from "../components/header-controls";
+import LocationItemGrid from '../components/locationGrid';
+import { useAuth } from '../context/AuthProvider';
+import { DailyItem, Item } from '../types/ItemTypes';
+import { postUserPreferences } from '../util/data';
+import { getCurrentTimeOfDayWithLocations, getDailyLocationOperationTimes } from '../util/helper';
 
 
 const DailyItems: React.FC = () => {
@@ -33,6 +33,7 @@ const DailyItems: React.FC = () => {
 
   // Data involved with API
   const staticData = useDataStore((state) => state.UserDataResponse);
+  const fetchWeeklyData = useDataStore((state) => state.fetchWeeklyData);
   const weeklyItems = staticData.weeklyItems;
   const memoizedLocationHours = useMemo(
     () => getDailyLocationOperationTimes(staticData.locationOperationHours, new Date()),
@@ -47,7 +48,38 @@ const DailyItems: React.FC = () => {
   const [filteredItems, setFilteredItems] = useState<DailyItem[]>([]);
   const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
 
+  console.log('weeklyItems', weeklyItems);
+  console.log('dailyItems', dailyItems);
 
+  // Update daily items when weeklyItems or selectedDate changes
+  useEffect(() => {
+    if (weeklyItems && Object.keys(weeklyItems).length > 0) {
+      // Use UTC date to avoid timezone issues
+      const dateKey = selectedDate.toISOString().slice(0, 10);
+      const items = weeklyItems[dateKey] || [];
+      console.log('Setting daily items for date', dateKey, items);
+      setDailyItems(items);
+      // Determine if there is some location that is open, but no items are available
+      // If this is the case then there was an error in scraping data and we should display
+      // an error message popup to the user
+      setShowErrorPopup(items.length === 0 && Boolean(memoizedLocationHours));
+    }
+  }, [weeklyItems, selectedDate, memoizedLocationHours]);
+
+  // Initialize with today's items on first load
+  useEffect(() => {
+    if (weeklyItems && Object.keys(weeklyItems).length > 0) {
+      // Get the earliest available date from weeklyItems
+      const availableDates = Object.keys(weeklyItems).sort();
+      const firstAvailableDate = availableDates[0];
+      console.log('Available dates:', availableDates);
+      console.log('Setting daily items for first available date', firstAvailableDate, weeklyItems[firstAvailableDate]);
+      if (firstAvailableDate) {
+        setDailyItems(weeklyItems[firstAvailableDate]);
+        setSelectedDate(new Date(firstAvailableDate));
+      }
+    }
+  }, [weeklyItems]);
 
   // Initialize selected times based on current time
   useEffect(() => {
@@ -64,24 +96,13 @@ const DailyItems: React.FC = () => {
   }, [memoizedLocationHours]);
 
   useEffect(() => {
-    if (weeklyItems && Object.keys(weeklyItems).length != 0) {
-      const todaysItems = weeklyItems[new Date().toISOString().split("T")[0]] || []
-      setDailyItems(todaysItems);
-      // Determine if there is some location that is open, but no items are available
-      // If this is the case then there was an error in scraping data and we should display
-      // an error message popup to the user
-      setShowErrorPopup(!todaysItems && memoizedLocationHours);
-    }
-  }, [weeklyItems])
-
-  useEffect(() => {
     // Set available favorites based on items that match user preferences
     if (userPreferences && userPreferences.length > 0) {
       const userPrefNames = new Set(userPreferences.map(pref => pref.Name));
       const favorites = dailyItems.filter(item => userPrefNames.has(item.Name));
       setAvailableFavorites(favorites);
     }
-  }, [dailyItems]);
+  }, [dailyItems, userPreferences]);
 
   useEffect(() => {
     if (searchQuery) {
@@ -146,11 +167,25 @@ const DailyItems: React.FC = () => {
     sessionStorage.setItem("showPreferences", newState.toString());
   };
 
+  const handleDateChange = async (date: Date) => {
+    const newDateKey = date.toISOString().split('T')[0];
+    const currentDateKey = selectedDate.toISOString().split('T')[0];
+
+    // Only fetch if date actually changed
+    if (newDateKey !== currentDateKey) {
+      setSelectedDate(date);
+      // If we don't have data for this date, fetch weekly data
+      if (!weeklyItems[newDateKey]) {
+        await fetchWeeklyData();
+      }
+    }
+  };
+
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <HeaderControls
         selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
+        setSelectedDate={handleDateChange}
         setDailyItems={setDailyItems}
         showPreferences={showPreferences}
         preferencesState={{

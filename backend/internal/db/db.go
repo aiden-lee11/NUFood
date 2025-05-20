@@ -486,7 +486,6 @@ func GetAvailableFavoritesBatch(userID string) ([]models.DailyItem, error) {
 	result := DB.Table("gorm_weekly_items").
 		Where("name IN ? AND day_index = 0", search).
 		Find(&matchingItems)
-	
 
 	if result.Error != nil {
 		fmt.Println("Error finding favorite items batch search:", result.Error)
@@ -655,4 +654,22 @@ func GetNutritionGoals(userID string) (models.NutritionGoals, error) {
 	}
 
 	return goals, nil
+}
+
+func GetTodayItems() ([]models.DailyItem, error) {
+	var weeklyItems []GormWeeklyItem
+	result := DB.Where("day_index = ?", 0).Find(&weeklyItems)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if len(weeklyItems) == 0 {
+		return nil, NoItemsInDB
+	}
+
+	var items []models.DailyItem
+	for _, item := range weeklyItems {
+		items = append(items, item.DailyItem)
+	}
+	return items, nil
 }
