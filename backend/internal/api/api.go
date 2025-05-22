@@ -293,25 +293,6 @@ func SetUserMailing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GetWeeklyDataHandler handles requests to retrieve weekly menu data.
-// This endpoint should be called only when needed, typically when the user interacts with the calendar.
-func GetWeeklyDataHandler(w http.ResponseWriter, r *http.Request) {
-	weeklyItems, err := db.GetAllWeeklyItems()
-	if err != nil {
-		http.Error(w, "Error fetching weekly items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Set content type header
-	w.Header().Set("Content-Type", "application/json")
-
-	// Encode weekly items as JSON and send
-	if err := json.NewEncoder(w).Encode(weeklyItems); err != nil {
-		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
 // GetAllDataHandler retrieves and combines all relevant dining hall data for the user.
 func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(string)
@@ -323,17 +304,11 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch only today's items instead of weekly items
-	todayItems, err := db.GetTodayItems()
-	if err != nil && err != db.NoItemsInDB {
-		http.Error(w, "Error fetching today's items: "+err.Error(), http.StatusInternalServerError)
+	// Fetch all weekly items (not just today)
+	weeklyItems, err := db.GetAllWeeklyItems()
+	if err != nil {
+		http.Error(w, "Error fetching weekly items: "+err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	// Create a map with just today's date
-	today := time.Now().Format("2006-01-02")
-	weeklyItems := map[string][]models.DailyItem{
-		today: todayItems,
 	}
 
 	locationOperatingTimes, err := db.GetLocationOperatingTimes()
@@ -436,17 +411,11 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch only today's items instead of weekly items
-	todayItems, err := db.GetTodayItems()
-	if err != nil && err != db.NoItemsInDB {
-		http.Error(w, "Error fetching today's items: "+err.Error(), http.StatusInternalServerError)
+	// Fetch all weekly items (not just today)
+	weeklyItems, err := db.GetAllWeeklyItems()
+	if err != nil {
+		http.Error(w, "Error fetching weekly items: "+err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	// Create a map with just today's date
-	today := time.Now().Format("2006-01-02")
-	weeklyItems := map[string][]models.DailyItem{
-		today: todayItems,
 	}
 
 	locationOperatingTimes, err := db.GetLocationOperatingTimes()
@@ -613,6 +582,43 @@ func GetNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Encode goals as JSON and send
 	if err := json.NewEncoder(w).Encode(goals); err != nil {
+		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// GetTodayDataHandler retrieves only today's items and user preferences (if authenticated)
+func GetTodayDataHandler(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context if available (user might not be authenticated)
+	userID, ok := r.Context().Value("userID").(string)
+
+	// Fetch today's items
+	todayItems, err := db.GetTodayItems()
+	if err != nil && err != db.NoItemsInDB {
+		http.Error(w, "Error fetching today's items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		TodayItems      []models.DailyItem   `json:"todayItems"`
+		UserPreferences []models.AllDataItem `json:"userPreferences,omitempty"`
+	}{
+		TodayItems: todayItems,
+	}
+
+	// If user is authenticated, fetch their preferences
+	if ok {
+		userPreferences, err := db.GetUserPreferences(userID)
+		if err == nil {
+			response.UserPreferences = userPreferences
+		}
+	}
+
+	// Set content type header
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode response as JSON and send
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

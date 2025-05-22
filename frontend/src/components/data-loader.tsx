@@ -1,20 +1,22 @@
+import { useAuth } from '@/context/AuthProvider';
 import { useEffect } from 'react';
 import { useDataStore } from '../store';
-import { useAuth } from '@/context/AuthProvider';
 
 const DataLoader = ({ children }: { children: React.ReactNode }) => {
-  const { fetchAllData, fetchGeneralData } = useDataStore();
+  const { fetchAllData, fetchGeneralData, fetchTodayData } = useDataStore();
   const { token, authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading) {
-      if (token) {
-        fetchAllData(token);
-      } else {
-        fetchGeneralData();
-      }
+    if (authLoading) return; // Wait until auth state is known
+
+    if (token) {
+      fetchTodayData(token);
+      fetchAllData(token);
+    } else {
+      fetchTodayData(null);
+      fetchGeneralData();
     }
-  }, [fetchAllData, token, authLoading]);
+  }, [fetchAllData, fetchGeneralData, fetchTodayData, token, authLoading]);
 
   return <>{children}</>;
 };

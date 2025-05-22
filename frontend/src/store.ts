@@ -9,14 +9,14 @@ interface DataState {
   error: string | null;
   hasFetchedAllData: boolean; // flag for all data fetch
   hasFetchedGeneralData: boolean; // flag for general data fetch
-  hasFetchedOperatingTimes: boolean; // flag for operating times
+  hasFetchedTodayData: boolean;
   fetchAllData: (userToken: string | null) => Promise<void>;
   fetchGeneralData: () => Promise<void>;
+  fetchTodayData: (userToken: string | null) => Promise<void>;
   fetchNutritionGoals: (userToken: string) => Promise<void>;
   saveNutritionGoals: (userToken: string, goals: NutritionGoals) => Promise<void>;
   setUserPreferences: (userPreferences: Item[]) => void;
   updateNutritionGoals: (goals: NutritionGoals) => void;
-  fetchWeeklyData: () => Promise<void>;
 }
 
 const fetchData = async (endpoint: string, authToken?: string) => {
@@ -52,18 +52,38 @@ export const useDataStore = create<DataState>((set, get) => ({
   error: null,
   hasFetchedAllData: false,
   hasFetchedGeneralData: false,
-  hasFetchedOperatingTimes: false,
+  hasFetchedTodayData: false,
 
-  fetchWeeklyData: async () => {
+  fetchTodayData: async (userToken: string | null) => {
+    if (get().hasFetchedTodayData) return;
+
     set({ loading: true, error: null });
     try {
-      const weeklyData = await fetchData(`${API_URL}/api/weeklyData`);
+      const headers: HeadersInit = {};
+      if (userToken) {
+        headers['Authorization'] = `Bearer ${userToken}`;
+      }
+
+      const response = await fetch(`${API_URL}/api/todayData`, { headers });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Create a weeklyItems map with just today's date
+      const today = new Date().toISOString().split('T')[0];
+      const weeklyItems = {
+        [today]: data.todayItems || []
+      };
+
       set({
         UserDataResponse: {
           ...get().UserDataResponse,
-          weeklyItems: weeklyData || {},
+          weeklyItems,
+          userPreferences: data.userPreferences || [],
         },
         loading: false,
+        hasFetchedTodayData: true,
       });
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
@@ -143,7 +163,6 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await fetchData(`${API_URL}/api/nutritionGoals`, userToken);
-      console.log('Fetched nutrition goals from backend:', response);
 
       // Map backend PascalCase keys to frontend camelCase keys
       const mappedGoals: NutritionGoals = {

@@ -33,7 +33,7 @@ const DailyItems: React.FC = () => {
 
   // Data involved with API
   const staticData = useDataStore((state) => state.UserDataResponse);
-  const fetchWeeklyData = useDataStore((state) => state.fetchWeeklyData);
+  const fetchAllData = useDataStore((state) => state.fetchAllData);
   const weeklyItems = staticData.weeklyItems;
   const memoizedLocationHours = useMemo(
     () => getDailyLocationOperationTimes(staticData.locationOperationHours, new Date()),
@@ -48,16 +48,12 @@ const DailyItems: React.FC = () => {
   const [filteredItems, setFilteredItems] = useState<DailyItem[]>([]);
   const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
 
-  console.log('weeklyItems', weeklyItems);
-  console.log('dailyItems', dailyItems);
-
   // Update daily items when weeklyItems or selectedDate changes
   useEffect(() => {
     if (weeklyItems && Object.keys(weeklyItems).length > 0) {
       // Use UTC date to avoid timezone issues
       const dateKey = selectedDate.toISOString().slice(0, 10);
       const items = weeklyItems[dateKey] || [];
-      console.log('Setting daily items for date', dateKey, items);
       setDailyItems(items);
       // Determine if there is some location that is open, but no items are available
       // If this is the case then there was an error in scraping data and we should display
@@ -69,14 +65,19 @@ const DailyItems: React.FC = () => {
   // Initialize with today's items on first load
   useEffect(() => {
     if (weeklyItems && Object.keys(weeklyItems).length > 0) {
-      // Get the earliest available date from weeklyItems
+      const today = new Date().toISOString().split('T')[0];
       const availableDates = Object.keys(weeklyItems).sort();
-      const firstAvailableDate = availableDates[0];
-      console.log('Available dates:', availableDates);
-      console.log('Setting daily items for first available date', firstAvailableDate, weeklyItems[firstAvailableDate]);
-      if (firstAvailableDate) {
-        setDailyItems(weeklyItems[firstAvailableDate]);
-        setSelectedDate(new Date(firstAvailableDate));
+
+      // If we have data for today, use it
+      if (weeklyItems[today]) {
+        setDailyItems(weeklyItems[today]);
+      } else {
+        // Otherwise, use the earliest available date
+        const firstAvailableDate = availableDates[0];
+        if (firstAvailableDate) {
+          setDailyItems(weeklyItems[firstAvailableDate]);
+          setSelectedDate(new Date(firstAvailableDate));
+        }
       }
     }
   }, [weeklyItems]);
@@ -174,9 +175,9 @@ const DailyItems: React.FC = () => {
     // Only fetch if date actually changed
     if (newDateKey !== currentDateKey) {
       setSelectedDate(date);
-      // If we don't have data for this date, fetch weekly data
+      // If we don't have data for this date, fetch all data
       if (!weeklyItems[newDateKey]) {
-        await fetchWeeklyData();
+        await fetchAllData(token);
       }
     }
   };
