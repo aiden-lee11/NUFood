@@ -68,18 +68,18 @@
 }
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
+@layer utilities {
+  .shadow-left-bottom {
+    box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.1), -2px 2px 4px rgba(0, 0, 0, 0.06);
   }
-  body {
-    @apply bg-background text-foreground;
+  .dark .shadow-left-bottom {
+    box-shadow: -4px 4px 12px rgba(0, 0, 0, 0.3), -2px 2px 6px rgba(0, 0, 0, 0.2);
   }
 }

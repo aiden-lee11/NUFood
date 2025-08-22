@@ -39,15 +39,37 @@ const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
 
   return (
     <div className="min-h-screen p-6 bg-background transition-colors duration-300">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
         {visibleLocations.length > 0 &&
           visibleLocations
-            .map((location) => (
+            .sort((a, b) => {
+              // Count items for each location
+              const aHasItems = timesOfDay.some(timeOfDay => 
+                filteredItems.some(item => item.Location === a && item.TimeOfDay === timeOfDay)
+              );
+              const bHasItems = timesOfDay.some(timeOfDay => 
+                filteredItems.some(item => item.Location === b && item.TimeOfDay === timeOfDay)
+              );
+              
+              // Locations with items come first
+              if (aHasItems && !bHasItems) return -1;
+              if (!aHasItems && bHasItems) return 1;
+              return 0; // Keep original order for locations with same status
+            })
+            .map((location) => {
+              // Check if this location has any items
+              const hasItems = timesOfDay.some(timeOfDay => 
+                filteredItems.some(item => item.Location === location && item.TimeOfDay === timeOfDay)
+              );
+              
+              return (
               <div
                 key={location}
-                className="p-6 rounded-md shadow-lg dark:shadow-gray-200/40 transition-all duration-300 bg-background"
+                className={`p-6 rounded-xl shadow-left-bottom transition-all duration-300 bg-card border border-border ${
+                  hasItems ? '' : 'opacity-75'
+                }`}
               >
-                <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">{location}</h2>
+                <h2 className="text-2xl font-bold mb-4 text-card-foreground">{location}</h2>
                 {locationOperationHours && (<Status operatingTimes={locationOperationHours[location]} />)}
                 {timesOfDay
                   .filter((timeOfDay) => visibleTimes.includes(timeOfDay))
@@ -84,8 +106,16 @@ const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
                       )
                     );
                   })}
+                
+                {/* Show a message if no items available */}
+                {!hasItems && (
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground text-sm">No items available</p>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
       </div>
     </div>
   );

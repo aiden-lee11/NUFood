@@ -59,8 +59,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   key={index}
                   to={item.href}
                   className={cn(
-                    "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent",
-                    location.pathname === item.href ? "bg-accent" : "transparent",
+                    "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
+                    location.pathname === item.href ? "bg-accent text-accent-foreground" : "transparent",
                   )}
                 >
                   {item.icon}
@@ -72,8 +72,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   key={"preferences"}
                   to={preferences.href}
                   className={cn(
-                    "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent",
-                    location.pathname === preferences.href ? "bg-accent" : "transparent",
+                    "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
+                    location.pathname === preferences.href ? "bg-accent text-accent-foreground" : "transparent",
                   )}
                 >
                   {preferences.icon}

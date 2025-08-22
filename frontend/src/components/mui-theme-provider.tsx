@@ -20,8 +20,14 @@ export function MyMUIThemeProvider({ children }: { children: React.ReactNode }) 
           root: {
             backgroundColor: theme === 'dark' ? 'hsl(249, 22%, 12%)' : 'hsl(32, 57%, 95%)',
             color: theme === 'dark' ? 'hsl(245, 50%, 91%)' : 'hsl(248, 19%, 40%)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            marginBottom: '12px',
             '&.Mui-expanded': {
-              margin: 0,
+              margin: '0 0 12px 0',
+            },
+            '&:before': {
+              display: 'none',
             },
           },
         },
@@ -36,6 +42,10 @@ export function MyMUIThemeProvider({ children }: { children: React.ReactNode }) 
         styleOverrides: {
           root: {
             backgroundColor: theme === 'dark' ? 'hsl(248, 25%, 18%)' : 'hsl(30, 32%, 92%)',
+            borderRadius: '12px 12px 0 0',
+            '&.Mui-expanded': {
+              borderRadius: '12px 12px 0 0',
+            },
           },
         },
       },
@@ -43,6 +53,7 @@ export function MyMUIThemeProvider({ children }: { children: React.ReactNode }) 
         styleOverrides: {
           root: {
             backgroundColor: theme === 'dark' ? 'hsl(248, 25%, 18%)' : 'hsl(30, 32%, 92%)',
+            borderRadius: '0 0 12px 12px',
           },
         },
       },
