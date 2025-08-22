@@ -80,8 +80,11 @@ const DailyItems: React.FC = () => {
       const userPrefNames = new Set(userPreferences.map(pref => pref.Name));
       const favorites = dailyItems.filter(item => userPrefNames.has(item.Name));
       setAvailableFavorites(favorites);
+    } else {
+      // Clear favorites when user preferences are empty/null (e.g., on sign out)
+      setAvailableFavorites([]);
     }
-  }, [dailyItems]);
+  }, [dailyItems, userPreferences]);
 
   useEffect(() => {
     if (searchQuery) {
