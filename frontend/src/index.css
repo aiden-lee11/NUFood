@@ -27,7 +27,7 @@
     --chart-2: 189 35% 45%; /* Foam: More vibrant */
     --chart-3: 197 55% 30%; /* Pine: More vibrant */
     --chart-4: 35 85% 50%; /* Gold: More vibrant */
-    --chart-5: 268 35% 55%; /* Iris: More vibrant */
+    --chart-5: 268 55% 65%; /* Saturated Purple for favorites */
     --item-hover: 30 25% 95%; /* New: Very subtle warm hover */
     --item-selected: 268 20% 88%; /* New: Very soft iris for selected items */
     --item-selected-foreground: 248 25% 30%; /* Dark text on selected */
@@ -58,7 +58,7 @@
     --chart-2: 189 50% 75%; /* Foam: More vibrant */
     --chart-3: 197 55% 40%; /* Pine: More vibrant */
     --chart-4: 35 90% 74%; /* Gold: More vibrant */
-    --chart-5: 267 65% 80%; /* Iris: More vibrant */
+    --chart-5: 267 75% 85%; /* Saturated Purple for favorites */
     --item-hover: 248 15% 28%; /* New: Subtle overlay hover */
     --item-selected: 267 30% 35%; /* New: Muted dark iris for selected items */
     --item-selected-foreground: 245 50% 91%; /* Light text on selected */

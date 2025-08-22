@@ -22,7 +22,6 @@ interface DataState {
 
 const fetchData = async (endpoint: string, authToken?: string) => {
   const headers: HeadersInit = {
-    'ngrok-skip-browser-warning': 'any',
     ...(authToken && { Authorization: `Bearer ${authToken}` })
   };
   const response = await fetch(endpoint, { headers });
@@ -158,8 +157,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       const headers = {
         'Authorization': `Bearer ${userToken}`,
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'any'
+        'Content-Type': 'application/json'
       };
       const response = await fetch(`${API_URL}/api/nutritionGoals`, {
         method: 'POST',

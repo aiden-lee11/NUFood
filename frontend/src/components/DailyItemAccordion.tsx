@@ -80,7 +80,7 @@ const DailyItemAccordion: React.FC<Props> = ({
                     onClick={() => handleItemClick(item)}
                     className={clsx(
                       "w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2 mb-2",
-                      "bg-item-selected text-item-selected-foreground border-chart-4 shadow-sm"
+                      "bg-item-selected text-item-selected-foreground border-chart-5 shadow-sm"
                     )}
                   >
                     {item.Name} ★

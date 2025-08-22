@@ -12,7 +12,7 @@ export const postUserPreferences = async (preferences: Item[], userToken: string
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'any',
+
         Authorization: auth,
       },
       body: JSON.stringify(preferences),
@@ -35,7 +35,7 @@ export const updateMailing = async (mailing: boolean, userToken: string) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'any',
+
         Authorization: auth,
       },
       body: JSON.stringify({ mailing }),
