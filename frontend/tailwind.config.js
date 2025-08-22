@@ -55,7 +55,10 @@ export default {
                                         '3': 'hsl(var(--chart-3))',
                                         '4': 'hsl(var(--chart-4))',
                                         '5': 'hsl(var(--chart-5))'
-                                }
+                                },
+                                'item-hover': 'hsl(var(--item-hover))',
+                                'item-selected': 'hsl(var(--item-selected))',
+                                'item-selected-foreground': 'hsl(var(--item-selected-foreground))'
                         }
                 }
         },

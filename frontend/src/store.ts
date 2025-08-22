@@ -16,10 +16,14 @@ interface DataState {
   saveNutritionGoals: (userToken: string, goals: NutritionGoals) => Promise<void>;
   setUserPreferences: (userPreferences: Item[]) => void;
   updateNutritionGoals: (goals: NutritionGoals) => void;
+  resetFetchFlags: () => void;
+  clearUserData: () => Promise<void>;
 }
 
 const fetchData = async (endpoint: string, authToken?: string) => {
-  const headers: HeadersInit = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  const headers: HeadersInit = {
+    ...(authToken && { Authorization: `Bearer ${authToken}` })
+  };
   const response = await fetch(endpoint, { headers });
 
   if (!response.ok) {
@@ -193,5 +197,31 @@ export const useDataStore = create<DataState>((set, get) => ({
         nutritionGoals: goals,
       },
     });
+  },
+
+  resetFetchFlags: () => {
+    set({
+      hasFetchedAllData: false,
+      hasFetchedGeneralData: false,
+      hasFetchedOperatingTimes: false,
+    });
+  },
+
+  clearUserData: async () => {
+    // First, clear user-specific data and reset flags
+    set({
+      UserDataResponse: {
+        ...get().UserDataResponse,
+        userPreferences: [],
+        mailing: false,
+        nutritionGoals: defaultNutritionGoals,
+      },
+      hasFetchedAllData: false,
+      hasFetchedGeneralData: false,
+      hasFetchedOperatingTimes: false,
+    });
+
+    // Then immediately fetch general data to update the UI
+    await get().fetchGeneralData();
   },
 }));

@@ -42,6 +42,7 @@ const NutrientPlanner: React.FC = () => {
     const [showFilters, setShowFilters] = useState<boolean>(true);
     const [activeTab, setActiveTab] = useState<string>("food-items");
     const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+    const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<string | null>(null);
     // Track if initial load has completed
     const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
@@ -127,6 +128,10 @@ const NutrientPlanner: React.FC = () => {
         setSelectedLocation(location);
     }, []);
 
+    const setSelectedTimeOfDayCallback = useCallback((timeOfDay: string | null) => {
+        setSelectedTimeOfDay(timeOfDay);
+    }, []);
+
     // Get today's items from weeklyItems
     const todaysItems = useMemo(() => {
         // const dayName = getCurrentDayName(); // Old way using day name
@@ -141,6 +146,32 @@ const NutrientPlanner: React.FC = () => {
         console.log(todaysItems);
         const locations = new Set(todaysItems.map(item => item.Location));
         return Array.from(locations).sort();
+    }, [todaysItems]);
+
+    // Derive available time of day options from today's items
+    const availableTimesOfDay = useMemo(() => {
+        const timesOfDay = new Set(todaysItems.map(item => item.TimeOfDay));
+        const timesArray = Array.from(timesOfDay);
+        
+        // Define the desired order for meal times
+        const mealOrder = ['Breakfast', 'Lunch', 'Dinner'];
+        
+        // Sort according to meal order, with any unknown times at the end
+        return timesArray.sort((a, b) => {
+            const indexA = mealOrder.indexOf(a);
+            const indexB = mealOrder.indexOf(b);
+            
+            // If both are in mealOrder, sort by their order
+            if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB;
+            }
+            // If only a is in mealOrder, it comes first
+            if (indexA !== -1) return -1;
+            // If only b is in mealOrder, it comes first
+            if (indexB !== -1) return 1;
+            // If neither is in mealOrder, sort alphabetically
+            return a.localeCompare(b);
+        });
     }, [todaysItems]);
 
     // Update Fuse.js implementation to use today's items
@@ -160,11 +191,16 @@ const NutrientPlanner: React.FC = () => {
             itemsToFilter = itemsToFilter.filter(item => item.Location === selectedLocation);
         }
 
-        if (!searchTerm.trim()) {
-            return itemsToFilter; // Return location-filtered items if no search term
+        // Apply time of day filter if a time of day is selected
+        if (selectedTimeOfDay) {
+            itemsToFilter = itemsToFilter.filter(item => item.TimeOfDay === selectedTimeOfDay);
         }
 
-        // Re-initialize Fuse with the potentially location-filtered items
+        if (!searchTerm.trim()) {
+            return itemsToFilter; // Return location and time-filtered items if no search term
+        }
+
+        // Re-initialize Fuse with the potentially filtered items
         const currentFuse = new Fuse(itemsToFilter, {
             keys: ['Name'],
             threshold: 0.3,
@@ -183,11 +219,11 @@ const NutrientPlanner: React.FC = () => {
             }
         }
 
-        // Use Fuse for fuzzy search on the (potentially location-filtered) items
+        // Use Fuse for fuzzy search on the (potentially filtered) items
         return currentFuse.search(searchTerm)
             .sort((a, b) => (a.score || 1) - (b.score || 1))
             .map(result => result.item);
-    }, [searchTerm, todaysItems, selectedLocation, fuse]); // Updated dependency to todaysItems
+    }, [searchTerm, todaysItems, selectedLocation, selectedTimeOfDay, fuse]); // Updated dependency to include selectedTimeOfDay
 
     const sortedItems = useMemo(() => {
         return [...filteredItems].sort((a, b) => {
@@ -252,8 +288,8 @@ const NutrientPlanner: React.FC = () => {
     }
 
     return (
-        <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col max-w-[100vw] overflow-hidden">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl mb-4 flex-shrink-0">
+        <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col max-w-[100vw] overflow-hidden bg-background">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl mb-4 flex-shrink-0 text-foreground font-bold">
                 Nutrient Planner
             </h1>
 
@@ -274,9 +310,9 @@ const NutrientPlanner: React.FC = () => {
                 </Tabs>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-hidden">
                 {/* Left Column: Food Items List (visible on medium+ or when 'food-items' tab is active) */}
-                <div className={`flex-1 flex-col ${activeTab === 'food-items' ? 'flex' : 'hidden'} md:flex overflow-y-auto`}>
+                <div className={`flex-1 flex-col ${activeTab === 'food-items' ? 'flex' : 'hidden'} md:flex overflow-y-auto bg-card rounded-lg border-2 border-border p-4 shadow-md`}>
                     <FoodItemsList
                         sortedItems={sortedItems}
                         selectedItems={selectedItems}
@@ -292,11 +328,14 @@ const NutrientPlanner: React.FC = () => {
                         availableLocations={availableLocations}
                         selectedLocation={selectedLocation}
                         setSelectedLocation={setSelectedLocationCallback}
+                        availableTimesOfDay={availableTimesOfDay}
+                        selectedTimeOfDay={selectedTimeOfDay}
+                        setSelectedTimeOfDay={setSelectedTimeOfDayCallback}
                     />
                 </div>
 
                 {/* Selected Items Section */}
-                <div className={`flex flex-col h-[calc(100vh-180px)] pb-12 md:h-full overflow-hidden ${activeTab === "my-plan" ? "block" : "hidden md:flex"}`}>
+                <div className={`flex flex-col h-[calc(100vh-180px)] pb-12 md:h-full overflow-hidden bg-card rounded-lg border-2 border-border p-4 shadow-md ${activeTab === "my-plan" ? "block" : "hidden md:flex"}`}>
                     <SelectedItemsList
                         selectedItems={selectedItems}
                         totalCalories={totalCalories}

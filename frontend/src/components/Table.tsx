@@ -34,7 +34,7 @@ export const Table: React.FC<TableProps> = ({
       <div className="w-full overflow-x-auto">
         <table
           {...props}
-          className={`w-full text-sm border-collapse ${bordered ? 'border border-zinc-200 dark:border-zinc-700' : ''
+          className={`w-full text-sm border-collapse ${bordered ? 'border border-border' : ''
             } ${className}`}
         >
           {children}
@@ -51,7 +51,7 @@ export const TableHead: React.FC<TableBaseProps> = ({
 }) => (
   <thead
     {...props}
-    className={`bg-zinc-50 dark:bg-zinc-800 ${className}`}
+    className={className}
   >
     {children}
   </thead>
@@ -66,7 +66,7 @@ export const TableBody: React.FC<TableBaseProps> = ({
   return (
     <tbody
       {...props}
-      className={`${zebra ? '[&>tr:nth-child(odd)]:bg-zinc-50 dark:[&>tr:nth-child(odd)]:bg-zinc-800/50' : ''
+      className={`${zebra ? '[&>tr:nth-child(odd)]:bg-muted/30' : ''
         } ${className}`}
     >
       {children}
@@ -85,7 +85,7 @@ export const TableRow: React.FC<TableBaseProps & {
     <tr
       {...props}
       className={`
-      ${isClickable ? 'cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700/50' : ''}
+      ${isClickable ? 'cursor-pointer hover:bg-muted/50' : ''}
       ${className}
     `}
     >
@@ -103,9 +103,9 @@ export const TableHeader: React.FC<TableBaseProps> = ({
     <th
       {...props}
       className={`
-        text-left font-semibold text-zinc-700 dark:text-zinc-300
+        text-left font-semibold
         ${compact ? 'px-3 py-2' : 'px-4 py-3'}
-        ${bordered ? 'border border-zinc-200 dark:border-zinc-700' : 'border-b border-zinc-200 dark:border-zinc-700'}
+        ${bordered ? 'border border-border' : 'border-b border-border'}
         ${className}
       `}
     >
@@ -124,9 +124,9 @@ export const TableCell: React.FC<TableBaseProps> = ({
     <td
       {...props}
       className={`
-        text-zinc-600 dark:text-zinc-400
+        text-card-foreground
         ${compact ? 'px-3 py-2' : 'px-4 py-3'}
-        ${bordered ? 'border border-zinc-200 dark:border-zinc-700' : ''}
+        ${bordered ? 'border border-border' : ''}
         ${className}
       `}
     >

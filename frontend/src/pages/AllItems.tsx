@@ -21,6 +21,7 @@ import React, { useState, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import clsx from 'clsx';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthProvider';
 import AuthPopup from '../components/AuthPopup';
 import { Item } from '../types/ItemTypes';
@@ -152,50 +153,84 @@ const AllItems: React.FC = () => {
       <h1 className="text-2xl font-bold mb-4">Select Your Favorite Items</h1>
 
       {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage > 1) setCurrentPage(currentPage - 1);
-                }}
-                className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
+        <div className="mb-4">
+          {/* Mobile Pagination */}
+          <div className="flex sm:hidden items-center justify-between">
+            <button
+              onClick={() => {
+                if (currentPage > 1) setCurrentPage(currentPage - 1);
+              }}
+              disabled={currentPage <= 1}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Prev
+            </button>
+            
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Page {currentPage} of {totalPages}
+            </span>
+            
+            <button
+              onClick={() => {
+                if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+              }}
+              disabled={currentPage >= totalPages}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
 
-            {getPageNumbers().map((pageNum, idx) => (
-              <PaginationItem key={idx}>
-                {pageNum === '...' ? (
-                  <PaginationEllipsis />
-                ) : (
-                  <PaginationLink
+          {/* Desktop Pagination */}
+          <div className="hidden sm:block">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      setCurrentPage(Number(pageNum));
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
                     }}
-                    isActive={currentPage === pageNum}
-                  >
-                    {pageNum}
-                  </PaginationLink>
-                )}
-              </PaginationItem>
-            ))}
+                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
 
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                }}
-                className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+                {getPageNumbers().map((pageNum, idx) => (
+                  <PaginationItem key={idx}>
+                    {pageNum === '...' ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(Number(pageNum));
+                        }}
+                        isActive={currentPage === pageNum}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </div>
       )}
 
       <Input
@@ -212,10 +247,10 @@ const AllItems: React.FC = () => {
             <button
               onClick={() => handleItemClick(item)}
               className={clsx(
-                'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none ',
+                'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2',
                 (userPreferences && userPreferences.some((fav) => fav.Name === item.Name))
-                  ? "bg-yellow-100 dark:bg-yellow-700 text-black dark:text-white border-yellow-300 dark:border-yellow-600 border"
-                  : "bg-gray-300 dark:bg-[#1a1d24] text-black dark:text-white border-gray-400 dark:border-gray-600"
+                  ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm"
+                  : "bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
               )}
             >
               {item.Name} {userPreferences && userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
@@ -225,50 +260,84 @@ const AllItems: React.FC = () => {
       </ul>
 
       {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage > 1) setCurrentPage(currentPage - 1);
-                }}
-                className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
+        <div className="mt-6">
+          {/* Mobile Pagination */}
+          <div className="flex sm:hidden items-center justify-between">
+            <button
+              onClick={() => {
+                if (currentPage > 1) setCurrentPage(currentPage - 1);
+              }}
+              disabled={currentPage <= 1}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Prev
+            </button>
+            
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Page {currentPage} of {totalPages}
+            </span>
+            
+            <button
+              onClick={() => {
+                if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+              }}
+              disabled={currentPage >= totalPages}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
 
-            {getPageNumbers().map((pageNum, idx) => (
-              <PaginationItem key={idx}>
-                {pageNum === '...' ? (
-                  <PaginationEllipsis />
-                ) : (
-                  <PaginationLink
+          {/* Desktop Pagination */}
+          <div className="hidden sm:block">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      setCurrentPage(Number(pageNum));
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
                     }}
-                    isActive={currentPage === pageNum}
-                  >
-                    {pageNum}
-                  </PaginationLink>
-                )}
-              </PaginationItem>
-            ))}
+                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
 
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                }}
-                className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+                {getPageNumbers().map((pageNum, idx) => (
+                  <PaginationItem key={idx}>
+                    {pageNum === '...' ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(Number(pageNum));
+                        }}
+                        isActive={currentPage === pageNum}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </div>
       )}
 
       {showPopup && (

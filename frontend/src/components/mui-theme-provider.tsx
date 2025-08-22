@@ -7,21 +7,27 @@ export function MyMUIThemeProvider({ children }: { children: React.ReactNode }) 
     palette: {
       mode: theme as 'light' | 'dark',
       background: {
-        default: theme === 'dark' ? '#030711' : '#ffffff',
-        paper: theme === 'dark' ? '#030711' : '#ffffff',
+        default: theme === 'dark' ? 'hsl(249, 22%, 12%)' : 'hsl(32, 57%, 95%)',
+        paper: theme === 'dark' ? 'hsl(249, 15%, 15%)' : 'hsl(35, 100%, 98%)',
       },
       text: {
-        primary: theme === 'dark' ? '#ffffff' : '#000000',
+        primary: theme === 'dark' ? 'hsl(245, 50%, 91%)' : 'hsl(248, 19%, 40%)',
       },
     },
     components: {
       MuiAccordion: {
         styleOverrides: {
           root: {
-            backgroundColor: theme === 'dark' ? '#030711' : '#ffffff',
-            color: theme === 'dark' ? '#ffffff' : '#000000',
+            backgroundColor: theme === 'dark' ? 'hsl(249, 22%, 12%)' : 'hsl(32, 57%, 95%)',
+            color: theme === 'dark' ? 'hsl(245, 50%, 91%)' : 'hsl(248, 19%, 40%)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            marginBottom: '12px',
             '&.Mui-expanded': {
-              margin: 0,
+              margin: '0 0 12px 0',
+            },
+            '&:before': {
+              display: 'none',
             },
           },
         },
@@ -35,14 +41,19 @@ export function MyMUIThemeProvider({ children }: { children: React.ReactNode }) 
       MuiAccordionSummary: {
         styleOverrides: {
           root: {
-            backgroundColor: theme === 'dark' ? '#010307' : '#f8f9fa',
+            backgroundColor: theme === 'dark' ? 'hsl(248, 25%, 18%)' : 'hsl(30, 32%, 92%)',
+            borderRadius: '12px 12px 0 0',
+            '&.Mui-expanded': {
+              borderRadius: '12px 12px 0 0',
+            },
           },
         },
       },
       MuiAccordionDetails: {
         styleOverrides: {
           root: {
-            backgroundColor: theme === 'dark' ? '#010307' : '#f8f9fa',
+            backgroundColor: theme === 'dark' ? 'hsl(248, 25%, 18%)' : 'hsl(30, 32%, 92%)',
+            borderRadius: '0 0 12px 12px',
           },
         },
       },

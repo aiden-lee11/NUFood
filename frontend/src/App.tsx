@@ -6,8 +6,6 @@ import Layout from './components/layout';
 import { MyMUIThemeProvider } from './components/mui-theme-provider';
 import { ThemeProvider } from './components/theme-provider';
 import { BannerProvider } from './context/BannerContext';
-import Login from './firebase/login';
-import SignOutButton from './firebase/signout';
 import AllItems from './pages/AllItems';
 import NutrientPlanner from './pages/NutrientPlanner';
 import DailyItems from './pages/DailyItems';
@@ -28,8 +26,6 @@ function App() {
               <Routes>
                 <Route path="/" element={<DailyItems />} />
                 <Route path="/hours" element={<OperationHours />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signout" element={<SignOutButton />} />
                 <Route path="/preferences" element={<Preferences />} />
                 <Route path="/all" element={<AllItems />} />
                 <Route path="/planner" element={<NutrientPlanner />} />

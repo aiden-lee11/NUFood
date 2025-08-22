@@ -11,24 +11,25 @@ const Banner: React.FC = () => {
     setIsVisible(false);
   };
 
-  const noShow = ["/login", "/signout", "/preferences", "/hours", "/planner"];
+  const noShow = ["/preferences", "/hours", "/planner"];
   if (!isVisible || noShow.includes(location.pathname)) {
     return null;
   }
 
   return (
-    <div ref={containerRef} className="w-full mx-auto text-center h-[30px] bg-background">
-      <span className="text-black font-bold dark:bg-blue dark:text-white text-md">
-        Click an item to favorite it!
-      </span>
-      <button
-        onClick={handleClose}
-        className="text-black dark:text-white font-bold dark:bg-[#030711] text-sm focus:outline-none mx-2"
-        aria-label="Close banner"
-        style={{ backgroundColor: 'transparent' }}
-      >
-        ✕
-      </button>
+    <div ref={containerRef} className="w-full mx-auto bg-secondary/30 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 md:py-2">
+        <span className="text-foreground font-medium text-sm md:text-base flex-1 text-center">
+          Click an item to favorite it!
+        </span>
+        <button
+          onClick={handleClose}
+          className="text-muted-foreground hover:text-foreground transition-colors duration-200 text-lg md:text-base font-bold focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 rounded p-1 ml-2 min-w-[32px] min-h-[32px] flex items-center justify-center"
+          aria-label="Close banner"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 };
