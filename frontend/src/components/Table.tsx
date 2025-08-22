@@ -51,7 +51,7 @@ export const TableHead: React.FC<TableBaseProps> = ({
 }) => (
   <thead
     {...props}
-    className={`bg-zinc-50 dark:bg-zinc-800 ${className}`}
+    className={className}
   >
     {children}
   </thead>
@@ -103,7 +103,7 @@ export const TableHeader: React.FC<TableBaseProps> = ({
     <th
       {...props}
       className={`
-        text-left font-semibold text-foreground
+        text-left font-semibold
         ${compact ? 'px-3 py-2' : 'px-4 py-3'}
         ${bordered ? 'border border-border' : 'border-b border-border'}
         ${className}

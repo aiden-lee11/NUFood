@@ -26,23 +26,23 @@ const Preferences: React.FC = () => {
   };
 
   return (
-    <div className="p-6 min-h-screen bg-transparent">
-      <h1 className="text-2xl font-bold mb-4 text-foreground">Your Favorite Items</h1>
+    <div className="p-6 min-h-screen text-black bg-background dark:text-white transition-colors duration-200">
+      <h1 className="text-2xl font-bold mb-4">Your Favorite Items</h1>
 
       {(userPreferences && userPreferences.length > 0) ? (
         <ul className="space-y-2">
           {userPreferences.map((item, index) => (
-            <li
-              key={index}
-              className="flex justify-between items-center p-3 rounded-md bg-muted text-muted-foreground transition-transform duration-200 transform hover:translate-y-[-2px] hover:shadow-md"
-            >
-              <span>{item.Name}</span>
+            <li key={index}>
               <button
                 onClick={() => handleItemClick(item)}
-                className="text-destructive hover:text-destructive/80 transition-colors duration-200"
-                aria-label="Remove from favorites"
+                className="w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2 bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
               >
-                −
+                <span className="flex justify-between items-center">
+                  <span>{item.Name} ★</span>
+                  <span className="text-destructive hover:text-destructive/80 transition-colors duration-200 text-lg font-bold">
+                    −
+                  </span>
+                </span>
               </button>
             </li>
           ))}

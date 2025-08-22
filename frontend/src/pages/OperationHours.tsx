@@ -67,18 +67,18 @@ const OperationHours: React.FC = () => {
     <div>
       {Object.entries(locationGrouping).map(([groupName, shortNames]) => (
         <div key={groupName} className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-foreground px-2 py-1 rounded-lg bg-secondary/30">
+          <h2 className="text-2xl font-bold mb-4 text-foreground">
             {groupName}
           </h2>
 
           {/* Table for wide screens */}
           <div className="hidden sm:block overflow-x-auto">
             <Table bordered className="min-w-full table-auto bg-card shadow-lg rounded-lg overflow-hidden">
-              <TableHead className="bg-secondary">
+              <TableHead className="bg-primary/70">
                 <TableRow>
                   <TableHeader className="p-3 font-semibold text-secondary-foreground">Location</TableHeader>
                   {weekDays.map((day) => (
-                    <TableHeader key={day.Date} className="p-3 font-semibold text-secondary-foreground text-center">
+                    <TableHeader key={day.Date} className="p-3 font-semibold text-foreground text-center">
                       {getWeekday(parseInt(day.Day, 10))}
                       <br />
                       <span className="text-sm opacity-75">({day.Date.slice(5)})</span>
@@ -95,9 +95,7 @@ const OperationHours: React.FC = () => {
                         {shortName}
                       </TableCell>
                       {loc?.Week.map((day) => (
-                        <TableCell key={day.Date} className={`p-3 text-center text-sm ${
-                          day.Status === "closed" ? "text-muted-foreground bg-muted/20" : "text-card-foreground"
-                        }`}>
+                        <TableCell key={day.Date} className="p-3 text-center text-sm text-card-foreground">
                           {day.Status === "closed"
                             ? <span className="text-destructive font-medium">Closed</span>
                             : <span className="text-primary font-medium">{renderHours(day.Hours)}</span>}
@@ -105,7 +103,7 @@ const OperationHours: React.FC = () => {
                       )) ||
                         // if nothing matched, render "Closed" for each day
                         weekDays.map((day) => (
-                          <TableCell key={day.Date} className="p-3 text-center text-sm text-muted-foreground bg-muted/20">
+                          <TableCell key={day.Date} className="p-3 text-center text-sm text-card-foreground">
                             <span className="text-destructive font-medium">Closed</span>
                           </TableCell>
                         ))}

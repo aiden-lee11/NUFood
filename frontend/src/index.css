@@ -16,8 +16,8 @@
     --secondary-foreground: 248 25% 35%; /* Text: #4d4668 */
     --muted: 30 40% 88%; /* Overlay: More vibrant #ede0d3 */
     --muted-foreground: 248 18% 48%; /* Subtle: More vibrant #726a85 */
-    --accent: 268 35% 55%; /* Iris for nav: #8b7ab8 */
-    --accent-foreground: 32 57% 95%; /* Base: #faf4ed */
+    --accent: 268 25% 65%; /* Softer iris for nav: #a394c7 */
+    --accent-foreground: 248 25% 25%; /* Much darker text: #3e3a4f */
     --destructive: 343 45% 52%; /* Love: More vibrant #c85577 */
     --destructive-foreground: 32 57% 95%; /* Base: #faf4ed */
     --border: 30 40% 88%; /* Overlay: #ede0d3 */
@@ -47,8 +47,8 @@
     --secondary-foreground: 245 60% 92%; /* Text: #e6e3f7 */
     --muted: 248 30% 22%; /* Overlay: More vibrant #2d2a42 */
     --muted-foreground: 248 20% 65%; /* Subtle: More vibrant #9f9bb8 */
-    --accent: 267 65% 80%; /* Iris for nav: #ceadee */
-    --accent-foreground: 249 22% 12%; /* Base: #191724 */
+    --accent: 267 45% 70%; /* Muted iris for nav: #b89ad6 */
+    --accent-foreground: 245 60% 92%; /* Light text: #e6e3f7 */
     --destructive: 343 80% 70%; /* Love: More vibrant #f16d96 */
     --destructive-foreground: 249 22% 12%; /* Base: #191724 */
     --border: 248 30% 22%; /* Overlay: #2d2a42 */

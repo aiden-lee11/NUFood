@@ -112,7 +112,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <VisuallyHidden.Root>x</VisuallyHidden.Root>
               </SheetTitle>
               <SheetContent side="left" className="w-56 p-0">
-                <nav className="flex flex-col gap-1 px-1 py-2">
+                <nav className="flex flex-col gap-1 px-1 py-2 pt-12">
                   {navItems.map((item, index) => (
                     <Link
                       key={index}
