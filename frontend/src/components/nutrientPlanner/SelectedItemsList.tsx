@@ -129,15 +129,19 @@ const SelectedItemsList: React.FC<SelectedItemsListProps> = ({
                         {selectedItems.map((item, index) => (
                             <Card
                                 key={`${item.Name}-${item.Location}-${item.TimeOfDay}-${index}`}
-                                className="p-4 mb-4"
+                                className="p-4 mb-4 border-2 border-border bg-card hover:shadow-lg transition-all duration-200 hover:border-primary/50"
                             >
                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                                     <div className="flex-1">
-                                        <h4 className="font-medium">{item.Name}</h4>
+                                        <h4 className="font-semibold text-primary">{item.Name}</h4>
                                         <p className="text-xs text-muted-foreground mb-2">
                                             {item.Location} ({item.TimeOfDay})
                                         </p>
                                         <div className="flex flex-col space-y-2 text-xs">
+                                            <div className="flex justify-between">
+                                                <span className="font-medium">Portion Size:</span>
+                                                <span>{item.portion || 'N/A'}</span>
+                                            </div>
                                             <div className="flex justify-between">
                                                 <span className="font-medium">Calories:</span>
                                                 <span>{(parseFloat(item.calories || '0') * item.quantity).toFixed(1)}</span>

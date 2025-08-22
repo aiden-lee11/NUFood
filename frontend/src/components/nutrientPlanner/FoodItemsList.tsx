@@ -48,6 +48,9 @@ interface FoodItemsListProps {
     availableLocations: string[];
     selectedLocation: string | null;
     setSelectedLocation: (location: string | null) => void;
+    availableTimesOfDay: string[];
+    selectedTimeOfDay: string | null;
+    setSelectedTimeOfDay: (timeOfDay: string | null) => void;
 }
 
 const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
@@ -65,6 +68,9 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
     availableLocations,
     selectedLocation,
     setSelectedLocation,
+    availableTimesOfDay,
+    selectedTimeOfDay,
+    setSelectedTimeOfDay,
 }) => {
     // Local state for the search input to avoid immediate updates
     const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
@@ -90,6 +96,10 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
     const handleLocationChange = useCallback((value: string) => {
         setSelectedLocation(value === "all" ? null : value);
     }, [setSelectedLocation]);
+
+    const handleTimeOfDayChange = useCallback((value: string) => {
+        setSelectedTimeOfDay(value === "all" ? null : value);
+    }, [setSelectedTimeOfDay]);
 
     const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalSearchTerm(e.target.value);
@@ -161,21 +171,39 @@ const FoodItemsList: React.FC<FoodItemsListProps> = React.memo(({
                                 </Select>
                             </div>
                         </div>
-                        <div className="space-y-2 pt-4">
-                            <Label htmlFor="location-filter">Filter by Location</Label>
-                            <Select value={selectedLocation ?? "all"} onValueChange={handleLocationChange}>
-                                <SelectTrigger id="location-filter">
-                                    <SelectValue placeholder="Select location" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Locations</SelectItem>
-                                    {availableLocations.map(location => (
-                                        <SelectItem key={location} value={location}>
-                                            {location}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="location-filter">Filter by Location</Label>
+                                <Select value={selectedLocation ?? "all"} onValueChange={handleLocationChange}>
+                                    <SelectTrigger id="location-filter">
+                                        <SelectValue placeholder="Select location" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Locations</SelectItem>
+                                        {availableLocations.map(location => (
+                                            <SelectItem key={location} value={location}>
+                                                {location}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="time-filter">Filter by Time of Day</Label>
+                                <Select value={selectedTimeOfDay ?? "all"} onValueChange={handleTimeOfDayChange}>
+                                    <SelectTrigger id="time-filter">
+                                        <SelectValue placeholder="Select time of day" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Times</SelectItem>
+                                        {availableTimesOfDay.map(timeOfDay => (
+                                            <SelectItem key={timeOfDay} value={timeOfDay}>
+                                                {timeOfDay}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </CollapsibleContent>
                 </Collapsible>

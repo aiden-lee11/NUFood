@@ -13,7 +13,6 @@ const DataLoader = ({ children }: { children: React.ReactNode }) => {
       
       // Detect sign-out: previous token existed but current token is null
       if (prevToken && !token) {
-        console.log("signing out")
         clearUserData();
       }
       // Normal auth state handling

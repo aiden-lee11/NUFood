@@ -206,7 +206,6 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   clearUserData: async () => {
-    console.log("clearing user data in store")
     // First, clear user-specific data and reset flags
     set({
       UserDataResponse: {
@@ -221,7 +220,6 @@ export const useDataStore = create<DataState>((set, get) => ({
     });
 
     // Then immediately fetch general data to update the UI
-    console.log("fetching general data")
     await get().fetchGeneralData();
   },
 }));

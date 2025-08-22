@@ -212,10 +212,10 @@ const AllItems: React.FC = () => {
             <button
               onClick={() => handleItemClick(item)}
               className={clsx(
-                'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none ',
+                'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2',
                 (userPreferences && userPreferences.some((fav) => fav.Name === item.Name))
-                  ? "bg-yellow-100 dark:bg-yellow-700 text-black dark:text-white border-yellow-300 dark:border-yellow-600 border"
-                  : "bg-gray-300 dark:bg-[#1a1d24] text-black dark:text-white border-gray-400 dark:border-gray-600"
+                  ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm"
+                  : "bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
               )}
             >
               {item.Name} {userPreferences && userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}

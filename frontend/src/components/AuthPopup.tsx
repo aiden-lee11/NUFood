@@ -55,22 +55,22 @@ const AuthPopup: React.FC<AuthPopupProps> = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-[#1a1d24] text-white border-gray-700">
+      <DialogContent className="sm:max-w-[425px] bg-card text-card-foreground border-border">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Not Signed In</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-muted-foreground">
             You need to log in to add this item to your favorites.
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-center space-x-4 mt-6">
-          <Button variant="outline" onClick={onClose} className="bg-transparent border-gray-600 text-white hover:bg-gray-700 hover:text-white transition-colors duration-200">
+          <Button variant="outline" onClick={onClose} className="bg-transparent border-border text-foreground hover:bg-muted hover:text-foreground transition-colors duration-200">
             <X className="w-4 h-4 mr-2" />
             Dismiss
           </Button>
           <Button 
             onClick={handleSignIn} 
             disabled={authLoading}
-            className="bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200"
           >
             {authLoading ? (
               <span className="flex items-center">

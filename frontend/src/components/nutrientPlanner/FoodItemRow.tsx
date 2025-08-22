@@ -49,8 +49,10 @@ const FoodItemRow: React.FC<RowProps> = React.memo(({ index, style, data }) => {
         <div
             style={style}
             className={cn(
-                "cursor-pointer border-b hover:bg-secondary/40 transition-colors p-4 mb-2",
-                isSelected && "bg-secondary/60"
+                "cursor-pointer border-2 rounded-lg hover:bg-item-hover hover:shadow-md transition-all duration-200 p-4 mb-3",
+                isSelected 
+                    ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm" 
+                    : "bg-card text-card-foreground border-border hover:border-muted-foreground"
             )}
             onClick={handleClick}
         >
@@ -59,7 +61,7 @@ const FoodItemRow: React.FC<RowProps> = React.memo(({ index, style, data }) => {
                     <div className={cn("font-medium", isSelected && "font-semibold")}>
                         {item.Name}
                     </div>
-                    {isSelected && <Badge variant="secondary" className="ml-1">Added</Badge>}
+                    {isSelected && <Badge className="ml-1 bg-primary text-primary-foreground">Added</Badge>}
                 </div>
 
                 <span className="text-xs text-muted-foreground mb-3">

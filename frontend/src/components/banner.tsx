@@ -18,12 +18,12 @@ const Banner: React.FC = () => {
 
   return (
     <div ref={containerRef} className="w-full mx-auto text-center h-[30px] bg-background">
-      <span className="text-black font-bold dark:bg-blue dark:text-white text-md">
+      <span className="text-foreground font-bold text-md">
         Click an item to favorite it!
       </span>
       <button
         onClick={handleClose}
-        className="text-black dark:text-white font-bold dark:bg-[#030711] text-sm focus:outline-none mx-2"
+        className="text-foreground font-bold bg-background text-sm focus:outline-none mx-2"
         aria-label="Close banner"
         style={{ backgroundColor: 'transparent' }}
       >
