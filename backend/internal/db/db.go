@@ -345,19 +345,26 @@ func GetAllWeeklyItems() (map[string][]models.DailyItem, error) {
 		return nil, NoItemsInDB
 	}
 
-	items := make(map[string][]models.DailyItem, 7)
-	today := time.Now()
+	// items := make(map[string][]models.DailyItem, 7)
+	// today := time.Now()
 
-	for i := -3; i <= 3; i++ {
-		dateKey := today.AddDate(0, 0, i).Format("2006-01-02")
-		items[dateKey] = make([]models.DailyItem, 0)
+	// for i := -3; i <= 3; i++ {
+	// 	dateKey := today.AddDate(0, 0, i).Format("2006-01-02")
+	// 	items[dateKey] = make([]models.DailyItem, 0)
+	// }
+
+	// for _, item := range weeklyItems {
+	// 	dateKey := today.AddDate(0, 0, item.DayIndex).Format("2006-01-02")
+	// 	items[dateKey] = append(items[dateKey], item.DailyItem)
+	// }
+
+	weeklyItemsMap := make(map[string][]models.DailyItem)
+	for _, wItem := range weeklyItems {
+		dateKey := time.Now().AddDate(0, 0, wItem.DayIndex).Format("2006-01-02")
+		weeklyItemsMap[dateKey] = append(weeklyItemsMap[dateKey], wItem.DailyItem)
 	}
 
-	for _, item := range weeklyItems {
-		dateKey := today.AddDate(0, 0, item.DayIndex).Format("2006-01-02")
-		items[dateKey] = append(items[dateKey], item.DailyItem)
-	}
-	return items, nil
+	return weeklyItemsMap, nil
 }
 
 // GetAllDataItems retrieves all records from the all data table.
@@ -486,7 +493,6 @@ func GetAvailableFavoritesBatch(userID string) ([]models.DailyItem, error) {
 	result := DB.Table("gorm_weekly_items").
 		Where("name IN ? AND day_index = 0", search).
 		Find(&matchingItems)
-	
 
 	if result.Error != nil {
 		fmt.Println("Error finding favorite items batch search:", result.Error)

@@ -4,6 +4,7 @@ import (
 	"backend/internal/models"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -32,50 +33,26 @@ var DefaultConfig = ScrapeConfig{
 		{
 			Name: "Allison",
 			Hash: "5b33ae291178e909d807593d",
-			Services: []models.Service{
-				{TimeOfDay: "Breakfast", Hash: "677822c2c625af074ef5cd6b"},
-				{TimeOfDay: "Lunch", Hash: "677822c2c625af074ef5cd81"},
-				{TimeOfDay: "Dinner", Hash: "677822c2c625af074ef5cd97"},
-			},
 		},
 		{
 			Name: "Sargent",
 			Hash: "5b33ae291178e909d807593e",
-			Services: []models.Service{
-				{TimeOfDay: "Breakfast", Hash: "677951c9351d53052c3afdd9"},
-				{TimeOfDay: "Lunch", Hash: "677951c9351d53052c3afdf7"},
-				{TimeOfDay: "Dinner", Hash: "677951c9351d53052c3afde8"},
-			},
 		},
 		{
 			Name: "Plex East",
 			Hash: "5bae7de3f3eeb60c7d3854ba",
-			Services: []models.Service{
-				{TimeOfDay: "Breakfast", Hash: "67788534351d53055628527f"},
-				{TimeOfDay: "Lunch", Hash: "67788534351d53055628528f"},
-				{TimeOfDay: "Dinner", Hash: "67788534351d53055628529a"},
-			},
 		},
 		{
 			Name: "Plex West",
 			Hash: "5bae7ee9f3eeb60cb4f8f3af",
-			Services: []models.Service{
-				{TimeOfDay: "Lunch", Hash: "67788534351d5305562852a6"},
-				{TimeOfDay: "Dinner", Hash: "67788534351d5305562852a0"},
-			},
 		},
 		{
 			Name: "Elder",
 			Hash: "5d113c924198d409c34fdf5c",
-			Services: []models.Service{
-				{TimeOfDay: "Breakfast", Hash: "677785c8351d53054024699c"},
-				{TimeOfDay: "Lunch", Hash: "677785c8351d5305402469b0"},
-				{TimeOfDay: "Dinner", Hash: "677785c8351d530540246995"},
-			},
 		},
 	},
 	SiteID:  "5acea5d8f3eeb60b08c5a50d",
-	BaseURL: "https://api.dineoncampus.com/v1",
+	BaseURL: "https://apiv4.dineoncampus.com",
 }
 
 // ScrapeFood scrapes daily menu items for a given date.
@@ -95,11 +72,19 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]models.DailyItem, []model
 	allClosed := true
 
 	for _, location := range d.Config.Locations {
+		fmt.Printf("Scraping location %s\n", location.Name)
+		d.setLocationServiceIds(&location, date)
+
+		if len(location.Services) == 0 {
+			fmt.Printf("Did not find any services for location %s, skipping scrape\n", location.Name)
+			continue
+		}
+
 		for _, service := range location.Services {
 			c := colly.NewCollector()
 			c.WithTransport(d.Client.Transport)
 
-			url := fmt.Sprintf("%s/location/%s/periods/%s?platform=0&date=%s", d.Config.BaseURL, location.Hash, service.Hash, date)
+			url := fmt.Sprintf("%s/locations/%s/menu?date=%s&period=%s", d.Config.BaseURL, location.Hash, date, service.ID)
 
 			err := RetryRequest(url, MAX_RETRIES, func() error {
 				dItems, aItems, closed, err := visitDiningHall(c, url, location.Name, service.TimeOfDay)
@@ -128,6 +113,33 @@ func (d *DiningHallScraper) ScrapeFood(date string) ([]models.DailyItem, []model
 	return dailyItems, allDataItems, allClosed, nil
 }
 
+func (d *DiningHallScraper) setLocationServiceIds(location *models.Location, date string) {
+	// ex https://apiv4.dineoncampus.com/locations/5b33ae291178e909d807593e/periods/?date=2025-08-27
+	hashesURL := fmt.Sprintf("%s/locations/%s/periods/?date=%s", d.Config.BaseURL, location.Hash, date)
+	resp, err := http.Get(hashesURL)
+	if err != nil {
+		fmt.Println("error getting the hashes for ", location.Hash)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("error reading body for ", location.Hash)
+		return
+	}
+
+	var locationServicesResp models.LocationServicesResponse
+	err = json.Unmarshal(body, &locationServicesResp)
+	if err != nil {
+		fmt.Println("error unmarshalling body for ", location.Hash)
+		return
+	}
+
+	location.Services = locationServicesResp.Services
+}
+
 // ScrapeLocationOperatingTimes scrapes operating times for dining hall locations on a given date.
 //
 // Parameters:
@@ -140,7 +152,9 @@ func (d *DiningHallScraper) ScrapeLocationOperatingTimes(date string) ([]models.
 	c := colly.NewCollector()
 	c.WithTransport(d.Client.Transport)
 
-	url := fmt.Sprintf("%s/locations/weekly_schedule/?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
+	// ex url:
+	// https://apiv4.dineoncampus.com/locations/weekly_schedule?site_id=5acea5d8f3eeb60b08c5a50d&date=2025-08-26
+	url := fmt.Sprintf("%s/locations/weekly_schedule?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
 
 	var locationOperatingTimesList []models.LocationOperatingTimes
 
@@ -233,21 +247,14 @@ func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([
 	c.OnResponse(func(r *colly.Response) {
 		locName := r.Ctx.Get("locationName")
 		var jsonResponse models.DiningHallResponse
+
 		err := json.Unmarshal(r.Body, &jsonResponse)
 		if err != nil {
 			log.Printf("Error unmarshalling JSON for %s: %v", locName, err)
 			return
 		}
 
-		if jsonResponse.Closed {
-			log.Printf("Location %s is closed", locName)
-			closed = true
-			return
-		}
-
-		menu := jsonResponse.Menu
-
-		parsedDailyItems, parsedAllDataItems, err := parseItems(menu, locName, timeOfDay)
+		parsedDailyItems, parsedAllDataItems, err := parseItems(jsonResponse, locName, timeOfDay)
 		if err != nil {
 			log.Printf("Error posting items for %s: %v", locName, err)
 			return
@@ -259,7 +266,6 @@ func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([
 
 	c.OnError(func(r *colly.Response, err error) {
 		log.Printf("Error for %s: %v", locationName, err)
-		return
 	})
 
 	err := c.Visit(url)
@@ -281,17 +287,19 @@ func visitDiningHall(c *colly.Collector, url, locationName, timeOfDay string) ([
 //   - []models.DailyItem: A list of parsed daily menu items.
 //   - []models.AllDataItem: A list of parsed all data items.
 //   - error: An error, if any occurred during parsing.
-func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, error) {
+func parseItems(jsonResponse models.DiningHallResponse, location, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, error) {
 	var dailyItems []models.DailyItem
 	var allDataItems []models.AllDataItem
+	period := jsonResponse.Period
+	date := jsonResponse.Date
 
 	// Ensure Periods is not nil
-	if menu.Periods.Categories == nil {
+	if period.Categories == nil {
 		log.Println("No categories found for this menu period")
 		return dailyItems, allDataItems, nil // Return empty slices, not an error
 	}
 
-	for _, category := range menu.Periods.Categories {
+	for _, category := range period.Categories {
 		// Ensure Items is not nil and check for ingredient categories
 		cleanedCategory := strings.ToLower(strings.TrimSpace(category.Name))
 		if category.Items == nil || contains(IngredientCategories, cleanedCategory) {
@@ -313,7 +321,7 @@ func parseItems(menu models.Menu, location, timeOfDay string) ([]models.DailyIte
 			dailyItem := models.DailyItem{
 				Name:        item.Name,
 				Description: item.Description,
-				Date:        menu.Date,
+				Date:        date,
 				Location:    location,
 				StationName: category.Name,
 				TimeOfDay:   timeOfDay,

@@ -8,29 +8,24 @@ type Location struct {
 	DailyItems []DailyItem
 }
 
+type LocationServicesResponse struct {
+	LocationId string    `json:"locationId"`
+	Date       string    `json:"date"`
+	Services   []Service `json:"periods"`
+}
+
 type Service struct {
-	TimeOfDay string
-	Hash      string
+	ID        string `json:"id"`
+	TimeOfDay string `json:"name"`
+	Slug      string `json:"slug"`
 }
 
 // API Data
 type DiningHallResponse struct {
-	Menu Menu `json:"menu"`
-	// Status string `json:"status"`
-	// request_time float `json:"request_time"`
-	// records int `json:"records"`
-	// allergen_filter boolean `json:"allergen_filter"`
-	Closed bool `json:"closed"`
-}
-
-type Menu struct {
 	// id int `json:"id"`
-	// date string `json:"date"`
-	// name string `json:"name"`
-	// from_date string `json:"from_date"`
-	// to_date string `json:"to_date"`
-	Periods Periods `json:"periods"`
-	Date    string  `json:"date"`
+	// LocationId string  `json:locationId`
+	Period Periods `json:"period"`
+	Date   string  `json:"date"`
 }
 
 type Periods struct {

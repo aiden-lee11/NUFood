@@ -5,6 +5,7 @@ import (
 	"backend/internal/auth"
 	"backend/internal/db"
 	"backend/internal/middleware"
+	"backend/internal/store"
 	"fmt"
 	"log"
 	"net/http"
@@ -40,6 +41,10 @@ func main() {
 	}
 
 	fmt.Println("Database initialized successfully")
+
+	store.InitStore()
+
+	fmt.Println("MemoryStore initialized")
 
 	// Create a new router
 	r := mux.NewRouter()
