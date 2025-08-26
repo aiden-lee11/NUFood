@@ -76,15 +76,15 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if err := db.UpdateWeeklyItems(dItems); err != nil {
-	// 	http.Error(w, "Error updating weekly items: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
+	if err := db.UpdateWeeklyItems(dItems); err != nil {
+		http.Error(w, "Error updating weekly items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	// if err := db.InsertAllDataItems(aItems); err != nil {
-	// 	http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
+	if err := db.InsertAllDataItems(aItems); err != nil {
+		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Populate the memory store after successful database insertion
 	// Convert dItems to the expected format for the store
