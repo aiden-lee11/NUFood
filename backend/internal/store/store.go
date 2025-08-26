@@ -72,6 +72,7 @@ func GetLocationOperatingTimes() []models.LocationOperatingTimes {
 	if store == nil {
 		return nil
 	}
+	fmt.Println("Getting location operation times", store.locationOperatingTimes)
 	return store.getLocationOperatingTimes()
 }
 
@@ -85,8 +86,6 @@ func GetWeeklyItems() map[string][]models.DailyItem {
 
 func Set(value any) {
 	if store != nil {
-		fmt.Printf("Setting value of type %T\n", value)
 		store.Set(value)
-		fmt.Printf("Store weeklyItems after set: %v\n", store.weeklyItems)
 	}
 }

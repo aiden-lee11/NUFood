@@ -152,7 +152,9 @@ func (d *DiningHallScraper) ScrapeLocationOperatingTimes(date string) ([]models.
 	c := colly.NewCollector()
 	c.WithTransport(d.Client.Transport)
 
-	url := fmt.Sprintf("%s/locations/weekly_schedule/?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
+	// ex url:
+	// https://apiv4.dineoncampus.com/locations/weekly_schedule?site_id=5acea5d8f3eeb60b08c5a50d&date=2025-08-26
+	url := fmt.Sprintf("%s/locations/weekly_schedule?site_id=%s&date=%s", d.Config.BaseURL, d.Config.SiteID, date)
 
 	var locationOperatingTimesList []models.LocationOperatingTimes
 

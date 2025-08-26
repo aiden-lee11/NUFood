@@ -230,7 +230,7 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 		Client: scraper.NewClient(),
 		Config: scraper.DefaultConfig,
 	}
-	formattedDate := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+	formattedDate := time.Now().UTC().Format("2006-01-02")
 
 	const MAX_RETRIES = 10
 	var locationOperatingTimes []models.LocationOperatingTimes

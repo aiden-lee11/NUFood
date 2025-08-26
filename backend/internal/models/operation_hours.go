@@ -4,7 +4,7 @@ type LocationOperationsResponse struct {
 	Status      string                  `json:"status"`
 	RequestTime float64                 `json:"request_time"`
 	Records     int                     `json:"records"`
-	Locations   []LocationOperatingInfo `json:"the_locations"`
+	Locations   []LocationOperatingInfo `json:"theLocations"`
 }
 
 type LocationOperatingInfo struct {
