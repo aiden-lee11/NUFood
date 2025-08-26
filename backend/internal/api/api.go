@@ -166,48 +166,33 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// New valid data so delete old data
-	// err := db.DeleteWeeklyItems()
+	err := db.DeleteWeeklyItems()
 
-	// if err != nil {
-	// 	fmt.Printf("Error deleting weekly items: %v\n", err)
-	// 	http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
+	if err != nil {
+		fmt.Printf("Error deleting weekly items: %v\n", err)
+		http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	fmt.Println("Successfully deleted old data")
 
-	// if err := db.InsertWeeklyItems(weeklyItems); err != nil {
-	// 	fmt.Printf("Error inserting weekly items: %v\n", err)
-	// 	http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// fmt.Printf("Successfully inserted %d weekly items to database\n", len(weeklyItems))
-
-	// if err := db.InsertAllDataItems(totalAllItems); err != nil {
-	// 	fmt.Printf("Error inserting all data items: %v\n", err)
-	// 	http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// fmt.Printf("Successfully inserted %d all data items to database\n", len(totalAllItems))
-
-	// Populate the memory store after successful database insertion
-	// Convert weeklyItems to the format expected by the store
-	fmt.Printf("Total weeklyItems to convert: %d\n", len(weeklyItems))
-	weeklyItemsMap := make(map[string][]models.DailyItem)
-	for _, wItem := range weeklyItems {
-		dateKey := time.Now().AddDate(0, 0, wItem.DayIndex).Format("2006-01-02")
-		weeklyItemsMap[dateKey] = append(weeklyItemsMap[dateKey], wItem.DailyItem)
-		fmt.Printf("Added item for date %s, total items for this date: %d\n", dateKey, len(weeklyItemsMap[dateKey]))
+	if err := db.InsertWeeklyItems(weeklyItems); err != nil {
+		fmt.Printf("Error inserting weekly items: %v\n", err)
+		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	fmt.Printf("Final weeklyItemsMap: %d dates with items\n", len(weeklyItemsMap))
-	for date, items := range weeklyItemsMap {
-		fmt.Printf("Date %s: %d items\n", date, len(items))
+	fmt.Printf("Successfully inserted %d weekly items to database\n", len(weeklyItems))
+
+	if err := db.InsertAllDataItems(totalAllItems); err != nil {
+		fmt.Printf("Error inserting all data items: %v\n", err)
+		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	store.Set(weeklyItemsMap)
+	fmt.Printf("Successfully inserted %d all data items to database\n", len(totalAllItems))
+
+	store.Set(db.CreateWeeklyItemsMap(weeklyItems))
 	store.Set(totalAllItems)
 
 	// Return success code
@@ -368,7 +353,9 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Check memory store first
 	allItems = store.GetAllDataItems()
 	if allItems == nil {
+		fmt.Println("All data items in store were nil, falling back to db")
 		allItems, err = db.GetAllDataItems()
+		store.Set(allItems)
 		if err != nil {
 			http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -376,9 +363,11 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	weeklyItems = store.GetWeeklyItems()
-	if weeklyItems == nil {
+	if len(weeklyItems) == 0 {
+		fmt.Println("Weekly items in store were nil, falling back to db")
 		// Fetch from database and convert to the format expected by frontend
 		dbWeeklyItems, err := db.GetAllWeeklyItems()
+		store.Set(dbWeeklyItems)
 		if err != nil {
 			http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -389,7 +378,9 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	locationOperatingTimes = store.GetLocationOperatingTimes()
 	if locationOperatingTimes == nil {
+		fmt.Println("Location operating times in store were nil, falling back to db")
 		locationOperatingTimes, err = db.GetLocationOperatingTimes()
+		store.Set(locationOperatingTimes)
 		if err != nil {
 			http.Error(w, "Error fetching locationOperatingTimes: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -509,7 +500,9 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Check memory store first
 	allItems = store.GetAllDataItems()
 	if allItems == nil {
+		fmt.Println("All Data items in store were nil, falling back to db")
 		allItems, err = db.GetAllDataItems()
+		store.Set(allItems)
 		if err != nil {
 			http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -519,8 +512,10 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	weeklyItems = store.GetWeeklyItems()
 	// Check len bc we initialize weeklyItems to an empty map
 	if len(weeklyItems) == 0 {
+		fmt.Println("Weekly items in store were nil, falling back to db")
 		// Fetch from database and convert to the format expected by frontend
 		dbWeeklyItems, err := db.GetAllWeeklyItems()
+		store.Set(dbWeeklyItems)
 		if err != nil {
 			http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -530,7 +525,9 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	locationOperatingTimes = store.GetLocationOperatingTimes()
 	if locationOperatingTimes == nil {
+		fmt.Println("Location operating times in store were nil, falling back to db")
 		locationOperatingTimes, err = db.GetLocationOperatingTimes()
+		store.Set(locationOperatingTimes)
 		if err != nil {
 			http.Error(w, "Error fetching location operations: "+err.Error(), http.StatusInternalServerError)
 			return

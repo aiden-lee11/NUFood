@@ -2,7 +2,6 @@ package store
 
 import (
 	"backend/internal/models"
-	"fmt"
 	"sync"
 )
 
@@ -61,7 +60,6 @@ func (s *MemoryStore) getWeeklyItems() map[string][]models.DailyItem {
 
 // Exported functions to access the global store
 func GetAllDataItems() []models.AllDataItem {
-	fmt.Println("Getting all data items")
 	if store == nil {
 		return nil
 	}
@@ -72,7 +70,6 @@ func GetLocationOperatingTimes() []models.LocationOperatingTimes {
 	if store == nil {
 		return nil
 	}
-	fmt.Println("Getting location operation times", store.locationOperatingTimes)
 	return store.getLocationOperatingTimes()
 }
 
@@ -80,7 +77,6 @@ func GetWeeklyItems() map[string][]models.DailyItem {
 	if store == nil {
 		return nil
 	}
-	fmt.Println("Getting weekly items", store.weeklyItems)
 	return store.getWeeklyItems()
 }
 
