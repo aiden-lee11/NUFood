@@ -41,11 +41,11 @@ The application is deployed using:
 ### Weekly Items View
 ![Weekly Items View showing dining locations items and their current status](./frontend/public/images/main.png)
 
-### Operation Hours
-![Operation Hours View showing dining locations and their status](./frontend/public/images/operationTimes.png)
-
 ### All Items View
 ![Display of all historical items that Northwestern has served.](./frontend/public/images/allItems.png)
+
+### Operation Hours
+![Operation Hours View showing dining locations and their status](./frontend/public/images/operationTimes.png)
 
 ### Nutrition Tracker
 ![Nutrition Tracker that allows you to see the macros of the foods being served.](./frontend/public/images/nutrition.png)
