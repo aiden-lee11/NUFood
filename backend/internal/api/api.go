@@ -14,6 +14,23 @@ import (
 	"time"
 )
 
+// Helper functions to convert between AllDataItem arrays and string arrays
+func allDataItemsToStrings(items []models.AllDataItem) []string {
+	result := make([]string, len(items))
+	for i, item := range items {
+		result[i] = item.Name
+	}
+	return result
+}
+
+func stringsToAllDataItems(names []string) []models.AllDataItem {
+	result := make([]models.AllDataItem, len(names))
+	for i, name := range names {
+		result[i] = models.AllDataItem{Name: name}
+	}
+	return result
+}
+
 // DeleteLocationOperatingTimes deletes all location operating times from the database.
 //
 // This handler expects no request body and no special authorization.
@@ -274,7 +291,7 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(string)
 
 	// Read and parse the JSON body
-	var favorites []models.AllDataItem
+	var favoriteNames []string
 
 	// Read the request body
 	body, err := io.ReadAll(r.Body)
@@ -284,11 +301,14 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Unmarshal (decode) the JSON into the Go slice
-	if err := json.Unmarshal(body, &favorites); err != nil {
+	if err := json.Unmarshal(body, &favoriteNames); err != nil {
 
 		http.Error(w, "Error parsing JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Convert string array to AllDataItem array
+	favorites := stringsToAllDataItems(favoriteNames)
 
 	// Call the SetUserPreferences function to set the user SetUserPreferences()
 	err = db.SaveUserPreferences(userID, favorites)
@@ -419,10 +439,10 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	combinedData := map[string]interface{}{
-		"allItems":               allItems,
+		"allItems":               allDataItemsToStrings(allItems),
 		"weeklyItems":            weeklyItems,
 		"locationOperatingTimes": locationOperatingTimes,
-		"userPreferences":        userPreferences,
+		"userPreferences":        allDataItemsToStrings(userPreferences),
 		"mailing":                mailing,
 		"nutritionGoals":         nutritionGoals,
 	}
@@ -544,7 +564,7 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Combine all data into a single JSON structure
 	combinedData := map[string]interface{}{
-		"allItems":               allItems,
+		"allItems":               allDataItemsToStrings(allItems),
 		"weeklyItems":            weeklyItems,
 		"locationOperatingTimes": locationOperatingTimes,
 		"nutritionGoals":         defaultNutritionGoals,
