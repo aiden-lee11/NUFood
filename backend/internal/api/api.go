@@ -93,7 +93,6 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 	weeklyItemsMap[dateKey] = dItems
 
 	store.Set(weeklyItemsMap)
-	store.Set(aItems)
 
 	// Return success code
 	w.WriteHeader(http.StatusOK)
@@ -193,7 +192,6 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Successfully inserted %d all data items to database\n", len(totalAllItems))
 
 	store.Set(db.CreateWeeklyItemsMap(weeklyItems))
-	store.Set(totalAllItems)
 
 	// Return success code
 	w.WriteHeader(http.StatusOK)
