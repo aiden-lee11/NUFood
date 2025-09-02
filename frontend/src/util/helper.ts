@@ -79,16 +79,13 @@ export function getDailyLocationOperationTimes(
 }
 
 
-export const formatTime = (hour: string, minutes: string): string => {
-  const hourInt = parseInt(hour, 10);
-  const minutesInt = parseInt(minutes, 10);
-
+export const formatTime = (hour: number, minutes: number): string => {
   // Determine AM/PM
-  const period = hourInt >= 12 ? "p" : "a";
-  const formattedHour = hourInt > 12 ? hourInt - 12 : hourInt === 0 ? 12 : hourInt;
+  const period = hour >= 12 ? "PM" : "AM";
+  const formattedHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
 
   // Format the time as "hh:mm"
-  const formattedTime = `${formattedHour}:${minutesInt.toString().padStart(2, "0")}${period}`;
+  const formattedTime = `${formattedHour}:${minutes.toString().padStart(2, "0")}${period}`;
 
   return formattedTime;
 };
@@ -104,8 +101,8 @@ export const isLocationOpenNow = (operatingTimes: OperatingTime[] | null): boole
   return operatingTimes.some(({ StartHour, StartMinutes, EndHour, EndMinutes }) => {
     const start = new Date();
     const end = new Date();
-    start.setHours(parseInt(StartHour, 10), parseInt(StartMinutes, 10), 0);
-    end.setHours(parseInt(EndHour, 10), parseInt(EndMinutes, 10), 0);
+    start.setHours(StartHour, StartMinutes, 0);
+    end.setHours(EndHour, EndMinutes, 0);
     return now >= start && now < end;
   });
 };
