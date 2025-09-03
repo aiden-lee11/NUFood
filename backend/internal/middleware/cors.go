@@ -8,6 +8,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
+)
+
+// ContextKey is a custom type for context keys to avoid collisions
+type ContextKey string
+
+const (
+	UserIDKey ContextKey = "userID"
 )
 
 // Custom JSON error response
@@ -77,7 +85,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// Add userID to request context
-		ctx := context.WithValue(r.Context(), "userID", userID)
+		ctx := context.WithValue(r.Context(), UserIDKey, userID)
 		next(w, r.WithContext(ctx))
 	}
 }
@@ -93,7 +101,21 @@ func AdminMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		authHeader := r.Header.Get("Authorization")
 
-		if authHeader != os.Getenv("ADMIN_TOKEN") {
+		if authHeader == "" {
+			SendJSONError(w, "Missing Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		// Parse the Bearer token
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			SendJSONError(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			return
+		}
+
+		adminToken := parts[1]
+		if adminToken != os.Getenv("ADMIN_TOKEN") {
+			fmt.Printf("Provided token does not have admin permission: %s \n %s \n", adminToken, os.Getenv("ADMIN_TOKEN"))
 			SendJSONError(w, "Provided token does not have admin permission", http.StatusUnauthorized)
 			return
 		}

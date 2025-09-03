@@ -3,6 +3,7 @@ package main
 import (
 	"backend/internal/api"
 	"backend/internal/auth"
+	"backend/internal/cache"
 	"backend/internal/db"
 	"backend/internal/middleware"
 	"backend/internal/store"
@@ -46,6 +47,15 @@ func main() {
 
 	fmt.Println("MemoryStore initialized")
 
+	// Initialize user cache
+	// Cache user data for 8 hours, max 1000 users
+	cache.InitUserCache(8*time.Hour, 1000)
+
+	// Start background cleanup routine (runs every 10 minutes)
+	cache.StartCleanupRoutine(10 * time.Minute)
+
+	fmt.Println("UserCache initialized")
+
 	// Create a new router
 	r := mux.NewRouter()
 
@@ -77,6 +87,9 @@ func main() {
 	nutritionGoalsRoute := apiRouter.PathPrefix("/nutritionGoals").Subrouter()
 	nutritionGoalsRoute.HandleFunc("", middleware.AuthMiddleware(api.SaveNutritionGoalsHandler)).Methods("POST", "OPTIONS")
 	nutritionGoalsRoute.HandleFunc("", middleware.AuthMiddleware(api.GetNutritionGoalsHandler)).Methods("GET", "OPTIONS")
+
+	// Cache statistics endpoint (for debugging/monitoring)
+	apiRouter.HandleFunc("/cache/stats", middleware.AdminMiddleware(api.GetCacheStatsHandler)).Methods("GET", "OPTIONS")
 
 	// Apply CORS middleware to all routes
 	corsRouter := middleware.CorsMiddleware(r)

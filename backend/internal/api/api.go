@@ -1,7 +1,9 @@
 package api
 
 import (
+	"backend/internal/cache"
 	"backend/internal/db"
+	"backend/internal/middleware"
 	"backend/internal/models"
 	"backend/internal/scraper"
 	"backend/internal/store"
@@ -288,7 +290,7 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(middleware.UserIDKey).(string)
 
 	// Read and parse the JSON body
 	var favoriteNames []string
@@ -317,12 +319,16 @@ func SetUserPreferences(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error saving user preferences: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Update cache with new preferences
+	cache.SetUserPreferences(userID, favorites)
+
 	// Return success status without a body
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func SetUserMailing(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(middleware.UserIDKey).(string)
 
 	var req map[string]interface{}
 
@@ -344,6 +350,9 @@ func SetUserMailing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Update cache with new mailing preference
+	cache.SetUserMailing(userID, mailing)
+
 	fmt.Println("Successful mailing update")
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -362,15 +371,18 @@ func SetUserMailing(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(middleware.UserIDKey).(string)
 
 	// Try to get data from memory store first, fall back to database if not available
 	var allItems []models.AllDataItem
 	var weeklyItems map[string][]models.DailyItem
 	var locationOperatingTimes []models.LocationOperatingTimes
+	var userPreferences []models.AllDataItem
+	var mailing *bool
+	var nutritionGoals models.NutritionGoals
 	var err error
 
-	// Check memory store first
+	// Check memory store first for general data
 	allItems = store.GetAllDataItems()
 	if allItems == nil {
 		fmt.Println("All data items in store were nil, falling back to db")
@@ -407,35 +419,51 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	userPreferences, err := db.GetUserPreferences(userID)
-	if err == db.NoUserPreferencesInDB {
-		userPreferences = []models.AllDataItem{}
-	} else if err != nil {
-		http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// Try to get user-specific data from cache first
+	cachedUserData, cacheHit := cache.GetUserData(userID)
+	if cacheHit {
+		fmt.Printf("Cache hit for user %s\n", userID)
+		userPreferences = cachedUserData.Preferences
+		nutritionGoals = cachedUserData.NutritionGoals
+		mailing = cachedUserData.Mailing
+	} else {
+		fmt.Printf("Cache miss for user %s, fetching from database\n", userID)
 
-	mailing, err := db.GetUserMailing(userID)
-	if err != nil {
-		http.Error(w, "Error fetching user mailing: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Fetch nutrition goals
-	nutritionGoals, err := db.GetNutritionGoals(userID)
-	if err != nil && err != db.NoUserGoalsInDB {
-		http.Error(w, "Error fetching nutrition goals: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// If no goals are found, use default values
-	if err == db.NoUserGoalsInDB {
-		nutritionGoals = models.NutritionGoals{
-			Calories: 2000,
-			Protein:  50,
-			Carbs:    275,
-			Fat:      78,
+		// Fetch user preferences from database
+		userPreferences, err = db.GetUserPreferences(userID)
+		if err == db.NoUserPreferencesInDB {
+			userPreferences = []models.AllDataItem{}
+		} else if err != nil {
+			http.Error(w, "Error fetching user preferences: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
+
+		// Fetch mailing preference from database
+		mailing, err = db.GetUserMailing(userID)
+		if err != nil {
+			http.Error(w, "Error fetching user mailing: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Fetch nutrition goals from database
+		nutritionGoals, err = db.GetNutritionGoals(userID)
+		if err != nil && err != db.NoUserGoalsInDB {
+			http.Error(w, "Error fetching nutrition goals: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// If no goals are found, use default values
+		if err == db.NoUserGoalsInDB {
+			nutritionGoals = models.NutritionGoals{
+				Calories: 2000,
+				Protein:  50,
+				Carbs:    275,
+				Fat:      78,
+			}
+		}
+
+		// Cache the user data for future requests
+		cache.SetUserData(userID, userPreferences, nutritionGoals, mailing)
 	}
 
 	combinedData := map[string]interface{}{
@@ -649,7 +677,7 @@ func HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 //   - r: The HTTP request.
 func SaveNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by AuthMiddleware)
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(middleware.UserIDKey).(string)
 
 	// Read the request body
 	body, err := io.ReadAll(r.Body)
@@ -671,6 +699,9 @@ func SaveNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Update cache with new nutrition goals
+	cache.SetUserNutritionGoals(userID, goals)
+
 	// Return success code
 	w.WriteHeader(http.StatusOK)
 }
@@ -688,23 +719,40 @@ func SaveNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
 //   - r: The HTTP request.
 func GetNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by AuthMiddleware)
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(middleware.UserIDKey).(string)
 
-	// Get the nutrition goals
-	goals, err := db.GetNutritionGoals(userID)
-	if err != nil {
-		if err == db.NoUserGoalsInDB {
-			// Return default values if no goals are found
-			goals = models.NutritionGoals{
-				Calories: 2000,
-				Protein:  50,
-				Carbs:    275,
-				Fat:      78,
+	var goals models.NutritionGoals
+
+	// Try to get nutrition goals from cache first
+	cachedUserData, cacheHit := cache.GetUserData(userID)
+	if cacheHit {
+		fmt.Printf("Cache hit for nutrition goals for user %s\n", userID)
+		goals = cachedUserData.NutritionGoals
+	} else {
+		fmt.Printf("Cache miss for nutrition goals for user %s, fetching from database\n", userID)
+
+		// Get the nutrition goals from database
+		var err error
+		goals, err = db.GetNutritionGoals(userID)
+		if err != nil {
+			if err == db.NoUserGoalsInDB {
+				// Return default values if no goals are found
+				goals = models.NutritionGoals{
+					Calories: 2000,
+					Protein:  50,
+					Carbs:    275,
+					Fat:      78,
+				}
+			} else {
+				http.Error(w, "Error retrieving nutrition goals: "+err.Error(), http.StatusInternalServerError)
+				return
 			}
-		} else {
-			http.Error(w, "Error retrieving nutrition goals: "+err.Error(), http.StatusInternalServerError)
-			return
 		}
+
+		// Cache the nutrition goals (along with other user data if available)
+		// Note: This will only update if the user is already in cache,
+		// otherwise we'd need to fetch other user data too
+		cache.SetUserNutritionGoals(userID, goals)
 	}
 
 	// Set content type header
@@ -712,6 +760,30 @@ func GetNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Encode goals as JSON and send
 	if err := json.NewEncoder(w).Encode(goals); err != nil {
+		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// GetCacheStatsHandler returns cache statistics for debugging purposes
+//
+// This handler requires admin access and responds with cache statistics including
+// cache hit rates, user count, and memory usage information.
+//
+// Expected Authorization:
+//   - Admin level access (could be restricted to specific users)
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
+func GetCacheStatsHandler(w http.ResponseWriter, r *http.Request) {
+	stats := cache.GetCacheStats()
+
+	// Set content type header
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode stats as JSON and send
+	if err := json.NewEncoder(w).Encode(stats); err != nil {
 		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
