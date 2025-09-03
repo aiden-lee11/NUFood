@@ -246,12 +246,12 @@ const OperationHours: React.FC = () => {
               <div className="overflow-x-auto">
                 <div className="relative" style={{ minWidth: `${80 + shortNames.length * 150}px` }}>
                   {/* Header with location names */}
-                  <div className="grid bg-card border-b border-border" style={{ gridTemplateColumns: `80px repeat(${shortNames.length}, minmax(150px, 1fr))` }}>
-                    <div className="p-3 font-semibold text-card-foreground border-r border-border">
+                  <div className="grid bg-card border-b-2 border-border" style={{ gridTemplateColumns: `80px repeat(${shortNames.length}, minmax(150px, 1fr))` }}>
+                    <div className="p-3 font-semibold text-card-foreground border-r-2 border-border">
                       Time
                     </div>
                     {shortNames.map((shortName) => (
-                      <div key={shortName} className="px-2 py-3 font-semibold text-card-foreground text-center border-r border-border last:border-r-0 whitespace-nowrap text-sm overflow-hidden">
+                      <div key={shortName} className="px-2 py-3 font-semibold text-card-foreground text-center border-r-2 border-border last:border-r-0 whitespace-nowrap text-sm overflow-hidden">
                         <span className="block truncate" title={shortName}>
                           {shortName}
                         </span>
@@ -274,9 +274,9 @@ const OperationHours: React.FC = () => {
 
                     {/* Time slots grid */}
                     {timeSlots.map((timeSlot) => (
-                      <div key={timeSlot.hour} className="grid border-b border-border/50 hover:bg-muted/20 transition-colors" style={{ gridTemplateColumns: `80px repeat(${shortNames.length}, minmax(150px, 1fr))` }}>
+                      <div key={timeSlot.hour} className="grid border-b-2 border-border hover:bg-muted/30 transition-colors" style={{ gridTemplateColumns: `80px repeat(${shortNames.length}, minmax(150px, 1fr))` }}>
                         {/* Time label */}
-                        <div className="p-3 text-sm font-medium text-card-foreground border-r border-border bg-card/50">
+                        <div className="p-3 text-sm font-medium text-card-foreground border-r-2 border-border bg-card/70">
                           {timeSlot.label}
                         </div>
                         
@@ -334,35 +334,6 @@ const OperationHours: React.FC = () => {
                 </div>
               </div>
 
-              {/* Legend */}
-              <div className="p-4 bg-card border-t border-border">
-                <div className="flex items-center gap-6 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-600"></div>
-                    <span className="text-card-foreground">Full hour open</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-4 h-4 border border-border/50">
-                      <div className="absolute top-0 left-0 w-full h-1/2 bg-green-600"></div>
-                    </div>
-                    <span className="text-card-foreground">First 30 min</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-4 h-4 border border-border/50">
-                      <div className="absolute bottom-0 left-0 w-full h-1/2 bg-green-600"></div>
-                    </div>
-                    <span className="text-card-foreground">Last 30 min</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border border-border/50"></div>
-                    <span className="text-card-foreground">Closed</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-red-500"></div>
-                    <span className="text-card-foreground">Current Time</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 

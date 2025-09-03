@@ -4,7 +4,6 @@ import React from 'react';
 type TableConfig = {
   compact?: boolean;
   bordered?: boolean;
-  zebra?: boolean;
   darkMode?: boolean;
 }
 
@@ -18,7 +17,6 @@ interface TableBaseProps extends React.HTMLAttributes<HTMLElement> {
 interface TableProps extends TableBaseProps {
   compact?: boolean;
   bordered?: boolean;
-  zebra?: boolean;
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -26,11 +24,10 @@ export const Table: React.FC<TableProps> = ({
   className = '',
   compact = false,
   bordered = false,
-  zebra = false,
   ...props
 }) => {
   return (
-    <TableContext.Provider value={{ compact, bordered, zebra }}>
+    <TableContext.Provider value={{ compact, bordered }}>
       <div className="w-full overflow-x-auto">
         <table
           {...props}
@@ -62,12 +59,10 @@ export const TableBody: React.FC<TableBaseProps> = ({
   className = '',
   ...props
 }) => {
-  const { zebra } = React.useContext(TableContext);
   return (
     <tbody
       {...props}
-      className={`${zebra ? '[&>tr:nth-child(odd)]:bg-muted/30' : ''
-        } ${className}`}
+      className={className}
     >
       {children}
     </tbody>
