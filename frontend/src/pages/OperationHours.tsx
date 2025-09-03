@@ -293,6 +293,18 @@ const OperationHours: React.FC = () => {
                           const shouldHideBorder = isOpen && nextLocationInfo.isOpen && 
                             topHalf && bottomHalf && nextLocationInfo.topHalf && nextLocationInfo.bottomHalf;
                           
+                          // Check if previous/next time slots are also open for continuous appearance
+                          const currentSlotIndex = timeSlots.findIndex(slot => slot.hour === timeSlot.hour);
+                          const prevTimeSlotInfo = currentSlotIndex > 0 
+                            ? getLocationTimeInfo(shortName, timeSlots[currentSlotIndex - 1].hour, todayIndex)
+                            : { isOpen: false, topHalf: false, bottomHalf: false };
+                          const nextTimeSlotInfo = currentSlotIndex < timeSlots.length - 1 
+                            ? getLocationTimeInfo(shortName, timeSlots[currentSlotIndex + 1].hour, todayIndex)
+                            : { isOpen: false, topHalf: false, bottomHalf: false };
+                          
+                          const shouldExtendUp = prevTimeSlotInfo.isOpen && prevTimeSlotInfo.bottomHalf && topHalf;
+                          const shouldExtendDown = nextTimeSlotInfo.isOpen && nextTimeSlotInfo.topHalf && bottomHalf;
+                          
                           return (
                             <div
                               key={shortName}
@@ -307,9 +319,10 @@ const OperationHours: React.FC = () => {
                               {/* Top half (first 30 minutes) */}
                               {topHalf && (
                                 <div 
-                                  className="bg-green-600 hover:bg-green-700 transition-colors absolute top-0 left-0 z-10"
+                                  className="bg-green-600 absolute left-0 z-20"
                                   style={{
-                                    height: '50%',
+                                    top: shouldExtendUp ? '-2px' : '0',
+                                    height: shouldExtendUp ? 'calc(50% + 2px)' : '50%',
                                     width: '100%',
                                   }}
                                 />
@@ -318,9 +331,10 @@ const OperationHours: React.FC = () => {
                               {/* Bottom half (last 30 minutes) */}
                               {bottomHalf && (
                                 <div 
-                                  className="bg-green-600 hover:bg-green-700 transition-colors absolute bottom-0 left-0 z-10"
+                                  className="bg-green-600 absolute left-0 z-20"
                                   style={{
-                                    height: '50%',
+                                    bottom: shouldExtendDown ? '-2px' : '0',
+                                    height: shouldExtendDown ? 'calc(50% + 2px)' : '50%',
                                     width: '100%',
                                   }}
                                 />
