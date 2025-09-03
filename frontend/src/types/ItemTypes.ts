@@ -34,7 +34,7 @@ export interface NutritionGoals {
 
 // Base interface for shared properties
 interface BaseDataResponse {
-  allItems: Item[];
+  allItems: string[];
   weeklyItems: WeeklyItemsMap;
   locationOperationHours: OperationHoursData[];
 }
@@ -44,7 +44,7 @@ export interface GeneralDataResponse extends BaseDataResponse { }
 
 // Interface for data with user preferences
 export interface UserDataResponse extends BaseDataResponse {
-  userPreferences: Item[] | null;
+  userPreferences: string[] | null;
   mailing: boolean;
   nutritionGoals: NutritionGoals;
 }

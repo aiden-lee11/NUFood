@@ -77,7 +77,7 @@ const DailyItems: React.FC = () => {
   useEffect(() => {
     // Set available favorites based on items that match user preferences
     if (userPreferences && userPreferences.length > 0) {
-      const userPrefNames = new Set(userPreferences.map(pref => pref.Name));
+      const userPrefNames = new Set(userPreferences);
       const favorites = dailyItems.filter(item => userPrefNames.has(item.Name));
       setAvailableFavorites(favorites);
     } else {
@@ -107,10 +107,10 @@ const DailyItems: React.FC = () => {
 
 
     if (userPreferences) {
-      if (userPreferences.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
-        tempPreferences = userPreferences.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
+      if (userPreferences.some(i => i.toLowerCase().trim() === formattedItemName)) {
+        tempPreferences = userPreferences.filter(i => i.toLowerCase().trim() !== formattedItemName);
       } else {
-        tempPreferences = [...userPreferences, item];
+        tempPreferences = [...userPreferences, item.Name];
       }
 
       if (availableFavorites.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {

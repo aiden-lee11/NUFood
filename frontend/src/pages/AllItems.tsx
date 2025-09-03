@@ -43,8 +43,11 @@ const ITEMS_PER_PAGE = 100;
 const AllItems: React.FC = () => {
   const staticData = useDataStore((state) => state.UserDataResponse);
   var userPreferences = staticData.userPreferences;
-  const allItems = staticData.allItems;
+  const allItemsStrings = staticData.allItems;
   const setUserPreferences = useDataStore((state) => state.setUserPreferences)
+
+  // Convert string array to Item array for UI compatibility
+  const allItems: Item[] = allItemsStrings.map(name => ({ Name: name }));
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
@@ -80,10 +83,10 @@ const AllItems: React.FC = () => {
 
 
     if (userPreferences) {
-      if (userPreferences.some(i => i.Name.toLowerCase().trim() === formattedItemName)) {
-        tempPreferences = userPreferences.filter(i => i.Name.toLowerCase().trim() !== formattedItemName);
+      if (userPreferences.some(i => i.toLowerCase().trim() === formattedItemName)) {
+        tempPreferences = userPreferences.filter(i => i.toLowerCase().trim() !== formattedItemName);
       } else {
-        tempPreferences = [...userPreferences, item];
+        tempPreferences = [...userPreferences, item.Name];
       }
 
       setUserPreferences(tempPreferences);
@@ -248,12 +251,12 @@ const AllItems: React.FC = () => {
               onClick={() => handleItemClick(item)}
               className={clsx(
                 'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2',
-                (userPreferences && userPreferences.some((fav) => fav.Name === item.Name))
+                (userPreferences && userPreferences.some((fav) => fav === item.Name))
                   ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm"
                   : "bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
               )}
             >
-              {item.Name} {userPreferences && userPreferences.some((fav) => fav.Name === item.Name) ? "★" : "☆"}
+              {item.Name} {userPreferences && userPreferences.some((fav) => fav === item.Name) ? "★" : "☆"}
             </button>
           </li>
         ))}

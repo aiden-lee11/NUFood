@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Item, NutritionGoals, UserDataResponse } from "./types/ItemTypes";
+import { NutritionGoals, UserDataResponse } from "./types/ItemTypes";
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
@@ -14,7 +14,7 @@ interface DataState {
   fetchGeneralData: () => Promise<void>;
   fetchNutritionGoals: (userToken: string) => Promise<void>;
   saveNutritionGoals: (userToken: string, goals: NutritionGoals) => Promise<void>;
-  setUserPreferences: (userPreferences: Item[]) => void;
+  setUserPreferences: (userPreferences: string[]) => void;
   updateNutritionGoals: (goals: NutritionGoals) => void;
   resetFetchFlags: () => void;
   clearUserData: () => Promise<void>;
@@ -181,7 +181,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
   },
 
-  setUserPreferences: (newPreferences: Item[]) => {
+  setUserPreferences: (newPreferences: string[]) => {
     set({
       UserDataResponse: {
         ...get().UserDataResponse,

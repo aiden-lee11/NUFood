@@ -4,7 +4,7 @@ import { LocationOperatingTimes } from "../types/OperationTypes";
 const formatTimeToAmPm = (date: Date): string => {
   let hours = date.getHours();
   const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? "pm" : "am";
+  const ampm = hours >= 12 ? "PM" : "AM";
   hours = hours % 12 || 12; // convert 0 to 12
   const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
   return `${hours}:${minutesStr} ${ampm}`;
@@ -30,8 +30,14 @@ const Status: React.FC<LocationOperatingTimes> = ({ operatingTimes }) => {
       operatingTimes.forEach(({ StartHour, StartMinutes, EndHour, EndMinutes }) => {
         const start = new Date();
         const end = new Date();
-        start.setHours(parseInt(StartHour, 10), parseInt(StartMinutes, 10), 0);
-        end.setHours(parseInt(EndHour, 10), parseInt(EndMinutes, 10), 0);
+        // Handle both string and number types for backward compatibility
+        const startHour = typeof StartHour === 'string' ? parseInt(StartHour, 10) : StartHour;
+        const startMinutes = typeof StartMinutes === 'string' ? parseInt(StartMinutes, 10) : StartMinutes;
+        const endHour = typeof EndHour === 'string' ? parseInt(EndHour, 10) : EndHour;
+        const endMinutes = typeof EndMinutes === 'string' ? parseInt(EndMinutes, 10) : EndMinutes;
+        
+        start.setHours(startHour, startMinutes, 0);
+        end.setHours(endHour, endMinutes, 0);
 
         // if end ≤ start, assume closing after midnight
         if (end.getTime() <= start.getTime()) {

@@ -11,10 +11,10 @@ export interface Day {
 }
 
 export interface Hour {
-  StartHour: string;
-  StartMinutes: string;
-  EndHour: string;
-  EndMinutes: string;
+  StartHour: number;
+  StartMinutes: number;
+  EndHour: number;
+  EndMinutes: number;
 }
 
 export interface OperatingTime extends Hour {
