@@ -115,7 +115,6 @@ func AdminMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		adminToken := parts[1]
 		if adminToken != os.Getenv("ADMIN_TOKEN") {
-			fmt.Printf("Provided token does not have admin permission: %s \n %s \n", adminToken, os.Getenv("ADMIN_TOKEN"))
 			SendJSONError(w, "Provided token does not have admin permission", http.StatusUnauthorized)
 			return
 		}
