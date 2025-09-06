@@ -10,6 +10,7 @@ import { DailyItem, Item } from '../types/ItemTypes';
 import ErrorPopup from '../components/error-popup';
 import { useDataStore } from '@/store';
 import { HeaderControls } from "../components/header-controls"
+import SEO from '../components/SEO';
 
 
 const DailyItems: React.FC = () => {
@@ -151,6 +152,12 @@ const DailyItems: React.FC = () => {
 
   return (
     <div className="p-6 min-h-screen bg-transparent">
+      <SEO 
+        title="Today's Menu - NUFood"
+        description="Discover today's dining options at Northwestern University. Find what's available now at your favorite campus dining locations."
+        keywords="Northwestern University dining today, NU daily menu, campus food today, Northwestern dining hours"
+        url="https://nufood.me/"
+      />
       <HeaderControls
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}

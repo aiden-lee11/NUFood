@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { getWeekday, formatTime, locationAliases } from "../util/helper";
 import { OperationHoursData, OperatingTime } from "../types/OperationTypes";
 import { useDataStore } from "@/store";
+import SEO from '../components/SEO';
 
 type LocationGrouping = { [category: string]: string[] };
 
@@ -199,7 +200,15 @@ const OperationHours: React.FC = () => {
   // Note: timeSlots and currentTimePosition are now calculated per category
 
   return (
-    <div>
+    <div className="p-6 min-h-screen bg-background">
+      <SEO 
+        title="Dining Hours - NUFood"
+        description="Check current operating hours for all Northwestern University dining locations. Find out when your favorite campus restaurants and dining halls are open."
+        keywords="Northwestern dining hours, NU restaurant hours, campus dining schedule, Northwestern food hours"
+        url="https://nufood.me/hours"
+      />
+      <h1 className="text-3xl font-bold mb-6 text-foreground">Dining Hours</h1>
+      <div>
       {Object.entries(locationGrouping).map(([groupName, shortNames]) => {
         // Calculate time range for this specific category
         const { startHour, endHour } = getOperatingTimeRange(shortNames);
@@ -396,6 +405,7 @@ const OperationHours: React.FC = () => {
         </div>
         );
       })}
+      </div>
     </div>
   );
 };

@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Important pages
+Allow: /all
+Allow: /hours
+Allow: /planner
+
+# Disallow admin or private areas (if any in the future)
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://nufood.me/sitemap.xml
+
+# Crawl delay (be nice to Northwestern servers)
+Crawl-delay: 1

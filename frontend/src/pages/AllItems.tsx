@@ -37,6 +37,7 @@ import {
 import { useDataStore } from '@/store';
 import { postUserPreferences } from '@/util/data';
 import { useBanner } from '@/context/BannerContext';
+import SEO from '../components/SEO';
 
 const ITEMS_PER_PAGE = 100;
 
@@ -153,6 +154,12 @@ const AllItems: React.FC = () => {
 
   return (
     <div className="p-6 min-h-screen text-black bg-background dark:text-white transition-colors duration-200">
+      <SEO 
+        title="All Menu Items - NUFood"
+        description="Browse and search through all available menu items at Northwestern University dining locations. Find and favorite your preferred dishes."
+        keywords="Northwestern University menu, NU all items, campus dining search, Northwestern food database"
+        url="https://nufood.me/all"
+      />
       <h1 className="text-2xl font-bold mb-4">Select Your Favorite Items</h1>
 
       {totalPages > 1 && (

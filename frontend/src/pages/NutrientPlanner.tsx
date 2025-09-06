@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthProvider';
 import { useDataStore } from '../store';
 import { DailyItem, NutritionGoals } from '../types/ItemTypes';
 import { SelectedDailyItem, SortDirection, SortKey, calculateNutritionTotals, getSavedItemsFromStorage, saveGoalsToStorage } from '../util/nutrientPlannerUtils';
+import SEO from '../components/SEO';
 
 
 // Helper function to get current date formatted as YYYY-MM-DD
@@ -289,6 +290,12 @@ const NutrientPlanner: React.FC = () => {
 
     return (
         <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col max-w-[100vw] overflow-hidden bg-background">
+            <SEO 
+                title="Nutrition Planner - NUFood"
+                description="Plan your daily nutrition with Northwestern University dining options. Track calories, proteins, carbs and other nutrients from campus food choices."
+                keywords="Northwestern nutrition planner, NU calorie tracker, campus food nutrition, university meal planning"
+                url="https://nufood.me/planner"
+            />
             <h1 className="text-2xl md:text-3xl lg:text-4xl mb-4 flex-shrink-0 text-foreground font-bold">
                 Nutrient Planner
             </h1>

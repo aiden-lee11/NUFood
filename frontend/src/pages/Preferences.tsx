@@ -2,6 +2,7 @@ import { postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
 import { FavoriteItem } from '../types/ItemTypes';
 import { useDataStore } from '@/store';
+import SEO from '../components/SEO';
 
 
 const Preferences: React.FC = () => {
@@ -27,6 +28,12 @@ const Preferences: React.FC = () => {
 
   return (
     <div className="p-6 min-h-screen text-black bg-background dark:text-white transition-colors duration-200">
+      <SEO 
+        title="Your Preferences - NUFood"
+        description="Manage your favorite Northwestern University dining items. View and edit your personalized food preferences and favorites."
+        keywords="Northwestern dining preferences, NU favorite foods, campus dining favorites, Northwestern food preferences"
+        url="https://nufood.me/preferences"
+      />
       <h1 className="text-2xl font-bold mb-4">Your Favorite Items</h1>
 
       {(userPreferences && userPreferences.length > 0) ? (
