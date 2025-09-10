@@ -4,6 +4,7 @@ import { getWeekday, formatTime, locationAliases } from "../util/helper";
 import { OperationHoursData, OperatingTime } from "../types/OperationTypes";
 import { useDataStore } from "@/store";
 import SEO from '../components/SEO';
+import { ColumnDividerOverlay } from '../components/Table';
 
 type LocationGrouping = { [category: string]: string[] };
 
@@ -283,24 +284,24 @@ const OperationHours: React.FC = () => {
 
                     {/* Time slots grid */}
                     {timeSlots.map((timeSlot) => (
-                      <div key={timeSlot.hour} className="grid border-b-2 border-border hover:bg-muted/30 transition-colors" style={{ gridTemplateColumns: `80px repeat(${shortNames.length}, minmax(150px, 1fr))` }}>
+                      <div key={timeSlot.hour} className="grid border-b-2 border-border hover:bg-muted/30 transition-colors relative" style={{ gridTemplateColumns: `80px repeat(${shortNames.length}, minmax(150px, 1fr))` }}>
                         {/* Time label */}
                         <div className="p-3 text-sm font-medium text-card-foreground border-r-2 border-border bg-card/70">
                           {timeSlot.label}
                         </div>
+
+                        {/* Column dividers overlayed above content; left gutter = 80px */}
+                        <ColumnDividerOverlay columns={shortNames.length} leftGutterPx={80} className="z-10" />
                         
                         {/* Location status cells */}
                         {shortNames.map((shortName, index) => {
                           const todayIndex = new Date().getDay();
-                          const { isOpen, topHalf, bottomHalf } = getLocationTimeInfo(shortName, timeSlot.hour, todayIndex);
+                          const { topHalf, bottomHalf } = getLocationTimeInfo(shortName, timeSlot.hour, todayIndex);
                           
-                          // Check if next location is also open for seamless borders
-                          const nextLocationInfo = index < shortNames.length - 1 
-                            ? getLocationTimeInfo(shortNames[index + 1], timeSlot.hour, todayIndex)
+                          // Check if previous/next locations and time slots are open for continuous appearance
+                          const prevLocationInfo = index > 0
+                            ? getLocationTimeInfo(shortNames[index - 1], timeSlot.hour, todayIndex)
                             : { isOpen: false, topHalf: false, bottomHalf: false };
-                          
-                          const shouldHideBorder = isOpen && nextLocationInfo.isOpen && 
-                            topHalf && bottomHalf && nextLocationInfo.topHalf && nextLocationInfo.bottomHalf;
                           
                           // Check if previous/next time slots are also open for continuous appearance
                           const currentSlotIndex = timeSlots.findIndex(slot => slot.hour === timeSlot.hour);
@@ -320,11 +321,6 @@ const OperationHours: React.FC = () => {
                               className="relative"
                               style={{ minHeight: '48px' }}
                             >
-                              {/* Border line - hide when both adjacent cells are fully open */}
-                              {index < shortNames.length - 1 && !shouldHideBorder && (
-                                <div className="absolute top-0 right-0 w-px bg-border/30 h-full z-5" />
-                              )}
-                              
                               {/* Top half (first 30 minutes) */}
                               {topHalf && (
                                 <div 
@@ -333,6 +329,14 @@ const OperationHours: React.FC = () => {
                                     top: shouldExtendUp ? '-2px' : '0',
                                     height: shouldExtendUp ? 'calc(50% + 2px)' : '50%',
                                     width: '100%',
+                                    // Outer-border for contiguous block (top-half)
+                                    borderStyle: 'solid',
+                                    borderColor: 'hsl(var(--accent))',
+                                    borderTopWidth: (!prevTimeSlotInfo.bottomHalf) ? 2 : 0,
+                                    borderLeftWidth: (!prevLocationInfo.topHalf) ? 2 : 0,
+                                    borderRightWidth: 2,
+                                    borderRightColor: 'hsl(var(--accent))',
+                                    borderBottomWidth: (!bottomHalf) ? 2 : 0,
                                   }}
                                 />
                               )}
@@ -345,6 +349,14 @@ const OperationHours: React.FC = () => {
                                     bottom: shouldExtendDown ? '-2px' : '0',
                                     height: shouldExtendDown ? 'calc(50% + 2px)' : '50%',
                                     width: '100%',
+                                    // Outer-border for contiguous block (bottom-half)
+                                    borderStyle: 'solid',
+                                    borderColor: 'hsl(var(--accent))',
+                                    borderTopWidth: (!topHalf) ? 2 : 0,
+                                    borderLeftWidth: (!prevLocationInfo.bottomHalf) ? 2 : 0,
+                                    borderRightWidth: 2,
+                                    borderRightColor: 'hsl(var(--accent))',
+                                    borderBottomWidth: (!nextTimeSlotInfo.topHalf) ? 2 : 0,
                                   }}
                                 />
                               )}

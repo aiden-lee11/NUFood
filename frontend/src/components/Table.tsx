@@ -131,3 +131,32 @@ export const TableCell: React.FC<TableBaseProps> = ({
 };
 
 export default Table;
+
+// Utility overlay to draw vertical column dividers over dynamic layouts
+// Useful when content (like absolute overlays) would otherwise cover cell borders
+export const ColumnDividerOverlay: React.FC<{
+  columns: number;
+  leftGutterPx?: number; // static gutter before the first column (e.g., time label width)
+  className?: string;
+  colorClassName?: string; // tailwind color class, default uses border color with reduced opacity
+}> = ({
+  columns,
+  leftGutterPx = 0,
+  className = '',
+  colorClassName = 'bg-border/30'
+}) => {
+  const lines = Array.from({ length: Math.max(0, columns - 1) }, (_, i) => i + 1);
+  return (
+    <div className={`pointer-events-none absolute inset-0 ${className}`}>
+      {lines.map((idx) => (
+        <div
+          key={idx}
+          className={`absolute top-0 h-full w-px ${colorClassName}`}
+          style={{
+            left: `calc(${leftGutterPx}px + (100% - ${leftGutterPx}px) * ${idx / columns})`
+          }}
+        />
+      ))}
+    </div>
+  );
+};
