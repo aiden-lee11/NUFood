@@ -1,5 +1,5 @@
 
-
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc
 resource "aws_vpc" "nufood" {
   cidr_block       = var.vpc_cidr_block
   instance_tenancy = "default"
@@ -10,7 +10,7 @@ resource "aws_vpc" "nufood" {
 }
 
 
-
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table
 resource "aws_route_table" "nufood" {
   vpc_id = aws_vpc.nufood.id
 

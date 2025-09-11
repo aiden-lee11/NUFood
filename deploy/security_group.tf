@@ -1,4 +1,6 @@
 
+
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group
 resource "aws_security_group" "nufood_instance" {
   name   = "nufood_ec2"
   vpc_id = aws_vpc.nufood.id

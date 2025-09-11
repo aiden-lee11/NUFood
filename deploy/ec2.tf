@@ -1,5 +1,5 @@
 
-
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance
 resource "aws_instance" "nufood" {
   ami           = "ami-03aa99ddf5498ceb9"
   instance_type = "t3.micro"
@@ -19,14 +19,14 @@ resource "aws_instance" "nufood" {
 }
 
 
-# ec2 profile
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile
 resource "aws_iam_instance_profile" "nufood" {
   name = "nu_food"
   role = aws_iam_role.nufood.name
 }
 
 
-
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role
 resource "aws_iam_role" "nufood" {
   name = "nufood"
 
@@ -47,7 +47,7 @@ resource "aws_iam_role" "nufood" {
 EOF
 }
 
-
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/key_pair
 resource "aws_key_pair" "nufood" {
   key_name   = "nufood"
   public_key = data.local_file.nufood_instance_key.content
