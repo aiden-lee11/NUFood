@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom'
 import { useBanner } from '@/context/BannerContext';
 
 const Banner: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
-  const location = useLocation();
   const { containerRef } = useBanner();
 
   const handleClose = () => {
     setIsVisible(false);
   };
 
-  const noShow = ["/preferences", "/hours", "/planner"];
-  if (!isVisible || noShow.includes(location.pathname)) {
+  if (!isVisible) {
     return null;
   }
 
@@ -20,7 +17,7 @@ const Banner: React.FC = () => {
     <div ref={containerRef} className="w-full mx-auto bg-secondary/30 border-b border-border">
       <div className="flex items-center justify-between px-4 py-3 md:py-2">
         <span className="text-foreground font-medium text-sm md:text-base flex-1 text-center">
-          Click an item to favorite it!
+          NUFood is temporarily down due to Dine On Campus data restrictions. Sorry for the inconvenience 🙏
         </span>
         <button
           onClick={handleClose}
