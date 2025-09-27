@@ -91,6 +91,9 @@ func main() {
 	// Cache statistics endpoint (for debugging/monitoring)
 	apiRouter.HandleFunc("/cache/stats", middleware.AdminMiddleware(api.GetCacheStatsHandler)).Methods("GET", "OPTIONS")
 
+	// Admin operations
+	apiRouter.HandleFunc("/stores/clear", middleware.AdminMiddleware(api.ClearStoresHandler)).Methods("POST", "OPTIONS")
+
 	// Apply CORS middleware to all routes
 	corsRouter := middleware.CorsMiddleware(r)
 

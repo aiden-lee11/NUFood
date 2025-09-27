@@ -786,3 +786,28 @@ func GetCacheStatsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+// ClearStoresHandler clears all in-memory stores. Requires authentication.
+//
+// This handler expects no request body and requires a valid Authorization header.
+// It clears:
+//   - Global MemoryStore (allData, weeklyItems, locationOperatingTimes)
+//   - User cache (all user-specific cached data)
+//
+// Expected Authorization:
+//   - Authorization header containing a valid Firebase ID token (Bearer token).
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
+func ClearStoresHandler(w http.ResponseWriter, r *http.Request) {
+	// Clear the global in-memory data store
+	store.Clear()
+
+	// Clear the user cache by reinitializing it with existing settings
+	// We don't have direct accessors for defaults, so re-init with sane defaults
+	// Alternatively, expose a Clear function in cache. For now, reset by re-init with current env-configured values.
+	cache.InitUserCache(8*time.Hour, 1000)
+
+	w.WriteHeader(http.StatusOK)
+}
