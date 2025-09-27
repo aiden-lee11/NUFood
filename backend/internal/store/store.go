@@ -40,6 +40,16 @@ func (s *MemoryStore) Set(value any) {
 	}
 }
 
+// Clear resets all in-memory data structures managed by the store
+func (s *MemoryStore) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.allData = nil
+	s.locationOperatingTimes = nil
+	s.weeklyItems = make(map[string][]models.DailyItem)
+}
+
 func (s *MemoryStore) getAllDataItems() []models.AllDataItem {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -83,5 +93,12 @@ func GetWeeklyItems() map[string][]models.DailyItem {
 func Set(value any) {
 	if store != nil {
 		store.Set(value)
+	}
+}
+
+// Clear removes all data from the global memory store
+func Clear() {
+	if store != nil {
+		store.Clear()
 	}
 }
