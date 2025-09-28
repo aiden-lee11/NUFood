@@ -1,0 +1,41 @@
+
+# the directory holding ssh keys
+keys
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files (local state files)
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Terraform variable files (potentially containing sensitive data)
+*.tfvars
+*.tfvars.json
+
+# Terraform override files (often used for local development)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform plan files
+*.tfplan
+
+# Terraform CLI configuration files
+.terraformrc
+terraform.rc
+
+# macOS system files
+.DS_Store
+
+# .terraform.lock.hcl (provider lock file - consider committing for team consistency)
+# If you are working in a team and want to ensure consistent provider versions,
+# you might choose to commit this file. Otherwise, ignore it.
+# **/.terraform.lock.hcl
+
+
