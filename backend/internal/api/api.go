@@ -63,10 +63,7 @@ func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
 // Expected Authorization:
 //   - No special authorization required.
 func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
-	scraper := &scraper.DiningHallScraper{
-		Client: scraper.NewClient(),
-		Config: scraper.DefaultConfig,
-	}
+	scraper := scraper.NewChromeDPScraper()
 
 	const MAX_RETRIES = 10
 
@@ -129,10 +126,7 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
-	scraper := &scraper.DiningHallScraper{
-		Client: scraper.NewClient(),
-		Config: scraper.DefaultConfig,
-	}
+	scraper := scraper.NewChromeDPScraper()
 
 	const MAX_RETRIES = 10
 	var weeklyItems []models.WeeklyItem

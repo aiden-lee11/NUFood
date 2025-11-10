@@ -312,4 +312,3 @@ func parseMenuItems(htmlContent, location, mealPeriod, date string) ([]models.Da
 func (s *ChromeDPScraper) ScrapeLocationOperatingTimes(date string) ([]models.LocationOperatingTimes, error) {
 	return nil, fmt.Errorf("ScrapeLocationOperatingTimes not yet implemented for ChromeDPScraper")
 }
-
