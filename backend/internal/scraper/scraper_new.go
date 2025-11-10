@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -38,7 +39,7 @@ func NewChromeDPScraper() *ChromeDPScraper {
 }
 
 // ScrapeFood scrapes daily menu items for a given date using chromedp.
-// It iterates through configured locations and meal periods, scraping web pages to gather menu data.
+// It concurrently scrapes all locations and meal periods to speed up the process.
 //
 // Parameters:
 //   - date: The date for which to scrape food data (format: "2006-01-02", e.g., "2025-11-09").
@@ -51,11 +52,15 @@ func NewChromeDPScraper() *ChromeDPScraper {
 func (s *ChromeDPScraper) ScrapeFood(date string) ([]models.DailyItem, []models.AllDataItem, bool, error) {
 	var dailyItems []models.DailyItem
 	var allDataItems []models.AllDataItem
+	var mu sync.Mutex
+	var wg sync.WaitGroup
 	allClosed := true
 
-	for _, location := range s.Locations {
-		fmt.Printf("Scraping location %s\n", location)
+	// Create a buffered channel to limit concurrent requests
+	// Limit to 5 concurrent requests to avoid overwhelming the server
+	semaphore := make(chan struct{}, 5)
 
+	for _, location := range s.Locations {
 		locationSlug, ok := LocationURLMapping[location]
 		if !ok {
 			log.Printf("No URL mapping found for location %s, skipping\n", location)
@@ -63,31 +68,48 @@ func (s *ChromeDPScraper) ScrapeFood(date string) ([]models.DailyItem, []models.
 		}
 
 		for _, mealPeriod := range MealPeriods {
-			url := buildURL(locationSlug, date, mealPeriod)
-			fmt.Printf("Scraping URL: %s\n", url)
+			wg.Add(1)
+			go func(loc, locSlug, meal string) {
+				defer wg.Done()
 
-			htmlContent, err := scrapeDiningMenu(url)
-			if err != nil {
-				log.Printf("Error scraping %s - %s: %v\n", location, mealPeriod, err)
-				continue
-			}
+				// Acquire semaphore
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
 
-			dItems, aItems, err := parseMenuItems(htmlContent, location, mealPeriod, date)
-			if err != nil {
-				log.Printf("Error parsing menu items for %s - %s: %v\n", location, mealPeriod, err)
-				continue
-			}
+				url := buildURL(locSlug, date, meal)
+				fmt.Printf("Scraping URL: %s\n", url)
 
-			if len(dItems) > 0 {
-				allClosed = false
-			}
+				htmlContent, err := scrapeDiningMenu(url)
+				if err != nil {
+					log.Printf("Error scraping %s - %s: %v\n", loc, meal, err)
+					return
+				}
 
-			dailyItems = append(dailyItems, dItems...)
-			allDataItems = append(allDataItems, aItems...)
+				dItems, aItems, err := parseMenuItems(htmlContent, loc, meal, date)
+				if err != nil {
+					log.Printf("Error parsing menu items for %s - %s: %v\n", loc, meal, err)
+					return
+				}
+
+				// Thread-safe append to shared slices
+				mu.Lock()
+				if len(dItems) > 0 {
+					allClosed = false
+				}
+				dailyItems = append(dailyItems, dItems...)
+				allDataItems = append(allDataItems, aItems...)
+				mu.Unlock()
+
+				fmt.Printf("✓ Completed %s - %s (%d items)\n", loc, meal, len(dItems))
+			}(location, locationSlug, mealPeriod)
 		}
 	}
 
-	fmt.Println("Scraping successful")
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(semaphore)
+
+	fmt.Printf("Scraping successful - Total items: %d\n", len(dailyItems))
 	return dailyItems, allDataItems, allClosed, nil
 }
 

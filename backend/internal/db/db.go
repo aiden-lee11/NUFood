@@ -145,13 +145,13 @@ func UpdateWeeklyItems(items []models.DailyItem) error {
 	}
 
 	// delete the oldest day that would now be 4 days old
-	if err := DB.Where("day_index = ?", -3).Delete(&models.WeeklyItem{}).Error; err != nil {
+	if err := DB.Where("day_index = ?", -3).Delete(&GormWeeklyItem{}).Error; err != nil {
 		log.Println("Error deleting records:", err)
 		return err
 	}
 
 	// slide the window of days to be one older
-	if err := DB.Model(&models.WeeklyItem{}).Where("day_index > ?", -3).
+	if err := DB.Model(&GormWeeklyItem{}).Where("day_index > ?", -3).
 		Update("day_index", gorm.Expr("day_index - 1")).Error; err != nil {
 		log.Println("Error updating records:", err)
 		return err
