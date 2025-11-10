@@ -222,10 +222,7 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
-	scraper := &scraper.DiningHallScraper{
-		Client: scraper.NewClient(),
-		Config: scraper.DefaultConfig,
-	}
+	scraper := scraper.NewChromeDPScraper()
 	formattedDate := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
 
 	const MAX_RETRIES = 10

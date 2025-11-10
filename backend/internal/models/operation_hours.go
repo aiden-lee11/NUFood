@@ -55,20 +55,20 @@ type HourlyOperatingInfo struct {
 }
 
 type LocationOperatingTimes struct {
-	Name string
-	Week []DailyOperatingTimes
+	Name string                `json:"Name"`
+	Week []DailyOperatingTimes `json:"Week"`
 }
 
 type DailyOperatingTimes struct {
-	Day    int
-	Date   string
-	Status string
-	Hours  []HourlyTimes
+	Day    int           `json:"Day"`
+	Date   string        `json:"Date"`
+	Status string        `json:"Status"`
+	Hours  []HourlyTimes `json:"Hours"`
 }
 
 type HourlyTimes struct {
-	StartHour    int
-	StartMinutes int
-	EndHour      int
-	EndMinutes   int
+	StartHour    int `json:"StartHour"`
+	StartMinutes int `json:"StartMinutes"`
+	EndHour      int `json:"EndHour"`
+	EndMinutes   int `json:"EndMinutes"`
 }

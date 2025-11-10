@@ -24,7 +24,7 @@ const navItems: NavItem[] = [
   { title: "Daily Items", href: "/", icon: <Home className="mr-2 h-4 w-4" /> },
   { title: "All Items", href: "/all", icon: <ListTodo className="mr-2 h-4 w-4" /> },
   { title: "Operation Hours", href: "/hours", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-  { title: "Nutrient Planner", href: "/planner", icon: <PieChart className="mr-2 h-4 w-4" /> },
+  // { title: "Nutrient Planner", href: "/planner", icon: <PieChart className="mr-2 h-4 w-4" /> },
 ]
 
 const preferences: NavItem = {

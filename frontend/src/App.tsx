@@ -7,7 +7,7 @@ import { MyMUIThemeProvider } from './components/mui-theme-provider';
 import { ThemeProvider } from './components/theme-provider';
 import { BannerProvider } from './context/BannerContext';
 import AllItems from './pages/AllItems';
-import NutrientPlanner from './pages/NutrientPlanner';
+// import NutrientPlanner from './pages/NutrientPlanner';
 import DailyItems from './pages/DailyItems';
 import OperationHours from './pages/OperationHours';
 import Preferences from './pages/Preferences';
@@ -28,7 +28,7 @@ function App() {
                 <Route path="/hours" element={<OperationHours />} />
                 <Route path="/preferences" element={<Preferences />} />
                 <Route path="/all" element={<AllItems />} />
-                <Route path="/planner" element={<NutrientPlanner />} />
+                {/* <Route path="/planner" element={<NutrientPlanner />} /> */}
               </Routes>
             </DataLoader>
           </Layout>
