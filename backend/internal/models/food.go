@@ -78,13 +78,13 @@ type Filter struct {
 
 // Item Struct for only data that I want to save
 type DailyItem struct {
-	Name        string
-	Description string `json:"desc"`
-	Date        string // The date this item is available
-	Location    string // The dining hall location
-	StationName string // The station name
-	TimeOfDay   string // The time of day this item is available
-	PortionSize string `json:"portion"` // The portion size of the item
+	Name        string `json:"Name"`
+	Description string `json:"Description"`
+	Date        string `json:"Date"`        // The date this item is available
+	Location    string `json:"Location"`    // The dining hall location
+	StationName string `json:"StationName"` // The station name
+	TimeOfDay   string `json:"TimeOfDay"`   // The time of day this item is available
+	PortionSize string `json:"portion"`     // The portion size of the item
 	Calories    string `json:"calories"`
 	Protein     string `json:"protein"`
 	Carbs       string `json:"carbs"`
