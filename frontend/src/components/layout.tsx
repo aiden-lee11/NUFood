@@ -1,5 +1,5 @@
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
-import { CalendarDays, Heart, Home, ListTodo, Menu, Moon, PieChart, Sun, User } from "lucide-react"
+import { CalendarDays, Heart, Home, ListTodo, Menu, Moon, Sun, User } from "lucide-react"
 import * as React from "react"
 import { Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthProvider"
