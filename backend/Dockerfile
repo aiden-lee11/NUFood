@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/server ./main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/app ./main.go
 
 FROM debian:bookworm-slim AS runtime
 
@@ -51,7 +51,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV CHROME_BIN=/usr/bin/chromium
 
 WORKDIR /app
-COPY --from=builder /out/server /app/server
+COPY --from=builder /out/app /app/app
+RUN ln -s /app/app /app/server
 
 EXPOSE 8081
-CMD ["/app/server"]
+CMD ["/app/app"]
