@@ -342,7 +342,7 @@ func (s *ChromeDPScraper) ScrapeLocationOperatingTimes(date string) ([]models.Lo
 	url := "https://dineoncampus.com/northwestern/hours-of-operation"
 	fmt.Printf("Scraping operating hours from: %s\n", url)
 
-	htmlContent, err := scrapeDiningMenu(url)
+	htmlContent, err := scrapeOperatingHoursPage(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape hours page: %w", err)
 	}
@@ -353,6 +353,65 @@ func (s *ChromeDPScraper) ScrapeLocationOperatingTimes(date string) ([]models.Lo
 	}
 
 	return locationOperatingTimesList, nil
+}
+
+// scrapeOperatingHoursPage fetches the hours page and navigates to the current week
+func scrapeOperatingHoursPage(url string) (string, error) {
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"),
+	)
+
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	ctx, cancel = context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+
+	var htmlContent string
+
+	// The page seems to default to a specific week, we may need to click "next" arrows
+	// to get to the current week. Let's check the displayed week and navigate if needed.
+
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.WaitVisible(`body`, chromedp.ByQuery),
+		chromedp.Sleep(8*time.Second), // Wait for initial load
+
+		// Try to click "next week" arrows if needed to get to current week
+		// Look for text containing "week of" to determine current displayed week
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			// Try clicking the "next" button multiple times to advance to current week
+			// The button might be an arrow or navigation element
+			for i := 0; i < 3; i++ { // Try up to 3 weeks ahead
+				// Try to find and click a "next" or forward arrow button
+				// Common selectors: button with arrow, .next, [aria-label="Next"]
+				err := chromedp.Run(ctx,
+					chromedp.Click(`button[aria-label*="next" i], button:has(svg), .next-week, button.next`, chromedp.ByQuery),
+					chromedp.Sleep(2*time.Second),
+				)
+				if err != nil {
+					// No more next button or couldn't find it
+					break
+				}
+			}
+			return nil
+		}),
+
+		chromedp.OuterHTML("html", &htmlContent, chromedp.ByQuery),
+	)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to scrape: %w", err)
+	}
+
+	return htmlContent, nil
 }
 
 // parseAllOperatingHours parses the consolidated hours-of-operation page

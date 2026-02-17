@@ -28,6 +28,7 @@ Live at: [nufood.me](https://nufood.me)
 - Go (Golang) for API and scraping
 - PostgreSQL database 
 - Firebase Admin SDK for auth verification
+- Headless Chromium (`chromedp`) for browser-context DineOnCampus API fetching
 
 ## Deployment
 
@@ -35,6 +36,9 @@ The application is deployed using:
 - Frontend: Vercel
 - Backend: Railway
 - Database: Railway PostgreSQL
+
+### Backend Runtime Note
+The backend now relies on a Chrome-based headless runtime for scraping. Use the pinned `backend/Dockerfile` on Railway to guarantee Chromium availability and set `CHROME_BIN` consistently.
 
 ## Screenshots
 
