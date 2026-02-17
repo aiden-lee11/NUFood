@@ -1,4 +1,4 @@
-.PHONY: test coverage
+.PHONY: test coverage local-scrape
 
 test:
 	@echo "Running all Go tests..."
@@ -17,3 +17,6 @@ clean:
 	@rm -rf coverage
 	@echo "Done."
 
+local-scrape:
+	@echo "Running local scraper sync into configured POSTGRES_URL..."
+	@go run ./cmd/local_scrape

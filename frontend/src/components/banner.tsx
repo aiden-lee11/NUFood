@@ -1,34 +1,5 @@
-import React, { useState } from 'react';
-import { useBanner } from '@/context/BannerContext';
+import React from 'react';
 
-const Banner: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(true);
-  const { containerRef } = useBanner();
-
-  const handleClose = () => {
-    setIsVisible(false);
-  };
-
-  if (!isVisible) {
-    return null;
-  }
-
-  return (
-    <div ref={containerRef} className="w-full mx-auto bg-secondary/30 border-b border-border">
-      <div className="flex items-center justify-between px-4 py-3 md:py-2">
-        <span className="text-foreground font-medium text-sm md:text-base flex-1 text-center">
-          NUFood is temporarily down due to Dine On Campus data restrictions. Sorry for the inconvenience 🙏
-        </span>
-        <button
-          onClick={handleClose}
-          className="text-muted-foreground hover:text-foreground transition-colors duration-200 text-lg md:text-base font-bold focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 rounded p-1 ml-2 min-w-[32px] min-h-[32px] flex items-center justify-center"
-          aria-label="Close banner"
-        >
-          ✕
-        </button>
-      </div>
-    </div>
-  );
-};
+const Banner: React.FC = () => null;
 
 export default Banner;
