@@ -40,7 +40,6 @@ type BrowserAPIScraper struct {
 	BaseURL    string
 	ChromePath string
 	MaxRetries int
-	Legacy     *ChromeDPScraper
 }
 
 type periodsResponse struct {
@@ -56,7 +55,6 @@ func NewBrowserAPIScraper() *BrowserAPIScraper {
 		BaseURL:    DefaultConfig.BaseURL,
 		ChromePath: resolveChromePath(),
 		MaxRetries: 3,
-		Legacy:     NewChromeDPScraper(),
 	}
 }
 
@@ -142,8 +140,7 @@ func (s *BrowserAPIScraper) ScrapeFood(date string) ([]models.DailyItem, []model
 		return dailyItems, allDataItems, allClosed, nil
 	}
 
-	log.Printf("browser-api scrape had no successful fetches for date=%s; falling back to html scraper", date)
-	return s.Legacy.ScrapeFood(date)
+	return nil, nil, true, fmt.Errorf("browser-api scrape had no successful fetches for date=%s", date)
 }
 
 func (s *BrowserAPIScraper) ScrapeLocationOperatingTimes(date string) ([]models.LocationOperatingTimes, error) {
@@ -158,8 +155,7 @@ func (s *BrowserAPIScraper) ScrapeLocationOperatingTimes(date string) ([]models.
 		return s.fetchJSONWithNewTab(allocCtx, url, &resp, 25*time.Second)
 	})
 	if err != nil {
-		log.Printf("browser-api failed operation-hours fetch; falling back to html scraper: %v", err)
-		return s.Legacy.ScrapeLocationOperatingTimes(date)
+		return nil, fmt.Errorf("browser-api failed operation-hours fetch for date=%s: %w", date, err)
 	}
 
 	return parseLocationOperatingTimes(resp.Locations)
