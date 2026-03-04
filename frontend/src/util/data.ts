@@ -46,4 +46,23 @@ export const updateMailing = async (mailing: boolean, userToken: string) => {
   }
 };
 
+export const postDisplayPreferences = async (visibleLocations: string[], userToken: string) => {
+  try {
+    const auth = `Bearer ${userToken}`;
+    const response = await fetch(`${API_URL}/api/displayPreferences`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: auth,
+      },
+      body: JSON.stringify({ visibleLocations }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Error posting display preferences:', error);
+  }
+};
 

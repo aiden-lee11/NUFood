@@ -73,6 +73,7 @@ func main() {
 	// User preferences endpoints
 	apiRouter.HandleFunc("/userPreferences", middleware.AuthMiddleware(api.SetUserPreferences)).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/mailing", middleware.AuthMiddleware(api.SetUserMailing)).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/displayPreferences", middleware.AuthMiddleware(api.SetDisplayPreferences)).Methods("POST", "OPTIONS")
 
 	// Scrape and Save Data endpoints
 	apiRouter.HandleFunc("/scrapeWeeklyItems", api.ScrapeWeeklyItemsHandler).Methods("GET", "OPTIONS")

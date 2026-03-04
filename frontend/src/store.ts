@@ -50,6 +50,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     locationOperationHours: [],
     mailing: false,
     nutritionGoals: defaultNutritionGoals,
+    displayPreferences: null,
   },
   loading: false,
   error: null,
@@ -83,6 +84,10 @@ export const useDataStore = create<DataState>((set, get) => ({
           locationOperationHours: allData.locationOperatingTimes || [],
           mailing: allData.mailing ?? false,
           nutritionGoals: mappedGoals, // Use the mapped goals
+          displayPreferences: allData.displayPreferences ?? {
+            visibleLocations: [],
+            hasSavedDisplayPreferences: false,
+          },
         },
         loading: false,
         hasFetchedAllData: true,
@@ -117,6 +122,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           userPreferences: null,
           mailing: false,
           nutritionGoals: mappedGoals, // Use the mapped goals
+          displayPreferences: null,
         },
         loading: false,
         hasFetchedGeneralData: true,
@@ -215,6 +221,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         userPreferences: [],
         mailing: false,
         nutritionGoals: defaultNutritionGoals,
+        displayPreferences: null,
       },
       hasFetchedAllData: false,
       hasFetchedGeneralData: false,

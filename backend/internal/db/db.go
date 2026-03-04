@@ -38,9 +38,10 @@ type GormAllDataItem struct {
 // GormUserPreferences represents user-specific preferences for menu items.
 type GormUserPreferences struct {
 	gorm.Model
-	UserID    string `gorm:"unique"` // Unique identifier for the user.
-	Favorites string // JSON-encoded array of item names marked as favorites.
-	Mailing   bool   //  Bool value to know if the user wants their available favorites in a daily email
+	UserID             string `gorm:"unique"` // Unique identifier for the user.
+	Favorites          string // JSON-encoded array of item names marked as favorites.
+	Mailing            bool   // Bool value to know if the user wants their available favorites in a daily email.
+	DisplayPreferences string // JSON-encoded display settings (locations currently).
 }
 
 // GormLocationOperatingTimes represents the operating times for a location.
@@ -307,6 +308,30 @@ func UpdateMailingStatus(userID string, mailing bool) error {
 	return nil
 }
 
+func SaveDisplayPreferences(userID string, displayPreferences models.DisplayPreferences) error {
+	displayPreferencesJSON, err := json.Marshal(displayPreferences)
+	if err != nil {
+		return fmt.Errorf("error serializing display preferences: %v", err)
+	}
+
+	var userPreferences GormUserPreferences
+	if err := DB.Where("user_id = ?", userID).First(&userPreferences).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			userPreferences = GormUserPreferences{
+				UserID:             userID,
+				Favorites:          "[]",
+				Mailing:            false,
+				DisplayPreferences: string(displayPreferencesJSON),
+			}
+			return DB.Create(&userPreferences).Error
+		}
+		return err
+	}
+
+	userPreferences.DisplayPreferences = string(displayPreferencesJSON)
+	return DB.Save(&userPreferences).Error
+}
+
 // ReturnDateOfDailyItems retrieves the date associated with the daily items in the database.
 // Should index into the weeklyItems table and return the date of an item with the day index field of 0
 //
@@ -475,6 +500,33 @@ func GetUserMailing(userID string) (*bool, error) {
 	}
 
 	return &userPreferences.Mailing, nil
+}
+
+func GetDisplayPreferences(userID string) (models.DisplayPreferences, bool, error) {
+	var userPreferences GormUserPreferences
+
+	result := DB.Where("user_id = ?", userID).First(&userPreferences)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return models.DisplayPreferences{VisibleLocations: []string{}}, false, nil
+	}
+	if result.Error != nil {
+		return models.DisplayPreferences{VisibleLocations: []string{}}, false, result.Error
+	}
+
+	if strings.TrimSpace(userPreferences.DisplayPreferences) == "" {
+		return models.DisplayPreferences{VisibleLocations: []string{}}, false, nil
+	}
+
+	var displayPreferences models.DisplayPreferences
+	if err := json.Unmarshal([]byte(userPreferences.DisplayPreferences), &displayPreferences); err != nil {
+		return models.DisplayPreferences{VisibleLocations: []string{}}, false, fmt.Errorf("error deserializing display preferences: %v", err)
+	}
+
+	if displayPreferences.VisibleLocations == nil {
+		displayPreferences.VisibleLocations = []string{}
+	}
+
+	return displayPreferences, true, nil
 }
 
 func GetAvailableFavoritesBatch(userID string) ([]models.DailyItem, error) {

@@ -16,6 +16,14 @@ import (
 	"time"
 )
 
+var allowedLocationPreferences = map[string]struct{}{
+	"Sargent":   {},
+	"Elder":     {},
+	"Allison":   {},
+	"Plex East": {},
+	"Plex West": {},
+}
+
 // Helper functions to convert between AllDataItem arrays and string arrays
 func allDataItemsToStrings(items []models.AllDataItem) []string {
 	result := make([]string, len(items))
@@ -346,6 +354,45 @@ func SetUserMailing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func SetDisplayPreferences(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(string)
+
+	var req struct {
+		VisibleLocations []string `json:"visibleLocations"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Error decoding JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	normalized := make([]string, 0, len(req.VisibleLocations))
+	seen := make(map[string]struct{}, len(req.VisibleLocations))
+	for _, location := range req.VisibleLocations {
+		if _, ok := allowedLocationPreferences[location]; !ok {
+			http.Error(w, "Invalid location in visibleLocations: "+location, http.StatusBadRequest)
+			return
+		}
+		if _, exists := seen[location]; exists {
+			continue
+		}
+		seen[location] = struct{}{}
+		normalized = append(normalized, location)
+	}
+
+	displayPreferences := models.DisplayPreferences{
+		VisibleLocations: normalized,
+	}
+
+	if err := db.SaveDisplayPreferences(userID, displayPreferences); err != nil {
+		http.Error(w, "Error updating display preferences: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	cache.SetUserDisplayPreferences(userID, displayPreferences)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // GetAllDataHandler retrieves and combines all relevant dining hall data for the user.
 //
 // This handler expects an Authorization header containing a valid Firebase ID token. It combines daily items, location operating times, and user preferences into a single JSON response.
@@ -369,6 +416,8 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	var userPreferences []models.AllDataItem
 	var mailing *bool
 	var nutritionGoals models.NutritionGoals
+	var displayPreferences models.DisplayPreferences
+	var hasSavedDisplayPreferences bool
 	var err error
 
 	// Check memory store first for general data
@@ -415,6 +464,8 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		userPreferences = cachedUserData.Preferences
 		nutritionGoals = cachedUserData.NutritionGoals
 		mailing = cachedUserData.Mailing
+		displayPreferences = cachedUserData.DisplayPreferences
+		hasSavedDisplayPreferences = cachedUserData.HasSavedDisplayPreferences
 	} else {
 		fmt.Printf("Cache miss for user %s, fetching from database\n", userID)
 
@@ -451,8 +502,18 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		displayPreferences, hasSavedDisplayPreferences, err = db.GetDisplayPreferences(userID)
+		if err != nil {
+			http.Error(w, "Error fetching display preferences: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		// Cache the user data for future requests
-		cache.SetUserData(userID, userPreferences, nutritionGoals, mailing)
+		cache.SetUserData(userID, userPreferences, nutritionGoals, mailing, displayPreferences, hasSavedDisplayPreferences)
+	}
+
+	if displayPreferences.VisibleLocations == nil {
+		displayPreferences.VisibleLocations = []string{}
 	}
 
 	combinedData := map[string]interface{}{
@@ -462,6 +523,10 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		"userPreferences":        allDataItemsToStrings(userPreferences),
 		"mailing":                mailing,
 		"nutritionGoals":         nutritionGoals,
+		"displayPreferences": map[string]interface{}{
+			"visibleLocations":           displayPreferences.VisibleLocations,
+			"hasSavedDisplayPreferences": hasSavedDisplayPreferences,
+		},
 	}
 
 	// Set the response header to indicate JSON content

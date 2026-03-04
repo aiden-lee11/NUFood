@@ -8,12 +8,14 @@ import (
 
 // UserData represents cached user-specific data
 type UserData struct {
-	UserID         string
-	Preferences    []models.AllDataItem
-	NutritionGoals models.NutritionGoals
-	Mailing        *bool
-	LastUpdated    time.Time
-	TTL            time.Duration
+	UserID                     string
+	Preferences                []models.AllDataItem
+	NutritionGoals             models.NutritionGoals
+	Mailing                    *bool
+	DisplayPreferences         models.DisplayPreferences
+	HasSavedDisplayPreferences bool
+	LastUpdated                time.Time
+	TTL                        time.Duration
 }
 
 // IsExpired checks if the cached data has expired
@@ -68,7 +70,14 @@ func (uc *UserCache) GetUserData(userID string) (*UserData, bool) {
 }
 
 // SetUserData caches user data with default TTL
-func (uc *UserCache) SetUserData(userID string, preferences []models.AllDataItem, nutritionGoals models.NutritionGoals, mailing *bool) {
+func (uc *UserCache) SetUserData(
+	userID string,
+	preferences []models.AllDataItem,
+	nutritionGoals models.NutritionGoals,
+	mailing *bool,
+	displayPreferences models.DisplayPreferences,
+	hasSavedDisplayPreferences bool,
+) {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 
@@ -78,12 +87,14 @@ func (uc *UserCache) SetUserData(userID string, preferences []models.AllDataItem
 	}
 
 	uc.users[userID] = &UserData{
-		UserID:         userID,
-		Preferences:    preferences,
-		NutritionGoals: nutritionGoals,
-		Mailing:        mailing,
-		LastUpdated:    time.Now(),
-		TTL:            uc.defaultTTL,
+		UserID:                     userID,
+		Preferences:                preferences,
+		NutritionGoals:             nutritionGoals,
+		Mailing:                    mailing,
+		DisplayPreferences:         displayPreferences,
+		HasSavedDisplayPreferences: hasSavedDisplayPreferences,
+		LastUpdated:                time.Now(),
+		TTL:                        uc.defaultTTL,
 	}
 }
 
@@ -116,6 +127,17 @@ func (uc *UserCache) SetUserMailing(userID string, mailing bool) {
 
 	if userData, exists := uc.users[userID]; exists {
 		userData.Mailing = &mailing
+		userData.LastUpdated = time.Now()
+	}
+}
+
+func (uc *UserCache) SetUserDisplayPreferences(userID string, displayPreferences models.DisplayPreferences) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+
+	if userData, exists := uc.users[userID]; exists {
+		userData.DisplayPreferences = displayPreferences
+		userData.HasSavedDisplayPreferences = true
 		userData.LastUpdated = time.Now()
 	}
 }
@@ -187,9 +209,16 @@ func GetUserData(userID string) (*UserData, bool) {
 }
 
 // SetUserData caches user data in the global cache
-func SetUserData(userID string, preferences []models.AllDataItem, nutritionGoals models.NutritionGoals, mailing *bool) {
+func SetUserData(
+	userID string,
+	preferences []models.AllDataItem,
+	nutritionGoals models.NutritionGoals,
+	mailing *bool,
+	displayPreferences models.DisplayPreferences,
+	hasSavedDisplayPreferences bool,
+) {
 	if userCache != nil {
-		userCache.SetUserData(userID, preferences, nutritionGoals, mailing)
+		userCache.SetUserData(userID, preferences, nutritionGoals, mailing, displayPreferences, hasSavedDisplayPreferences)
 	}
 }
 
@@ -211,6 +240,12 @@ func SetUserNutritionGoals(userID string, goals models.NutritionGoals) {
 func SetUserMailing(userID string, mailing bool) {
 	if userCache != nil {
 		userCache.SetUserMailing(userID, mailing)
+	}
+}
+
+func SetUserDisplayPreferences(userID string, displayPreferences models.DisplayPreferences) {
+	if userCache != nil {
+		userCache.SetUserDisplayPreferences(userID, displayPreferences)
 	}
 }
 

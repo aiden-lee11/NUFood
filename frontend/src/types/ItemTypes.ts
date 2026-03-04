@@ -32,6 +32,11 @@ export interface NutritionGoals {
   fat: number;
 }
 
+export interface DisplayPreferences {
+  visibleLocations: string[];
+  hasSavedDisplayPreferences: boolean;
+}
+
 // Base interface for shared properties
 interface BaseDataResponse {
   allItems: string[];
@@ -47,4 +52,5 @@ export interface UserDataResponse extends BaseDataResponse {
   userPreferences: string[] | null;
   mailing: boolean;
   nutritionGoals: NutritionGoals;
+  displayPreferences: DisplayPreferences | null;
 }

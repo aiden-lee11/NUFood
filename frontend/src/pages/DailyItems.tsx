@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { postUserPreferences } from '../util/data';
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { postDisplayPreferences, postUserPreferences } from '../util/data';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import LocationItemGrid from '../components/locationGrid'
@@ -12,25 +12,25 @@ import { useDataStore } from '@/store';
 import { HeaderControls } from "../components/header-controls"
 import SEO from '../components/SEO';
 
+const DEFAULT_LOCATIONS = ["Sargent", "Elder", "Allison", "Plex East", "Plex West"];
 
 const DailyItems: React.FC = () => {
   // Data involved with auth
   const [showPopup, setShowPopup] = useState(false);
-  const { token } = useAuth();
+  const { token, authLoading } = useAuth();
 
   // Data involved with display of items
-  const locations = ["Sargent", "Elder", "Allison", "Plex East", "Plex West"];
-  const [visibleLocations, setVisibleLocations] = useState<string[]>(["Sargent", "Elder", "Allison", "Plex East", "Plex West"]);
+  const locations = DEFAULT_LOCATIONS;
+  const [visibleLocations, setVisibleLocations] = useState<string[]>(DEFAULT_LOCATIONS);
   const [visibleTimes, setVisibleTimes] = useState<string[]>([]);
   const [expandFolders, setExpandFolders] = useState(false);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
-  const [showPreferences, setShowPreferences] = useState(() => {
-    return sessionStorage.getItem("showPreferences") !== "false";
-  });
+  const [showPreferences, setShowPreferences] = useState(false);
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [openLocations, setOpenLocations] = useState<string[]>([])
   const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const hasHydratedSignedInDisplayPrefs = useRef(false);
 
   // Data involved with API
   const staticData = useDataStore((state) => state.UserDataResponse);
@@ -40,8 +40,32 @@ const DailyItems: React.FC = () => {
     [staticData.locationOperationHours, selectedDate]
   );
   const userPreferences = staticData.userPreferences;
+  const displayPreferences = staticData.displayPreferences;
   const setUserPreferences = useDataStore((state) => state.setUserPreferences)
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
+  useEffect(() => {
+    if (!authLoading && !token) {
+      setShowPreferences(sessionStorage.getItem("showPreferences") !== "false");
+      setVisibleLocations(DEFAULT_LOCATIONS);
+      hasHydratedSignedInDisplayPrefs.current = false;
+    }
+  }, [authLoading, token]);
+
+  useEffect(() => {
+    if (!token || !displayPreferences || hasHydratedSignedInDisplayPrefs.current) {
+      return;
+    }
+
+    if (displayPreferences.hasSavedDisplayPreferences) {
+      setVisibleLocations(displayPreferences.visibleLocations);
+      setShowPreferences(false);
+    } else {
+      setVisibleLocations(DEFAULT_LOCATIONS);
+      setShowPreferences(true);
+    }
+
+    hasHydratedSignedInDisplayPrefs.current = true;
+  }, [token, displayPreferences]);
 
   // Data involved with fuse
   const [searchQuery, setSearchQuery] = useState('');
@@ -126,13 +150,26 @@ const DailyItems: React.FC = () => {
     }
   };
 
+  const persistVisibleLocations = (nextVisibleLocations: string[]) => {
+    if (token) {
+      postDisplayPreferences(nextVisibleLocations, token);
+    }
+  };
+
+  const setVisibleLocationsAndPersist = (nextVisibleLocations: string[]) => {
+    setVisibleLocations(nextVisibleLocations);
+    persistVisibleLocations(nextVisibleLocations);
+  };
+
   const togglePreferencesItem = (preferenceType: string, preference: string | boolean) => {
     if (preferenceType === 'location') {
-      setVisibleLocations(prev =>
-        prev.includes(preference as string)
+      setVisibleLocations(prev => {
+        const nextVisibleLocations = prev.includes(preference as string)
           ? prev.filter(loc => loc !== preference)
-          : [...prev, preference as string]
-      );
+          : [...prev, preference as string];
+        persistVisibleLocations(nextVisibleLocations);
+        return nextVisibleLocations;
+      });
     } else if (preferenceType === 'time') {
       setVisibleTimes(prev =>
         prev.includes(preference as string)
@@ -144,10 +181,11 @@ const DailyItems: React.FC = () => {
     }
   }
 
-  const handleTogglePreferences = () => {
-    const newState = !showPreferences;
-    setShowPreferences(newState);
-    sessionStorage.setItem("showPreferences", newState.toString());
+  const handleTogglePreferences = (show: boolean) => {
+    setShowPreferences(show);
+    if (!token) {
+      sessionStorage.setItem("showPreferences", show.toString());
+    }
   };
 
   return (
@@ -172,7 +210,7 @@ const DailyItems: React.FC = () => {
         }}
         preferencesActions={{
           togglePreferencesItem,
-          setVisibleLocations,
+          setVisibleLocations: setVisibleLocationsAndPersist,
           setShowPreferences: handleTogglePreferences,
         }}
         openLocations={openLocations}

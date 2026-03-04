@@ -105,6 +105,10 @@ type PreferenceReturn struct {
 	Preferences []DailyItem // json encoded arrays but are stored as strings in db
 }
 
+type DisplayPreferences struct {
+	VisibleLocations []string `json:"visibleLocations"`
+}
+
 // NutritionGoals represents user-defined nutrition goals
 type NutritionGoals struct {
 	Calories float64
