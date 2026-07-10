@@ -57,8 +57,9 @@ func main() {
 
 	fmt.Println("UserCache initialized")
 
-	// Start the in-process daily menu scrape (replaces the old Vercel cron).
-	// Disable with ENABLE_SCRAPE_CRON=false; time it with SCRAPE_HOUR_UTC.
+	// Start the in-process menu scrape (replaces the old Vercel cron). Runs at
+	// 6am & 6pm Central by default; override times with SCRAPE_HOURS_CST or
+	// disable with ENABLE_SCRAPE_CRON=false.
 	scheduler.StartDailyScrape()
 
 	// Create a new router

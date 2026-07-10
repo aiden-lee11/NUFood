@@ -105,7 +105,9 @@ func Run(opts Options) error {
 		return nil
 	}
 
-	hoursDate := opts.BaseDate.UTC().AddDate(0, 0, 1).Format("2006-01-02")
+	// Use BaseDate's own location so "tomorrow" is the next campus day, not the
+	// next UTC day (which can differ during the evening in Chicago).
+	hoursDate := opts.BaseDate.AddDate(0, 0, 1).Format("2006-01-02")
 	log.Printf("scraping operating hours date=%s", hoursDate)
 
 	var hours []models.LocationOperatingTimes
