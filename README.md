@@ -16,41 +16,6 @@ Live at: [nufood.me](https://nufood.me)
 -  Nutrition tracking to hit your goals
 -  Retain the last 100 days of successfully scraped menus
 
-## Tech Stack
-
-### Frontend
-- React with TypeScript
-- Vite for build tooling
-- Tailwind CSS for styling
-- Firebase Authentication
-- Google Analytics for usage tracking
-
-### Backend
-- Go (Golang) for API and scraping
-- PostgreSQL database 
-- Firebase Admin SDK for auth verification
-- Headless Chromium (`chromedp`) for browser-context DineOnCampus API fetching
-
-## Deployment
-
-The application is deployed using:
-- Frontend: Vercel
-- Backend: Railway
-- Database: Railway PostgreSQL
-
-### Backend Runtime Note
-The backend now relies on a Chrome-based headless runtime for scraping. Use the pinned `backend/Dockerfile` on Railway to guarantee Chromium availability and set `CHROME_BIN` consistently.
-
-### Scheduled Scraping
-
-The Vercel cron calls `/api/scrape`, which invokes the protected Railway scrape endpoints. Configure:
-
-- Vercel: `BACKEND_URL`, `CRON_SECRET`, and optionally `SCRAPE_TOKEN`
-- Railway: `SCRAPE_TOKEN` (the same value as Vercel's `SCRAPE_TOKEN`, or `CRON_SECRET` when the optional value is omitted)
-- Optional remote browser: `BROWSERLESS_WS_URL` or `BROWSER_WS_ENDPOINT`
-
-Scrape endpoints accept authenticated `POST` requests only. Menu updates are transactional: failed or partial scrapes leave existing data unchanged, successful scrapes replace only the requested dates, and menu rows older than 100 days are pruned.
-
 ## Screenshots
 
 ### Weekly Items View
