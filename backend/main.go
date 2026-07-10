@@ -76,9 +76,9 @@ func main() {
 	apiRouter.HandleFunc("/displayPreferences", middleware.AuthMiddleware(api.SetDisplayPreferences)).Methods("POST", "OPTIONS")
 
 	// Scrape and Save Data endpoints
-	apiRouter.HandleFunc("/scrapeWeeklyItems", api.ScrapeWeeklyItemsHandler).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/updateWeeklyItems", api.ScrapeUpdateWeekly).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/scrapeOperatingTimes", api.ScrapeLocationOperatingTimesHandler).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/scrapeWeeklyItems", middleware.ScrapeMiddleware(api.ScrapeWeeklyItemsHandler)).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/updateWeeklyItems", middleware.ScrapeMiddleware(api.ScrapeUpdateWeekly)).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/scrapeOperatingTimes", middleware.ScrapeMiddleware(api.ScrapeLocationOperatingTimesHandler)).Methods("POST", "OPTIONS")
 
 	// Mailing endpoints
 	apiRouter.HandleFunc("/sendMailing", middleware.AdminMiddleware(api.SendOutMailing)).Methods("GET", "OPTIONS")

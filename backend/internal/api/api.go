@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,6 +25,8 @@ var allowedLocationPreferences = map[string]struct{}{
 	"Plex East": {},
 	"Plex West": {},
 }
+
+var scrapeJobMu sync.Mutex
 
 // Helper functions to convert between AllDataItem arrays and string arrays
 func allDataItemsToStrings(items []models.AllDataItem) []string {
@@ -72,6 +75,12 @@ func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
 // Expected Authorization:
 //   - No special authorization required.
 func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
+	if !scrapeJobMu.TryLock() {
+		http.Error(w, "A scrape job is already running", http.StatusConflict)
+		return
+	}
+	defer scrapeJobMu.Unlock()
+
 	scraper := scraper.NewBrowserAPIScraper()
 
 	const MAX_RETRIES = 3
@@ -137,6 +146,12 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
+	if !scrapeJobMu.TryLock() {
+		http.Error(w, "A scrape job is already running", http.StatusConflict)
+		return
+	}
+	defer scrapeJobMu.Unlock()
+
 	scraper := scraper.NewBrowserAPIScraper()
 
 	const MAX_RETRIES = 3
@@ -233,6 +248,12 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
+	if !scrapeJobMu.TryLock() {
+		http.Error(w, "A scrape job is already running", http.StatusConflict)
+		return
+	}
+	defer scrapeJobMu.Unlock()
+
 	scraper := scraper.NewBrowserAPIScraper()
 	formattedDate := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
 
