@@ -46,28 +46,6 @@ func stringsToAllDataItems(names []string) []models.AllDataItem {
 	return result
 }
 
-// DeleteLocationOperatingTimes deletes all location operating times from the database.
-//
-// This handler expects no request body and no special authorization.
-// It responds with an HTTP status code indicating the result of the operation.
-//
-// Expected Authorization:
-//   - No special authorization required.
-//
-// Parameters:
-//   - w: The HTTP response writer.
-//   - r: The HTTP request.
-func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
-	err := db.DeleteLocationOperatingTimes()
-	if err != nil {
-		http.Error(w, "Error deleting location operations: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Return success code
-	w.WriteHeader(http.StatusOK)
-}
-
 // ScrapeUpdateWeekly scrapes the weekly items and updates the database.
 //
 // This handler expects no request body and no special authorization.

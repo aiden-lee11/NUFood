@@ -17,13 +17,6 @@ import (
 // Global database variable
 var DB *gorm.DB
 
-// GormDailyItem represents a daily menu item in the database.
-type GormDailyItem struct {
-	gorm.Model
-	models.DailyItem `gorm:"unique"`
-	AllClosed        *bool `gorm:"column:all_closed"`
-}
-
 type GormWeeklyItem struct {
 	gorm.Model
 	models.DailyItem
@@ -66,7 +59,7 @@ type GormNutritionGoals struct {
 
 // Package-level errors for database operations.
 var (
-	NoItemsInDB           = errors.New("no daily items found")
+	NoItemsInDB           = errors.New("no menu items found")
 	NoUserPreferencesInDB = errors.New("no user preferences found")
 	NoUserGoalsInDB       = errors.New("no user nutrition goals found")
 )
@@ -76,11 +69,6 @@ const MenuRetentionDays = 100
 // AllDataItemToGorm converts an AllDataItem model to a GormAllDataItem.
 func AllDataItemToGorm(item models.AllDataItem) GormAllDataItem {
 	return GormAllDataItem{AllDataItem: item}
-}
-
-// DailyItemToGorm converts a DailyItem model to a GormDailyItem.
-func DailyItemToGorm(item models.DailyItem) GormDailyItem {
-	return GormDailyItem{DailyItem: item}
 }
 
 func WeeklyItemToGorm(item models.WeeklyItem) GormWeeklyItem {
@@ -143,10 +131,6 @@ func Migrate(database *gorm.DB) error {
 	})
 }
 
-func InsertWeeklyItems(items []models.WeeklyItem) error {
-	return insertWeeklyItems(DB, items)
-}
-
 func insertWeeklyItems(tx *gorm.DB, items []models.WeeklyItem) error {
 	if len(items) == 0 {
 		log.Println("No weekly items, skipping insert")
@@ -170,21 +154,6 @@ func insertWeeklyItems(tx *gorm.DB, items []models.WeeklyItem) error {
 
 	log.Println("Weekly items inserted successfully")
 	return nil
-}
-
-// UpdateWeeklyItems replaces the rows for the dates represented by items and
-// prunes menu history older than MenuRetentionDays.
-func UpdateWeeklyItems(items []models.DailyItem) error {
-	if len(items) == 0 {
-		return errors.New("cannot update weekly items with an empty scrape")
-	}
-
-	weeklyItems := make([]models.WeeklyItem, 0, len(items))
-	for _, item := range items {
-		weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: item})
-	}
-
-	return PersistScrapedMenu(weeklyItems, nil, nil, time.Now())
 }
 
 // PersistScrapedMenu atomically replaces scraped dates, records newly observed
@@ -704,51 +673,6 @@ func GetMailingList() ([]models.PreferenceReturn, error) {
 	}
 
 	return items, nil
-}
-
-// DeleteWeeklyItems removes all records from the weekly items table.
-//
-// Returns:
-// - error: An error if the deletion operation fails.
-func DeleteWeeklyItems() error {
-	result := DB.Unscoped().Where("1 = 1").Delete(&GormWeeklyItem{})
-	if result.Error != nil {
-		fmt.Println("Error deleting weekly items:", result.Error)
-		return result.Error
-	}
-
-	fmt.Println("All weekly items deleted")
-	return nil
-}
-
-// DeleteAllDataItems removes all records from the allData items table.
-//
-// Returns:
-// - error: An error if the deletion operation fails.
-func DeleteAllDataItems() error {
-	result := DB.Unscoped().Where("1 = 1").Delete(&GormAllDataItem{})
-	if result.Error != nil {
-		fmt.Println("Error deleting items:", result.Error)
-		return result.Error
-	}
-
-	fmt.Println("All items deleted")
-	return nil
-}
-
-// DeleteLocationOperatingTimes deletes all records from the location operating times table.
-//
-// Returns:
-// - error: An error if the deletion operation fails.
-func DeleteLocationOperatingTimes() error {
-	result := DB.Unscoped().Where("1 = 1").Delete(&GormLocationOperatingTimes{})
-	if result.Error != nil {
-		fmt.Println("Error deleting location operations:", result.Error)
-		return result.Error
-	}
-
-	fmt.Println("All location operations deleted")
-	return nil
 }
 
 // SaveNutritionGoals saves a user's nutrition goals to the database.
