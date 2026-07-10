@@ -103,7 +103,7 @@ func main() {
 		Addr:         ":8081",
 		Handler:      corsRouter,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: 10 * time.Minute,
 		IdleTimeout:  60 * time.Second,
 	}
 

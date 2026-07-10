@@ -28,33 +28,38 @@ import (
 func TestScrapeFood(t *testing.T) {
 	// Define a mock HTTP response
 	mockResponse := models.DiningHallResponse{
-		Menu: models.Menu{
-			Date: "2024-12-16",
-			Periods: models.Periods{
-				Categories: []models.Category{
-					{
-						Name: "Comfort",
-						Items: []models.Item{
-							{Name: "Pancakes", Description: "Delicious pancakes"},
-							// Test of flagged ingredient food should not be in end results
-							{Name: "Butter", Description: "That Lard"},
-						},
+		Date: "2024-12-16",
+		Period: models.Periods{
+			Categories: []models.Category{
+				{
+					Name: "Comfort",
+					Items: []models.Item{
+						{Name: "Pancakes", Description: "Delicious pancakes"},
+						// Test of flagged ingredient food should not be in end results
+						{Name: "Butter", Description: "That Lard"},
 					},
-					{
-						// Test of flagged ingredient category ie no foods in category are to be saved
-						Name: "planet eats (cold)",
-						Items: []models.Item{
-							{Name: "Turkey Breast", Description: "this one didn't get pardoned"},
-							{Name: "Thinly sliced ham", Description: "Invisible from the side"},
-						},
+				},
+				{
+					// Test of flagged ingredient category ie no foods in category are to be saved
+					Name: "planet eats (cold)",
+					Items: []models.Item{
+						{Name: "Turkey Breast", Description: "this one didn't get pardoned"},
+						{Name: "Thinly sliced ham", Description: "Invisible from the side"},
 					},
 				},
 			},
 		},
-		Closed: false,
 	}
 	mockResponseBody, err := json.Marshal(mockResponse)
 	require.NoError(t, err, "Error marshalling mock response: %v", err)
+	periodsResponseBody, err := json.Marshal(models.LocationServicesResponse{
+		LocationId: "5b33ae291178e909d807593d",
+		Date:       "2024-12-16",
+		Services: []models.Service{
+			{ID: "66e1fc2de45d43074be3a0e5", TimeOfDay: "Breakfast"},
+		},
+	})
+	require.NoError(t, err, "Error marshalling periods response: %v", err)
 
 	// Create a mock server
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -63,14 +68,19 @@ func TestScrapeFood(t *testing.T) {
 
 		fmt.Printf("Mock server received request: Path=%s, Query=%v\n", path, query)
 
-		// Match the expected endpoint pattern
-		if strings.HasPrefix(path, "/v1/location/5b33ae291178e909d807593d/periods/66e1fc2de45d43074be3a0e5") &&
-			query.Get("platform") == "0" && query.Get("date") != "" {
+		switch {
+		case path == "/v1/locations/5b33ae291178e909d807593d/periods/" && query.Get("date") != "":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(periodsResponseBody)
+		case path == "/v1/locations/5b33ae291178e909d807593d/menu" &&
+			query.Get("period") == "66e1fc2de45d43074be3a0e5" &&
+			query.Get("date") != "":
 			// Serve the mock response
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			w.Write(mockResponseBody)
-		} else {
+		default:
 			// Return 404 for unmatched routes
 			http.NotFound(w, r)
 		}
@@ -84,7 +94,7 @@ func TestScrapeFood(t *testing.T) {
 				Name: "Allison",
 				Hash: "5b33ae291178e909d807593d",
 				Services: []models.Service{
-					{TimeOfDay: "Breakfast", Hash: "66e1fc2de45d43074be3a0e5"},
+					{TimeOfDay: "Breakfast", ID: "66e1fc2de45d43074be3a0e5"},
 				},
 			},
 		},

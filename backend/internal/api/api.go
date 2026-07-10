@@ -73,7 +73,7 @@ func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
 func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 	scraper := scraper.NewBrowserAPIScraper()
 
-	const MAX_RETRIES = 10
+	const MAX_RETRIES = 3
 
 	var dItems []models.DailyItem
 	var aItems []models.AllDataItem
@@ -87,6 +87,9 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("successful scrape on the %d time", i)
 			err = nil
 			break
+		}
+		if i < MAX_RETRIES-1 {
+			time.Sleep(time.Duration(i+1) * time.Second)
 		}
 	}
 
@@ -136,7 +139,7 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	scraper := scraper.NewBrowserAPIScraper()
 
-	const MAX_RETRIES = 10
+	const MAX_RETRIES = 3
 	var weeklyItems []models.WeeklyItem
 	var totalAllItems []models.AllDataItem
 
@@ -155,6 +158,9 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 				fmt.Printf("successful scrape on the %d time", tryInd)
 				err = nil
 				break
+			}
+			if tryInd < MAX_RETRIES-1 {
+				time.Sleep(time.Duration(tryInd+1) * time.Second)
 			}
 		}
 
@@ -233,7 +239,7 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 	scraper := scraper.NewBrowserAPIScraper()
 	formattedDate := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
 
-	const MAX_RETRIES = 10
+	const MAX_RETRIES = 3
 	var locationOperatingTimes []models.LocationOperatingTimes
 	var err error
 
@@ -245,6 +251,13 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 			err = nil
 			break
 		}
+		if i < MAX_RETRIES-1 {
+			time.Sleep(time.Duration(i+1) * time.Second)
+		}
+	}
+	if err != nil {
+		http.Error(w, "Error scraping location operating times: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if len(locationOperatingTimes) == 0 {
 		http.Error(w, "Error scraping and saving: nil locationOperatingTimes", http.StatusInternalServerError)
