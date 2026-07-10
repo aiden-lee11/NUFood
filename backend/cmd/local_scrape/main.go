@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -49,6 +50,8 @@ func main() {
 
 	var weeklyItems []models.WeeklyItem
 	var totalAllItems []models.AllDataItem
+	var scrapedDates []string
+	var failedDates []string
 
 	for dayIndex := -windowDays; dayIndex <= windowDays; dayIndex++ {
 		scrapeDate := baseDate.AddDate(0, 0, dayIndex).Format("2006-01-02")
@@ -68,8 +71,10 @@ func main() {
 
 		if scrapeErr != nil {
 			log.Printf("skipping date=%s after retries; err=%v", scrapeDate, scrapeErr)
+			failedDates = append(failedDates, scrapeDate)
 			continue
 		}
+		scrapedDates = append(scrapedDates, scrapeDate)
 
 		if len(dItems) == 0 {
 			log.Printf("no menu items for date=%s", scrapeDate)
@@ -79,7 +84,6 @@ func main() {
 		for _, dItem := range dItems {
 			weeklyItems = append(weeklyItems, models.WeeklyItem{
 				DailyItem: dItem,
-				DayIndex:  dayIndex,
 			})
 		}
 		totalAllItems = append(totalAllItems, aItems...)
@@ -87,18 +91,11 @@ func main() {
 		log.Printf("date=%s daily_items=%d all_items=%d", scrapeDate, len(dItems), len(aItems))
 	}
 
-	if len(weeklyItems) == 0 && len(totalAllItems) == 0 {
-		log.Fatal("no data scraped for any day; aborting db update")
+	if len(failedDates) > 0 {
+		log.Fatalf("scrape incomplete for dates %s; database left unchanged", strings.Join(failedDates, ", "))
 	}
-
-	if err := db.DeleteWeeklyItems(); err != nil {
-		log.Fatalf("failed to clear weekly items: %v", err)
-	}
-	if err := db.InsertWeeklyItems(weeklyItems); err != nil {
-		log.Fatalf("failed to insert weekly items: %v", err)
-	}
-	if err := db.InsertAllDataItems(totalAllItems); err != nil {
-		log.Fatalf("failed to insert all data items: %v", err)
+	if err := db.PersistScrapedMenu(weeklyItems, totalAllItems, scrapedDates, baseDate); err != nil {
+		log.Fatalf("failed to persist scraped menu: %v", err)
 	}
 
 	log.Printf("menu update complete weekly_items=%d all_items=%d", len(weeklyItems), len(totalAllItems))
@@ -125,11 +122,8 @@ func main() {
 			log.Fatal("hours scrape returned zero locations")
 		}
 
-		if err := db.DeleteLocationOperatingTimes(); err != nil {
-			log.Fatalf("failed to clear location operating times: %v", err)
-		}
-		if err := db.InsertLocationOperatingTimes(hours); err != nil {
-			log.Fatalf("failed to insert location operating times: %v", err)
+		if err := db.ReplaceLocationOperatingTimes(hours); err != nil {
+			log.Fatalf("failed to replace location operating times: %v", err)
 		}
 
 		log.Printf("hours update complete locations=%d", len(hours))

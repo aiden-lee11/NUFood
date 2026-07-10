@@ -2,9 +2,6 @@ package scraper
 
 import (
 	"backend/internal/models"
-	"fmt"
-	"net/http"
-	"time"
 )
 
 // Predefined ingredient-related categories and items used to filter dining data.
@@ -115,26 +112,6 @@ var (
 	}
 )
 
-// RetryRequest attempts to execute a given callback function up to a specified number
-// of retries if the function returns an error. Returns an error if all retries fail.
-//
-// Parameters:
-//   - url: The URL associated with the request (used in the error message).
-//   - retries: The maximum number of retries.
-//   - callback: The function to execute, which should return an error if it fails.
-//
-// Returns:
-//   - error: An error indicating the failure of all retries, if applicable.
-func RetryRequest(url string, retries int, callback func() error) error {
-	for i := 0; i < retries; i++ {
-		err := callback()
-		if err == nil {
-			return nil
-		}
-	}
-	return fmt.Errorf("all retries failed for URL: %s", url)
-}
-
 // contains checks if a given string exists within a slice of strings.
 //
 // Parameters:
@@ -150,16 +127,6 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
-}
-
-// NewClient creates a new HTTP client with a predefined timeout.
-//
-// Returns:
-//   - *http.Client: A pointer to the configured HTTP client.
-func NewClient() *http.Client {
-	return &http.Client{
-		Timeout: time.Second * 30,
-	}
 }
 
 // convertWeekOperationInfoJSON converts a slice of DailyOperatingInfo into a slice

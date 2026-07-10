@@ -3,7 +3,9 @@ package db_test
 import (
 	"backend/internal/db"
 	"backend/internal/models"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,672 +13,220 @@ import (
 	"gorm.io/gorm"
 )
 
-// Total functions in db.go
-
-// func AllDataItemToGorm(item models.AllDataItem) GormAllDataItem {
-// func DailyItemToGorm(item models.DailyItem) GormDailyItem {
-// func InitDB(databasePath string) error {
-// func InsertDailyItems(items []models.DailyItem, allClosed bool) error {
-// func InsertAllDataItems(items []models.AllDataItem, allClosed bool) error {
-// func InsertLocationOperatingTimes(locations []models.LocationOperatingTimes) error {
-// func SaveUserPreferences(userID string, favorites []models.AllDataItem) error {
-// func ReturnDateOfDailyItems() (date string, err error) {
-// func GetAllDailyItems() ([]models.DailyItem, error) {
-// func GetAllDataItems() ([]models.AllDataItem, error) {
-// func GetLocationOperatingTimes() ([]models.LocationOperatingTimes, error) {
-// func GetUserPreferences(userID string) ([]models.AllDataItem, error) {
-// func FindFavoriteItemInDailyItems(favorite string) ([]models.DailyItem, error) {
-// func GetAvailableFavorites(userID string) ([]models.DailyItem, error) {
-// func DeleteDailyItems() error {
-// func DeleteLocationOperatingTimes() error {
-
 func setupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
-	t.Log("Setting up test database")
-
-	// Initialize an in-memory SQLite database
-	DB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err, "Failed to initialize test database")
-
-	// Apply migrations
-	err = DB.AutoMigrate(&db.GormDailyItem{}, &db.GormAllDataItem{}, &db.GormUserPreferences{}, &db.GormLocationOperatingTimes{})
-	if err != nil {
-		t.Fatalf("Failed to migrate schema: %v", err)
-	}
-
-	t.Log("Test database initialized successfully")
-
-	return DB
-}
-
-func teardownTestDB(db *gorm.DB, t *testing.T) {
-	t.Helper()
-	sqlDB, err := db.DB()
-	require.NoError(t, err, "Failed to retrieve SQL DB from Gorm DB")
-	assert.NoError(t, sqlDB.Close(), "Failed to close the test database")
-}
-
-func TestLocationOperationsLifeTime(t *testing.T) {
-
-	t.Log("Running TestInsertLocationOperations")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
-
-	// Override the global DB variable in your `db` package
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
+	testDB, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Migrate(testDB))
 	db.DB = testDB
+	t.Cleanup(func() {
+		sqlDB, err := testDB.DB()
+		require.NoError(t, err)
+		require.NoError(t, sqlDB.Close())
+	})
+	return testDB
+}
 
-	locationOperations := []models.LocationOperatingTimes{
-		{
-			Name: "allison dining commons",
-			Week: []models.DailyOperatingTimes{
-				{
-					Day:    0,
-					Date:   "2021-09-06",
-					Status: "open",
-					Hours: []models.HourlyTimes{
-						{
-							StartHour:    7,
-							StartMinutes: 0,
-							EndHour:      20,
-							EndMinutes:   0,
-						},
-						{
-							StartHour:    9,
-							StartMinutes: 30,
-							EndHour:      14,
-							EndMinutes:   0,
-						},
-					},
-				},
-			},
-		},
-		{
-			Name: "sargent",
-			Week: []models.DailyOperatingTimes{
-				{
-					Day:    0,
-					Date:   "2021-09-06",
-					Status: "open",
-					Hours: []models.HourlyTimes{
-						{
-							StartHour:    8,
-							StartMinutes: 0,
-							EndHour:      20,
-							EndMinutes:   0,
-						},
-						{
-							StartHour:    8,
-							StartMinutes: 30,
-							EndHour:      14,
-							EndMinutes:   0,
-						},
-					},
-				},
-			},
-		},
+func menuItem(date, name, location string) models.WeeklyItem {
+	return models.WeeklyItem{DailyItem: models.DailyItem{
+		Name:        name,
+		Date:        date,
+		Location:    location,
+		StationName: "Comfort",
+		TimeOfDay:   "Lunch",
+	}}
+}
+
+func TestPersistScrapedMenuReplacesDatesAndPrunesOldHistory(t *testing.T) {
+	setupTestDB(t)
+	now := time.Date(2026, time.July, 10, 12, 0, 0, 0, time.UTC)
+	tooOld := now.AddDate(0, 0, -db.MenuRetentionDays-1).Format("2006-01-02")
+	oldestRetained := now.AddDate(0, 0, -db.MenuRetentionDays).Format("2006-01-02")
+	today := now.Format("2006-01-02")
+	future := now.AddDate(0, 0, 3).Format("2006-01-02")
+
+	initial := []models.WeeklyItem{
+		menuItem(tooOld, "Expired", "Allison"),
+		menuItem(oldestRetained, "Still retained", "Allison"),
+		menuItem(today, "Old today item", "Allison"),
+		menuItem(future, "Future item", "Sargent"),
 	}
+	require.NoError(t, db.PersistScrapedMenu(
+		initial,
+		[]models.AllDataItem{{Name: "Old today item"}},
+		[]string{tooOld, oldestRetained, today, future},
+		now,
+	))
 
-	err := db.InsertLocationOperatingTimes(locationOperations)
-	require.NoError(t, err, "Error inserting location operations")
+	require.NoError(t, db.PersistScrapedMenu(
+		[]models.WeeklyItem{
+			menuItem(today, "Replacement", "Allison"),
+			menuItem(today, "Replacement", "Allison"),
+		},
+		[]models.AllDataItem{{Name: "Replacement"}, {Name: "Replacement"}},
+		[]string{today},
+		now,
+	))
+
+	items, err := db.GetAllWeeklyItems()
+	require.NoError(t, err)
+	assert.NotContains(t, items, tooOld)
+	require.Len(t, items[oldestRetained], 1)
+	require.Len(t, items[today], 1)
+	assert.Equal(t, "Replacement", items[today][0].Name)
+	require.Len(t, items[future], 1)
+
+	allItems, err := db.GetAllDataItems()
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []models.AllDataItem{{Name: "Old today item"}, {Name: "Replacement"}}, allItems)
+}
+
+func TestPersistScrapedMenuCanReplaceClosedDate(t *testing.T) {
+	setupTestDB(t)
+	now := time.Date(2026, time.July, 10, 12, 0, 0, 0, time.UTC)
+	date := now.Format("2006-01-02")
+
+	require.NoError(t, db.PersistScrapedMenu(
+		[]models.WeeklyItem{menuItem(date, "Existing", "Allison")},
+		nil,
+		[]string{date},
+		now,
+	))
+	require.NoError(t, db.PersistScrapedMenu(nil, nil, []string{date}, now))
+
+	items, err := db.GetAllWeeklyItems()
+	assert.ErrorIs(t, err, db.NoItemsInDB)
+	assert.Nil(t, items)
+}
+
+func TestPersistScrapedMenuRollsBackOnInsertFailure(t *testing.T) {
+	testDB := setupTestDB(t)
+	now := time.Date(2026, time.July, 10, 12, 0, 0, 0, time.UTC)
+	date := now.Format("2006-01-02")
+
+	require.NoError(t, db.PersistScrapedMenu(
+		[]models.WeeklyItem{menuItem(date, "Existing", "Allison")},
+		nil,
+		[]string{date},
+		now,
+	))
+	require.NoError(t, testDB.Migrator().DropTable(&db.GormAllDataItem{}))
+
+	err := db.PersistScrapedMenu(
+		[]models.WeeklyItem{menuItem(date, "Replacement", "Allison")},
+		[]models.AllDataItem{{Name: "Replacement"}},
+		[]string{date},
+		now,
+	)
+	require.Error(t, err)
+
+	items, getErr := db.GetAllWeeklyItems()
+	require.NoError(t, getErr)
+	require.Len(t, items[date], 1)
+	assert.Equal(t, "Existing", items[date][0].Name)
+}
+
+func TestAvailableFavoritesUsesActualDate(t *testing.T) {
+	setupTestDB(t)
+	today := time.Now().Format("2006-01-02")
+	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
+
+	require.NoError(t, db.PersistScrapedMenu(
+		[]models.WeeklyItem{
+			menuItem(today, "Bacon", "Allison"),
+			menuItem(today, "Bacon", "Sargent"),
+			menuItem(yesterday, "Eggs", "Allison"),
+		},
+		nil,
+		[]string{today, yesterday},
+		time.Now(),
+	))
+	require.NoError(t, db.SaveUserPreferences("test-user", []models.AllDataItem{{Name: "Bacon"}, {Name: "Eggs"}}))
+
+	favorites, err := db.GetAvailableFavoritesBatch("test-user")
+	require.NoError(t, err)
+	require.Len(t, favorites, 2)
+	assert.Equal(t, "Bacon", favorites[0].Name)
+	assert.Equal(t, "Bacon", favorites[1].Name)
+}
+
+func TestReplaceLocationOperatingTimes(t *testing.T) {
+	setupTestDB(t)
+	first := []models.LocationOperatingTimes{{Name: "Allison", Week: []models.DailyOperatingTimes{{Date: "2026-07-10"}}}}
+	second := []models.LocationOperatingTimes{{Name: "Sargent", Week: []models.DailyOperatingTimes{{Date: "2026-07-11"}}}}
+
+	require.NoError(t, db.ReplaceLocationOperatingTimes(first))
+	require.NoError(t, db.ReplaceLocationOperatingTimes(second))
 
 	locations, err := db.GetLocationOperatingTimes()
-	require.NoError(t, err, "Error fetching location operations")
-	assert.Len(t, locations, 2, "Expected 2 locations")
-
-	for i, location := range locations {
-		assert.Equal(t, location.Name, locationOperations[i].Name, "Expected location name %s, got %s", locationOperations[i].Name, location.Name)
-
-		assert.Len(t, location.Week, 1, "Expected 1 day operation, got %d", len(location.Week))
-
-		for j, day := range location.Week {
-			assert.Equal(
-				t,
-				day.Day,
-				locationOperations[i].Week[j].Day,
-				"Expected day %d, got %d",
-				locationOperations[i].Week[j].Day,
-				day.Day,
-			)
-
-			assert.Equal(
-				t,
-				day.Date,
-				locationOperations[i].Week[j].Date,
-				"Expected date %s, got %s",
-				locationOperations[i].Week[j].Date,
-				day.Date,
-			)
-
-			assert.Equal(
-				t,
-				day.Status,
-				locationOperations[i].Week[j].Status,
-				"Expected status %s, got %s",
-				locationOperations[i].Week[j].Status,
-				day.Status,
-			)
-
-			assert.Len(t, day.Hours, 2, "Expected 2 hours, got %d", len(day.Hours))
-
-			for k, hour := range day.Hours {
-				assert.Equal(
-					t,
-					hour.StartHour,
-					locationOperations[i].Week[j].Hours[k].StartHour,
-					"Expected start hour %d, got %d",
-					locationOperations[i].Week[j].Hours[k].StartHour,
-					hour.StartHour,
-				)
-
-				assert.Equal(
-					t,
-					hour.StartMinutes,
-					locationOperations[i].Week[j].Hours[k].StartMinutes,
-					"Expected start minutes %d, got %d",
-					locationOperations[i].Week[j].Hours[k].StartMinutes,
-					hour.StartMinutes,
-				)
-
-				assert.Equal(
-					t,
-					hour.EndHour,
-					locationOperations[i].Week[j].Hours[k].EndHour,
-					"Expected end hour %d, got %d",
-					locationOperations[i].Week[j].Hours[k].EndHour,
-					hour.EndHour,
-				)
-
-				assert.Equal(
-					t,
-					hour.EndMinutes,
-					locationOperations[i].Week[j].Hours[k].EndMinutes,
-					"Expected end minutes %d, got %d",
-					locationOperations[i].Week[j].Hours[k].EndMinutes,
-					hour.EndMinutes,
-				)
-			}
-		}
-	}
-
-	err = db.DeleteLocationOperatingTimes()
-	require.NoError(t, err, "Error deleting location operations")
-
-	locations, err = db.GetLocationOperatingTimes()
-	require.Error(t, err, "Expected error fetching location operations, got nil")
-
-	assert.Nil(t, locations, "Expected nil locations, got %v", locations)
+	require.NoError(t, err)
+	require.Len(t, locations, 1)
+	assert.Equal(t, second[0], locations[0])
 }
 
-func TestDailyItemLifetime(t *testing.T) {
-	t.Log("Running TestInsertDailyItem")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
+func TestUserAndDisplayPreferences(t *testing.T) {
+	setupTestDB(t)
+	userID := "test-user"
+	favorites := []models.AllDataItem{{Name: "Bacon"}, {Name: "Eggs"}}
 
-	// Override the global DB variable in your `db` package
-	db.DB = testDB
+	require.NoError(t, db.SaveUserPreferences(userID, favorites))
+	savedFavorites, err := db.GetUserPreferences(userID)
+	require.NoError(t, err)
+	assert.Equal(t, favorites, savedFavorites)
 
-	dailyItems := []models.DailyItem{
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Eggs",
-			Description: "Scrambled eggs",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-	}
+	initial := models.DisplayPreferences{VisibleLocations: []string{"Allison", "Plex East"}}
+	require.NoError(t, db.SaveDisplayPreferences(userID, initial))
+	savedDisplay, hasSaved, err := db.GetDisplayPreferences(userID)
+	require.NoError(t, err)
+	assert.True(t, hasSaved)
+	assert.Equal(t, initial, savedDisplay)
 
-	err := db.InsertDailyItems(dailyItems, false)
-	require.NoError(t, err, "Error inserting daily items")
-
-	items, err := db.GetAllDailyItems()
-	require.NoError(t, err, "Error fetching daily items")
-
-	assert.Len(t, items, 2, "Expected 2 daily items, got %d", len(items))
-
-	for i, item := range items {
-		assert.Equal(t, item.Name, dailyItems[i].Name, "Expected item name %s, got %s", dailyItems[i].Name, item.Name)
-
-		assert.Equal(t, item.Description, dailyItems[i].Description, "Expected item description %s, got %s", dailyItems[i].Description, item.Description)
-
-		assert.Equal(t, item.Date, dailyItems[i].Date, "Expected item date %s, got %s", dailyItems[i].Date, item.Date)
-
-		assert.Equal(t, item.Location, dailyItems[i].Location, "Expected item location %s, got %s", dailyItems[i].Location, item.Location)
-
-		assert.Equal(t, item.StationName, dailyItems[i].StationName, "Expected item station name %s, got %s", dailyItems[i].StationName, item.StationName)
-
-		assert.Equal(t, item.TimeOfDay, dailyItems[i].TimeOfDay, "Expected item time of day %s, got %s", dailyItems[i].TimeOfDay, item.TimeOfDay)
-	}
-
-	date, err := db.ReturnDateOfDailyItems()
-
-	require.NoError(t, err, "Error fetching date of daily items")
-
-	assert.Equal(t, date, "2021-09-06", "Expected return date of %s, got %s", "2021-09-06", date)
-
-	err = db.DeleteDailyItems()
-	require.NoError(t, err, "Error deleting daily items")
-
-	items, err = db.GetAllDailyItems()
-	require.Error(t, err, "Expected error fetching daily items, got nil")
-
-	assert.Nil(t, items, "Expected nil items, got %v", items)
-
-	date, err = db.ReturnDateOfDailyItems()
-
-	require.Error(t, err, "Expected error fetching date of daily items, got nil")
+	updated := models.DisplayPreferences{VisibleLocations: []string{"Sargent", "Elder"}}
+	require.NoError(t, db.SaveDisplayPreferences(userID, updated))
+	savedDisplay, hasSaved, err = db.GetDisplayPreferences(userID)
+	require.NoError(t, err)
+	assert.True(t, hasSaved)
+	assert.Equal(t, updated, savedDisplay)
 }
 
-func TestDailyItemAllClosed(t *testing.T) {
-	t.Log("Running TestDailyItemAllClosed")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
+func TestDisplayPreferencesNotFound(t *testing.T) {
+	setupTestDB(t)
 
-	// Override the global DB variable in your `db` package
-	db.DB = testDB
-
-	err := db.InsertDailyItems([]models.DailyItem{}, true)
-
-	require.NoError(t, err, "Error inserting all closed daily items")
-
-	items, err := db.GetAllDailyItems()
-	require.NoError(t, err, "Error fetching daily items")
-
-	assert.Len(t, items, 0, "Expected 0 daily items, got %d", len(items))
-
-	err = db.DeleteDailyItems()
-	require.NoError(t, err, "Error deleting daily items")
-
-	items, err = db.GetAllDailyItems()
-
-	require.Error(t, err, "Expected error fetching daily items, got nil")
-
-	assert.Nil(t, items, "Expected nil items, got %v", items)
+	preferences, hasSaved, err := db.GetDisplayPreferences("unknown-user")
+	require.NoError(t, err)
+	assert.False(t, hasSaved)
+	assert.Empty(t, preferences.VisibleLocations)
 }
 
-func TestAllDataItemLifetime(t *testing.T) {
-	t.Log("Running TestAllDataItemLifetime")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
+func TestInsertAllDataItemsIgnoresDuplicates(t *testing.T) {
+	setupTestDB(t)
 
-	// Override the global DB variable in your `db` package
-	db.DB = testDB
-
-	allDataItems := []models.AllDataItem{
-		{Name: "Bacon"},
+	require.NoError(t, db.InsertAllDataItems([]models.AllDataItem{
 		{Name: "Eggs"},
-	}
-
-	err := db.InsertAllDataItems(allDataItems, false)
-	require.NoError(t, err, "Error inserting all data items")
+		{Name: "Eggs"},
+		{Name: " Bacon "},
+		{Name: ""},
+	}))
+	require.NoError(t, db.InsertAllDataItems([]models.AllDataItem{{Name: "Eggs"}, {Name: "Bacon"}}))
 
 	items, err := db.GetAllDataItems()
-	require.NoError(t, err, "Error fetching all data items")
-
-	assert.Len(t, items, 2, "Expected 2 all data items, got %d", len(items))
-
-	for i, item := range items {
-		assert.Equal(t, item.Name, allDataItems[i].Name, "Expected item name %s, got %s", allDataItems[i].Name, item.Name)
-	}
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []models.AllDataItem{{Name: "Eggs"}, {Name: "Bacon"}}, items)
 }
 
-func TestUserPreferencesLifetime(t *testing.T) {
-	t.Log("Running TestAllDataItemLifetime")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
-
-	// Override the global DB variable in your `db` package
-	db.DB = testDB
-
-	initialAllDataItems := []models.AllDataItem{
-		{Name: "Bacon"},
-		{Name: "Eggs"},
-		{Name: "Skirt Steak"},
-		{Name: "Chicken Parmesan"},
-	}
-
-	err := db.SaveUserPreferences("test_user", initialAllDataItems)
-	require.NoError(t, err, "Error saving user preferences")
-
-	items, err := db.GetUserPreferences("test_user")
-	require.NoError(t, err, "Error fetching user preferences")
-
-	assert.Len(t, items, 4, "Expected 4 user preferences, got %d", len(items))
-	for i, item := range items {
-		assert.Equal(t, item.Name, initialAllDataItems[i].Name, "Expected item name %s, got %s", initialAllDataItems[i].Name, item.Name)
-	}
-
-	// Add a new items to the user preferences
-	additionalDataItems := []models.AllDataItem{
-		{Name: "Mac and Cheese"},
-		{Name: "Baked Ziti"},
-	}
-
-	newAllDataItems := append(initialAllDataItems, additionalDataItems...)
-
-	err = db.SaveUserPreferences("test_user", newAllDataItems)
-	require.NoError(t, err, "Error saving user preferences with new items")
-
-	items, err = db.GetUserPreferences("test_user")
-	require.NoError(t, err, "Error fetching user preferences with new items")
-
-	assert.Len(t, items, 6, "Expected 6 user preferences, got %d", len(items))
-
-	for i, item := range items {
-		assert.Equal(t, item.Name, newAllDataItems[i].Name, "Expected item name %s, got %s", newAllDataItems[i].Name, item.Name)
-	}
-}
-
-func TestUserPreferencesLifetimeEmpty(t *testing.T) {
-	t.Log("Running TestUserPreferencesLifetimeEmpty")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
-
-	// Override the global DB variable in your `db` package
-	db.DB = testDB
-
-	items, err := db.GetUserPreferences("test_user")
-	require.Error(t, err, "Expected error fetching user preferences, got nil")
-
-	assert.Nil(t, items, "Expected nil items, got %v", items)
-}
-
-func TestAvailableFavorites(t *testing.T) {
-	t.Log("Running TestAvailableFavorites")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
-
-	// Override the global DB variable in your `db` package
-	db.DB = testDB
-
-	// Insert daily items to be looked up
-	dailyItems := []models.DailyItem{
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Sargent",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Eggs",
-			Description: "Scrambled eggs",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-	}
-
-	err := db.InsertDailyItems(dailyItems, false)
-	require.NoError(t, err, "Error inserting daily items")
-
-	// Set up a user's preferences
-	initialPreferences := []models.AllDataItem{
-		{Name: "Bacon"},
-		{Name: "Eggs"},
-	}
-
-	err = db.SaveUserPreferences("test_user", initialPreferences)
-	require.NoError(t, err, "Error saving user preferences")
-
-	expectedAvailable := []models.AllDataItem{
-		{Name: "Bacon"},
-		{Name: "Bacon"},
-		{Name: "Eggs"},
-	}
-
-	// Fetch the available favorites based on user preferences
-	favorites, err := db.GetAvailableFavoritesBatch("test_user")
-	require.NoError(t, err, "Error fetching available favorites")
-
-	// Check if the favorites match the user preferences
-	assert.Len(t, favorites, 3, "Expected 3 available favorite items, got %d", len(favorites))
-
-	for i, favorite := range favorites {
-		assert.Equal(t, favorite.Name, expectedAvailable[i].Name, "Expected favorite name %s, got %s", expectedAvailable[i].Name, favorite.Name)
-	}
-
-	// Delete the test data
-	err = db.DeleteDailyItems()
-	require.NoError(t, err, "Error deleting daily items")
-
-	favorites, err = db.GetAvailableFavoritesBatch("test_user")
-	assert.Len(t, favorites, 0, "Expected 0 favorite items, got %d", len(favorites))
-}
-
-func TestUserPreferencesMailing(t *testing.T) {
-	t.Log("Running TestUserPreferencesMailing")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
-
-	// Override the global DB variable in your `db` package
-	tx := testDB.Begin()
-	defer tx.Rollback()
-
-	// Use this transaction for all DB operations
-	// transaction is necessary here for testing not for prod just becuase the read writes to in memory sqlite can interfere with eachothers timing
-	// causing a horrible "table not found" err :)
-	db.DB = tx
-
-	// Insert daily items to be looked up
-	dailyItems := []models.DailyItem{
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Sargent",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Eggs",
-			Description: "Scrambled eggs",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-	}
-
-	err := db.InsertDailyItems(dailyItems, false)
-	require.NoError(t, err, "Error inserting daily items")
-
-	// Set up a user's preferences
-	initialPreferences := []models.AllDataItem{
-		{Name: "Bacon"},
-		{Name: "Eggs"},
-	}
-
-	userID := "test_user"
-
-	err = db.SaveUserPreferences(userID, initialPreferences)
-	assert.NoError(t, err, "Error saving user")
-	err = db.UpdateMailingStatus(userID, true)
-
-	require.NoError(t, err, "Error saving user preferences")
-
-	expectedAvailable := []models.AllDataItem{
-		{Name: "Bacon"},
-		{Name: "Bacon"},
-		{Name: "Eggs"},
-	}
-
-	// Fetch the available favorites based on user preferences
-	mailingList, err := db.GetMailingList()
-	require.NoError(t, err, "Error fetching mailing list")
-
-	// Check if the favorites match the user preferences
-	assert.Len(t, mailingList, 1, "Expected 1 user in the mailing list, got %d", len(mailingList))
-
-	for _, user := range mailingList {
-		favorites := user.Preferences
-		for i, favorite := range favorites {
-			assert.Equal(t, favorite.Name, expectedAvailable[i].Name, "Expected favorite name %s, got %s", expectedAvailable[i].Name, favorite.Name)
-		}
-	}
-
-	// Delete the test data
-	err = db.DeleteDailyItems()
-	require.NoError(t, err, "Error deleting daily items")
-
-	favorites, err := db.GetAvailableFavoritesBatch(userID)
-	assert.Len(t, favorites, 0, "Expected 0 favorite items, got %d", len(favorites))
-}
-
-func TestAllDataItemCleanFunc(t *testing.T) {
-	t.Log("Running TestAllDataItemCleanFunc")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
-
-	// Override the global DB variable in your `db` package
-	db.DB = testDB
-
-	allDataItems := []models.AllDataItem{
-		{Name: "Eggs"},
-		{Name: "Bacon"},
-		{Name: "Pancakes"},
-		{Name: "Chicken"},
-		{Name: "Stroganoff"},
-		{Name: "Beef"},
-	}
-
-	err := db.InsertAllDataItems(allDataItems, false)
-	require.NoError(t, err, "Error inserting all data items")
-
-	items, err := db.GetAllDataItems()
-	require.NoError(t, err, "Error fetching all data items")
-
-	assert.Len(t, items, 6, "Expected 2 all data items, got %d", len(items))
-
-	for i, item := range items {
-		assert.Equal(t, item.Name, allDataItems[i].Name, "Expected item name %s, got %s", allDataItems[i].Name, item.Name)
-	}
-
-	newItems := []models.AllDataItem{
-		{Name: "Eggs"},
-		{Name: "Stroganoff"},
-		{Name: "Turkey"},
-		{Name: "American Cheese"},
-	}
-
-	expectedItems := []models.AllDataItem{
-		{Name: "Turkey"},
-		{Name: "American Cheese"},
-	}
-
-	cleanedItems, err := db.CleanAllData(newItems)
-	require.NoError(t, err, "Error cleaning all data items")
-
-	for i, item := range cleanedItems {
-		assert.Equal(t, item.Name, expectedItems[i].Name, "Expected item name %s, got %s", expectedItems[i].Name, item.Name)
-	}
-
-	// Delete the test data
-	err = db.DeleteAllDataItems()
-	require.NoError(t, err, "Error deleting all data items")
-}
-
-func TestInsertDuplicatesAllData(t *testing.T) {
-	t.Log("Running TestInsertDuplicatesAllData")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
-
-	// Override the global DB variable in your `db` package
-	tx := testDB.Begin()
-	defer tx.Rollback()
-
-	// Use this transaction for all DB operations
-	// transaction is necessary here for testing not for prod just becuase the read writes to in memory sqlite can interfere with eachothers timing
-	// causing a horrible "table not found" err :)
-	db.DB = tx
-
-	allDataItems := []models.AllDataItem{
-		{Name: "Eggs"},
-		{Name: "Bacon"},
-		{Name: "Pancakes"},
-		{Name: "Chicken"},
-		{Name: "Stroganoff"},
-		{Name: "Beef"},
-	}
-
-	err := db.InsertAllDataItems(allDataItems, false)
-	require.NoError(t, err, "Error inserting all data items")
-
-	items, err := db.GetAllDataItems()
-	require.NoError(t, err, "Error fetching all data items")
-
-	assert.Len(t, items, 6, "Expected 2 all data items, got %d", len(items))
-
-	for i, item := range items {
-		assert.Equal(t, item.Name, allDataItems[i].Name, "Expected item name %s, got %s", allDataItems[i].Name, item.Name)
-	}
-
-	newItems := []models.AllDataItem{
-		{Name: "Eggs"},
-		{Name: "Stroganoff"},
-		{Name: "Turkey"},
-		{Name: "American Cheese"},
-	}
-
-	err = db.InsertAllDataItems(newItems, false)
-	require.NoError(t, err, "Error inserting all data items")
-
-	expectedItems := []models.AllDataItem{
-		{Name: "Eggs"},
-		{Name: "Bacon"},
-		{Name: "Pancakes"},
-		{Name: "Chicken"},
-		{Name: "Stroganoff"},
-		{Name: "Beef"},
-		{Name: "Turkey"},
-		{Name: "American Cheese"},
-	}
-
-	items, err = db.GetAllDataItems()
-	require.NoError(t, err, "Error fetching all data items")
-
-	for i, item := range items {
-		assert.Equal(t, item.Name, expectedItems[i].Name, "Expected item name %s, got %s", expectedItems[i].Name, item.Name)
-	}
-
-	// Delete the test data
-	err = db.DeleteAllDataItems()
-	require.NoError(t, err, "Error deleting all data items")
+func TestMigrateDeduplicatesExistingAllDataItems(t *testing.T) {
+	testDB, err := gorm.Open(sqlite.Open("file:migration-test?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, testDB.AutoMigrate(&db.GormAllDataItem{}))
+	require.NoError(t, testDB.Create(&db.GormAllDataItem{AllDataItem: models.AllDataItem{Name: "Eggs"}}).Error)
+	require.NoError(t, testDB.Create(&db.GormAllDataItem{AllDataItem: models.AllDataItem{Name: "Eggs"}}).Error)
+
+	require.NoError(t, db.Migrate(testDB))
+
+	var count int64
+	require.NoError(t, testDB.Model(&db.GormAllDataItem{}).Where("name = ?", "Eggs").Count(&count).Error)
+	assert.EqualValues(t, 1, count)
+	assert.Error(t, testDB.Create(&db.GormAllDataItem{AllDataItem: models.AllDataItem{Name: "Eggs"}}).Error)
 }

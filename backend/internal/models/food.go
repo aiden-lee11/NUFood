@@ -80,11 +80,11 @@ type Filter struct {
 type DailyItem struct {
 	Name        string `json:"Name"`
 	Description string `json:"Description"`
-	Date        string `json:"Date"`        // The date this item is available
-	Location    string `json:"Location"`    // The dining hall location
-	StationName string `json:"StationName"` // The station name
-	TimeOfDay   string `json:"TimeOfDay"`   // The time of day this item is available
-	PortionSize string `json:"portion"`     // The portion size of the item
+	Date        string `json:"Date" gorm:"index"` // The date this item is available
+	Location    string `json:"Location"`          // The dining hall location
+	StationName string `json:"StationName"`       // The station name
+	TimeOfDay   string `json:"TimeOfDay"`         // The time of day this item is available
+	PortionSize string `json:"portion"`           // The portion size of the item
 	Calories    string `json:"calories"`
 	Protein     string `json:"protein"`
 	Carbs       string `json:"carbs"`
@@ -93,7 +93,9 @@ type DailyItem struct {
 
 type WeeklyItem struct {
 	DailyItem DailyItem
-	DayIndex  int
+	// DayIndex is retained for database migration compatibility. New code uses
+	// DailyItem.Date as the source of truth.
+	DayIndex int
 }
 
 type AllDataItem struct {

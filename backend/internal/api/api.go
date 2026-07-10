@@ -9,10 +9,13 @@ import (
 	"backend/internal/store"
 	"backend/internal/twilio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,6 +26,8 @@ var allowedLocationPreferences = map[string]struct{}{
 	"Plex East": {},
 	"Plex West": {},
 }
+
+var scrapeJobMu sync.Mutex
 
 // Helper functions to convert between AllDataItem arrays and string arrays
 func allDataItemsToStrings(items []models.AllDataItem) []string {
@@ -41,28 +46,6 @@ func stringsToAllDataItems(names []string) []models.AllDataItem {
 	return result
 }
 
-// DeleteLocationOperatingTimes deletes all location operating times from the database.
-//
-// This handler expects no request body and no special authorization.
-// It responds with an HTTP status code indicating the result of the operation.
-//
-// Expected Authorization:
-//   - No special authorization required.
-//
-// Parameters:
-//   - w: The HTTP response writer.
-//   - r: The HTTP request.
-func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
-	err := db.DeleteLocationOperatingTimes()
-	if err != nil {
-		http.Error(w, "Error deleting location operations: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Return success code
-	w.WriteHeader(http.StatusOK)
-}
-
 // ScrapeUpdateWeekly scrapes the weekly items and updates the database.
 //
 // This handler expects no request body and no special authorization.
@@ -71,9 +54,15 @@ func DeleteLocationOperatingTimes(w http.ResponseWriter, r *http.Request) {
 // Expected Authorization:
 //   - No special authorization required.
 func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
+	if !scrapeJobMu.TryLock() {
+		http.Error(w, "A scrape job is already running", http.StatusConflict)
+		return
+	}
+	defer scrapeJobMu.Unlock()
+
 	scraper := scraper.NewBrowserAPIScraper()
 
-	const MAX_RETRIES = 10
+	const MAX_RETRIES = 3
 
 	var dItems []models.DailyItem
 	var aItems []models.AllDataItem
@@ -88,6 +77,9 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 			err = nil
 			break
 		}
+		if i < MAX_RETRIES-1 {
+			time.Sleep(time.Duration(i+1) * time.Second)
+		}
 	}
 
 	if err != nil {
@@ -95,27 +87,25 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if dItems == nil {
-		http.Error(w, "Error scraping and saving: nil dItems", http.StatusInternalServerError)
+	weeklyItems := make([]models.WeeklyItem, 0, len(dItems))
+	for _, item := range dItems {
+		weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: item})
+	}
+	advancedDay := time.Now().AddDate(0, 0, 3).Format("2006-01-02")
+	if err := db.PersistScrapedMenu(weeklyItems, aItems, []string{advancedDay}, time.Now()); err != nil {
+		http.Error(w, "Error updating menu items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := db.UpdateWeeklyItems(dItems); err != nil {
-		http.Error(w, "Error updating weekly items: "+err.Error(), http.StatusInternalServerError)
+	weeklyItemsMap, err := db.GetAllWeeklyItems()
+	if errors.Is(err, db.NoItemsInDB) {
+		weeklyItemsMap = map[string][]models.DailyItem{}
+		err = nil
+	}
+	if err != nil {
+		http.Error(w, "Error refreshing menu cache: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	if err := db.InsertAllDataItems(aItems); err != nil {
-		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Populate the memory store after successful database insertion
-	// Convert dItems to the expected format for the store
-	weeklyItemsMap := make(map[string][]models.DailyItem)
-	dateKey := time.Now().AddDate(0, 0, 3).Format("2006-01-02") // Use the same date as scraping
-	weeklyItemsMap[dateKey] = dItems
-
 	store.Set(weeklyItemsMap)
 
 	// Return success code
@@ -134,11 +124,19 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
+	if !scrapeJobMu.TryLock() {
+		http.Error(w, "A scrape job is already running", http.StatusConflict)
+		return
+	}
+	defer scrapeJobMu.Unlock()
+
 	scraper := scraper.NewBrowserAPIScraper()
 
-	const MAX_RETRIES = 10
+	const MAX_RETRIES = 3
 	var weeklyItems []models.WeeklyItem
 	var totalAllItems []models.AllDataItem
+	var scrapedDates []string
+	var failedDates []string
 
 	today := time.Now()
 	for scrapeInd := -3; scrapeInd <= 3; scrapeInd++ {
@@ -156,16 +154,21 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 				err = nil
 				break
 			}
+			if tryInd < MAX_RETRIES-1 {
+				time.Sleep(time.Duration(tryInd+1) * time.Second)
+			}
 		}
 
 		if err != nil {
-			fmt.Printf("Error scraping date %s: %v - continuing with next date\n", scrapeDate, err)
-			continue // Continue with next date instead of returning error
+			fmt.Printf("Error scraping date %s: %v\n", scrapeDate, err)
+			failedDates = append(failedDates, scrapeDate)
+			continue
 		}
+		scrapedDates = append(scrapedDates, scrapeDate)
 
 		if dItems == nil {
 			fmt.Printf("No items found for date %s (dining halls closed) - continuing with next date\n", scrapeDate)
-			continue // Continue with next date instead of returning error
+			continue
 		}
 
 		fmt.Printf("Successfully scraped date %s: %d daily items, %d all items\n", scrapeDate, len(dItems), len(aItems))
@@ -179,40 +182,31 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Scraping completed! Total weeklyItems collected: %d, totalAllItems: %d\n", len(weeklyItems), len(totalAllItems))
 
-	// Check if we have any data at all
-	if len(weeklyItems) == 0 && len(totalAllItems) == 0 {
-		http.Error(w, "No data could be scraped for any dates - all dining halls appear to be closed", http.StatusInternalServerError)
+	if len(failedDates) > 0 {
+		http.Error(
+			w,
+			fmt.Sprintf("Scrape failed for dates %s; existing data was left unchanged", strings.Join(failedDates, ", ")),
+			http.StatusBadGateway,
+		)
 		return
 	}
 
-	// New valid data so delete old data
-	err := db.DeleteWeeklyItems()
+	if err := db.PersistScrapedMenu(weeklyItems, totalAllItems, scrapedDates, today); err != nil {
+		fmt.Printf("Error persisting scraped menu: %v\n", err)
+		http.Error(w, "Error persisting scraped menu: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	weeklyItemsMap, err := db.GetAllWeeklyItems()
+	if errors.Is(err, db.NoItemsInDB) {
+		weeklyItemsMap = map[string][]models.DailyItem{}
+		err = nil
+	}
 	if err != nil {
-		fmt.Printf("Error deleting weekly items: %v\n", err)
-		http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error refreshing menu cache: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Println("Successfully deleted old data")
-
-	if err := db.InsertWeeklyItems(weeklyItems); err != nil {
-		fmt.Printf("Error inserting weekly items: %v\n", err)
-		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Printf("Successfully inserted %d weekly items to database\n", len(weeklyItems))
-
-	if err := db.InsertAllDataItems(totalAllItems); err != nil {
-		fmt.Printf("Error inserting all data items: %v\n", err)
-		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Printf("Successfully inserted %d all data items to database\n", len(totalAllItems))
-
-	store.Set(db.CreateWeeklyItemsMap(weeklyItems))
+	store.Set(weeklyItemsMap)
 
 	// Return success code
 	w.WriteHeader(http.StatusOK)
@@ -230,10 +224,16 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
+	if !scrapeJobMu.TryLock() {
+		http.Error(w, "A scrape job is already running", http.StatusConflict)
+		return
+	}
+	defer scrapeJobMu.Unlock()
+
 	scraper := scraper.NewBrowserAPIScraper()
 	formattedDate := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
 
-	const MAX_RETRIES = 10
+	const MAX_RETRIES = 3
 	var locationOperatingTimes []models.LocationOperatingTimes
 	var err error
 
@@ -245,23 +245,21 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 			err = nil
 			break
 		}
+		if i < MAX_RETRIES-1 {
+			time.Sleep(time.Duration(i+1) * time.Second)
+		}
+	}
+	if err != nil {
+		http.Error(w, "Error scraping location operating times: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if len(locationOperatingTimes) == 0 {
 		http.Error(w, "Error scraping and saving: nil locationOperatingTimes", http.StatusInternalServerError)
 		return
 	}
 
-	// New valid data so delete old data
-	err = db.DeleteLocationOperatingTimes()
-
-	if err != nil {
-		http.Error(w, "Error clearing location operating hours before scrape: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = db.InsertLocationOperatingTimes(locationOperatingTimes)
-	if err != nil {
-		http.Error(w, "Error inserting locationOperatingTimes: "+err.Error(), http.StatusInternalServerError)
+	if err = db.ReplaceLocationOperatingTimes(locationOperatingTimes); err != nil {
+		http.Error(w, "Error replacing location operating times: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

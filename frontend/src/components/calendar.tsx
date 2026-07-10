@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useDataStore } from "@/store"
+import type { DailyItem } from "@/types/ItemTypes"
+import { toLocalISODate } from "@/util/date"
 
 interface DatePickerProps {
   selectedDate: Date
   setSelectedDate: (date: Date) => void
-  setDailyItems?: (items: any) => void
+  setDailyItems?: (items: DailyItem[] | undefined) => void
   minDate?: Date
   maxDate?: Date
 }
@@ -19,13 +21,6 @@ export function DatePicker({ selectedDate, setSelectedDate, setDailyItems, minDa
   const staticData = useDataStore((state) => state.UserDataResponse)
   const weeklyItems = staticData.weeklyItems
   const [isOpen, setIsOpen] = useState(false)
-
-  function toLocalISODate(d: Date) {
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
 
   function onSubmit(date: Date | undefined) {
     if (date) {
@@ -51,11 +46,8 @@ export function DatePicker({ selectedDate, setSelectedDate, setDailyItems, minDa
     }
 
     if (keys.length >= 1) {
-      // Default behavior: center window of +/- 3 days around the midpoint index
-      const currentDayIndex = Math.floor(keys.length / 2)
-      const baseDate = parseLocal(keys[currentDayIndex])
-      minDate = subDays(baseDate, currentDayIndex)
-      maxDate = addDays(baseDate, currentDayIndex) // inclusive end
+      minDate = parseLocal(keys[0])
+      maxDate = parseLocal(keys[keys.length - 1])
     } else {
       const today = new Date()
       minDate = subDays(today, 3)

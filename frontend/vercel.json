@@ -1,13 +1,16 @@
 {
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/[^.]+",
-      "dest": "/"
+      "dest": "/index.html"
     }
   ],
   "crons": [
     {
-      "path": "/scrape",
+      "path": "/api/scrape",
       "schedule": "0 0 * * *"
     }
   ],

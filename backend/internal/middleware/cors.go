@@ -4,6 +4,7 @@ package middleware
 import (
 	"backend/internal/auth"
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -116,6 +117,38 @@ func AdminMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		adminToken := parts[1]
 		if adminToken != os.Getenv("ADMIN_TOKEN") {
 			SendJSONError(w, "Provided token does not have admin permission", http.StatusUnauthorized)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
+// ScrapeMiddleware protects expensive scrape jobs with a dedicated bearer
+// token suitable for cron services.
+func ScrapeMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			next(w, r)
+			return
+		}
+
+		expectedToken := strings.TrimSpace(os.Getenv("SCRAPE_TOKEN"))
+		if expectedToken == "" {
+			SendJSONError(w, "Scrape endpoint is not configured", http.StatusServiceUnavailable)
+			return
+		}
+
+		const prefix = "Bearer "
+		authHeader := r.Header.Get("Authorization")
+		if !strings.HasPrefix(authHeader, prefix) {
+			SendJSONError(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		providedToken := strings.TrimSpace(strings.TrimPrefix(authHeader, prefix))
+		if subtle.ConstantTimeCompare([]byte(providedToken), []byte(expectedToken)) != 1 {
+			SendJSONError(w, "Invalid scrape token", http.StatusUnauthorized)
 			return
 		}
 
