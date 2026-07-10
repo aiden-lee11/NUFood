@@ -9,6 +9,7 @@ import (
 	"backend/internal/store"
 	"backend/internal/twilio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -108,11 +109,6 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if dItems == nil {
-		http.Error(w, "Error scraping and saving: nil dItems", http.StatusInternalServerError)
-		return
-	}
-
 	weeklyItems := make([]models.WeeklyItem, 0, len(dItems))
 	for _, item := range dItems {
 		weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: item})
@@ -124,6 +120,10 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 	}
 
 	weeklyItemsMap, err := db.GetAllWeeklyItems()
+	if errors.Is(err, db.NoItemsInDB) {
+		weeklyItemsMap = map[string][]models.DailyItem{}
+		err = nil
+	}
 	if err != nil {
 		http.Error(w, "Error refreshing menu cache: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -213,12 +213,6 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if we have any data at all
-	if len(weeklyItems) == 0 && len(totalAllItems) == 0 {
-		http.Error(w, "No data could be scraped for any dates - all dining halls appear to be closed", http.StatusInternalServerError)
-		return
-	}
-
 	if err := db.PersistScrapedMenu(weeklyItems, totalAllItems, scrapedDates, today); err != nil {
 		fmt.Printf("Error persisting scraped menu: %v\n", err)
 		http.Error(w, "Error persisting scraped menu: "+err.Error(), http.StatusInternalServerError)
@@ -226,6 +220,10 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	weeklyItemsMap, err := db.GetAllWeeklyItems()
+	if errors.Is(err, db.NoItemsInDB) {
+		weeklyItemsMap = map[string][]models.DailyItem{}
+		err = nil
+	}
 	if err != nil {
 		http.Error(w, "Error refreshing menu cache: "+err.Error(), http.StatusInternalServerError)
 		return

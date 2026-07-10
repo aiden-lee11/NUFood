@@ -91,9 +91,6 @@ func main() {
 		log.Printf("date=%s daily_items=%d all_items=%d", scrapeDate, len(dItems), len(aItems))
 	}
 
-	if len(weeklyItems) == 0 && len(totalAllItems) == 0 {
-		log.Fatal("no data scraped for any day; aborting db update")
-	}
 	if len(failedDates) > 0 {
 		log.Fatalf("scrape incomplete for dates %s; database left unchanged", strings.Join(failedDates, ", "))
 	}
