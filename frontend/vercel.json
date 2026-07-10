@@ -12,12 +12,6 @@
       "dest": "/index.html"
     }
   ],
-  "crons": [
-    {
-      "path": "/api/scrape",
-      "schedule": "0 0 * * *"
-    }
-  ],
   "git": {
     "enabled": false
   }

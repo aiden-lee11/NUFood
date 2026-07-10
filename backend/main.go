@@ -6,6 +6,7 @@ import (
 	"backend/internal/cache"
 	"backend/internal/db"
 	"backend/internal/middleware"
+	"backend/internal/scheduler"
 	"backend/internal/store"
 	"fmt"
 	"log"
@@ -55,6 +56,10 @@ func main() {
 	cache.StartCleanupRoutine(10 * time.Minute)
 
 	fmt.Println("UserCache initialized")
+
+	// Start the in-process daily menu scrape (replaces the old Vercel cron).
+	// Disable with ENABLE_SCRAPE_CRON=false; time it with SCRAPE_HOUR_UTC.
+	scheduler.StartDailyScrape()
 
 	// Create a new router
 	r := mux.NewRouter()
