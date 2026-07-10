@@ -13,6 +13,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -103,22 +104,21 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.UpdateWeeklyItems(dItems); err != nil {
-		http.Error(w, "Error updating weekly items: "+err.Error(), http.StatusInternalServerError)
+	weeklyItems := make([]models.WeeklyItem, 0, len(dItems))
+	for _, item := range dItems {
+		weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: item})
+	}
+	advancedDay := time.Now().AddDate(0, 0, 3).Format("2006-01-02")
+	if err := db.PersistScrapedMenu(weeklyItems, aItems, []string{advancedDay}, time.Now()); err != nil {
+		http.Error(w, "Error updating menu items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := db.InsertAllDataItems(aItems); err != nil {
-		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
+	weeklyItemsMap, err := db.GetAllWeeklyItems()
+	if err != nil {
+		http.Error(w, "Error refreshing menu cache: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Populate the memory store after successful database insertion
-	// Convert dItems to the expected format for the store
-	weeklyItemsMap := make(map[string][]models.DailyItem)
-	dateKey := time.Now().AddDate(0, 0, 3).Format("2006-01-02") // Use the same date as scraping
-	weeklyItemsMap[dateKey] = dItems
-
 	store.Set(weeklyItemsMap)
 
 	// Return success code
@@ -142,6 +142,8 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 	const MAX_RETRIES = 3
 	var weeklyItems []models.WeeklyItem
 	var totalAllItems []models.AllDataItem
+	var scrapedDates []string
+	var failedDates []string
 
 	today := time.Now()
 	for scrapeInd := -3; scrapeInd <= 3; scrapeInd++ {
@@ -165,13 +167,15 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			fmt.Printf("Error scraping date %s: %v - continuing with next date\n", scrapeDate, err)
-			continue // Continue with next date instead of returning error
+			fmt.Printf("Error scraping date %s: %v\n", scrapeDate, err)
+			failedDates = append(failedDates, scrapeDate)
+			continue
 		}
+		scrapedDates = append(scrapedDates, scrapeDate)
 
 		if dItems == nil {
 			fmt.Printf("No items found for date %s (dining halls closed) - continuing with next date\n", scrapeDate)
-			continue // Continue with next date instead of returning error
+			continue
 		}
 
 		fmt.Printf("Successfully scraped date %s: %d daily items, %d all items\n", scrapeDate, len(dItems), len(aItems))
@@ -185,40 +189,33 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Scraping completed! Total weeklyItems collected: %d, totalAllItems: %d\n", len(weeklyItems), len(totalAllItems))
 
+	if len(failedDates) > 0 {
+		http.Error(
+			w,
+			fmt.Sprintf("Scrape failed for dates %s; existing data was left unchanged", strings.Join(failedDates, ", ")),
+			http.StatusBadGateway,
+		)
+		return
+	}
+
 	// Check if we have any data at all
 	if len(weeklyItems) == 0 && len(totalAllItems) == 0 {
 		http.Error(w, "No data could be scraped for any dates - all dining halls appear to be closed", http.StatusInternalServerError)
 		return
 	}
 
-	// New valid data so delete old data
-	err := db.DeleteWeeklyItems()
+	if err := db.PersistScrapedMenu(weeklyItems, totalAllItems, scrapedDates, today); err != nil {
+		fmt.Printf("Error persisting scraped menu: %v\n", err)
+		http.Error(w, "Error persisting scraped menu: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	weeklyItemsMap, err := db.GetAllWeeklyItems()
 	if err != nil {
-		fmt.Printf("Error deleting weekly items: %v\n", err)
-		http.Error(w, "Error clearing daily items before scrape: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error refreshing menu cache: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Println("Successfully deleted old data")
-
-	if err := db.InsertWeeklyItems(weeklyItems); err != nil {
-		fmt.Printf("Error inserting weekly items: %v\n", err)
-		http.Error(w, "Error inserting daily items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Printf("Successfully inserted %d weekly items to database\n", len(weeklyItems))
-
-	if err := db.InsertAllDataItems(totalAllItems); err != nil {
-		fmt.Printf("Error inserting all data items: %v\n", err)
-		http.Error(w, "Error inserting all data items: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Printf("Successfully inserted %d all data items to database\n", len(totalAllItems))
-
-	store.Set(db.CreateWeeklyItemsMap(weeklyItems))
+	store.Set(weeklyItemsMap)
 
 	// Return success code
 	w.WriteHeader(http.StatusOK)
@@ -264,17 +261,8 @@ func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// New valid data so delete old data
-	err = db.DeleteLocationOperatingTimes()
-
-	if err != nil {
-		http.Error(w, "Error clearing location operating hours before scrape: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = db.InsertLocationOperatingTimes(locationOperatingTimes)
-	if err != nil {
-		http.Error(w, "Error inserting locationOperatingTimes: "+err.Error(), http.StatusInternalServerError)
+	if err = db.ReplaceLocationOperatingTimes(locationOperatingTimes); err != nil {
+		http.Error(w, "Error replacing location operating times: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

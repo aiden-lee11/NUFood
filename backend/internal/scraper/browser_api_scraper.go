@@ -106,6 +106,7 @@ func (s *BrowserAPIScraper) ScrapeFood(date string) ([]models.DailyItem, []model
 	var allDataItems []models.AllDataItem
 	allClosed := true
 	fetchSucceeded := false
+	var fetchErrors []error
 
 	for _, location := range s.Locations {
 		periodURL := fmt.Sprintf("%s/locations/%s/periods/?date=%s", s.BaseURL, location.Hash, date)
@@ -115,6 +116,7 @@ func (s *BrowserAPIScraper) ScrapeFood(date string) ([]models.DailyItem, []model
 			services, err := s.fetchPeriods(browserCtx, periodURL)
 			if err != nil {
 				log.Printf("browser-api failed to fetch periods for %s: %v", location.Name, err)
+				fetchErrors = append(fetchErrors, fmt.Errorf("%s periods: %w", location.Name, err))
 				break
 			}
 			fetchSucceeded = true
@@ -132,6 +134,7 @@ func (s *BrowserAPIScraper) ScrapeFood(date string) ([]models.DailyItem, []model
 			})
 			if err != nil {
 				log.Printf("browser-api failed menu fetch for %s (%s): %v", location.Name, service.TimeOfDay, err)
+				fetchErrors = append(fetchErrors, fmt.Errorf("%s %s menu: %w", location.Name, service.TimeOfDay, err))
 				scrapedServiceKeys[serviceKey(service)] = struct{}{}
 				continue
 			}
@@ -140,6 +143,7 @@ func (s *BrowserAPIScraper) ScrapeFood(date string) ([]models.DailyItem, []model
 			dItems, aItems, err := parseItems(menu, location.Name, service.TimeOfDay)
 			if err != nil {
 				log.Printf("browser-api failed to parse menu for %s (%s): %v", location.Name, service.TimeOfDay, err)
+				fetchErrors = append(fetchErrors, fmt.Errorf("%s %s parse: %w", location.Name, service.TimeOfDay, err))
 				scrapedServiceKeys[serviceKey(service)] = struct{}{}
 				continue
 			}
@@ -152,6 +156,14 @@ func (s *BrowserAPIScraper) ScrapeFood(date string) ([]models.DailyItem, []model
 			allDataItems = append(allDataItems, aItems...)
 			scrapedServiceKeys[serviceKey(service)] = struct{}{}
 		}
+	}
+
+	if len(fetchErrors) > 0 {
+		return dailyItems, allDataItems, allClosed, fmt.Errorf(
+			"browser-api scrape incomplete for date=%s: %w",
+			date,
+			errors.Join(fetchErrors...),
+		)
 	}
 
 	if fetchSucceeded {

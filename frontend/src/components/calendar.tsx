@@ -51,11 +51,8 @@ export function DatePicker({ selectedDate, setSelectedDate, setDailyItems, minDa
     }
 
     if (keys.length >= 1) {
-      // Default behavior: center window of +/- 3 days around the midpoint index
-      const currentDayIndex = Math.floor(keys.length / 2)
-      const baseDate = parseLocal(keys[currentDayIndex])
-      minDate = subDays(baseDate, currentDayIndex)
-      maxDate = addDays(baseDate, currentDayIndex) // inclusive end
+      minDate = parseLocal(keys[0])
+      maxDate = parseLocal(keys[keys.length - 1])
     } else {
       const today = new Date()
       minDate = subDays(today, 3)

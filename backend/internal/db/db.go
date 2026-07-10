@@ -11,6 +11,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Global database variable
@@ -26,6 +27,8 @@ type GormDailyItem struct {
 type GormWeeklyItem struct {
 	gorm.Model
 	models.DailyItem
+	// Deprecated: retained so existing deployments can migrate without a
+	// destructive schema change. DailyItem.Date is now authoritative.
 	DayIndex int `gorm:"index"`
 }
 
@@ -68,7 +71,7 @@ var (
 	NoUserGoalsInDB       = errors.New("no user nutrition goals found")
 )
 
-const NEWEST_DAY_INDEX = 3
+const MenuRetentionDays = 100
 
 // AllDataItemToGorm converts an AllDataItem model to a GormAllDataItem.
 func AllDataItemToGorm(item models.AllDataItem) GormAllDataItem {
@@ -113,6 +116,10 @@ func InitDB(databasePath string) error {
 }
 
 func InsertWeeklyItems(items []models.WeeklyItem) error {
+	return insertWeeklyItems(DB, items)
+}
+
+func insertWeeklyItems(tx *gorm.DB, items []models.WeeklyItem) error {
 	if len(items) == 0 {
 		log.Println("No weekly items, skipping insert")
 		return nil
@@ -126,7 +133,7 @@ func InsertWeeklyItems(items []models.WeeklyItem) error {
 
 	// Use CreateInBatches to insert items in chunks
 	batchSize := 500
-	result := DB.CreateInBatches(&gormItems, batchSize)
+	result := tx.CreateInBatches(&gormItems, batchSize)
 
 	if result.Error != nil {
 		log.Println("Error inserting weekly items:", result.Error)
@@ -137,40 +144,135 @@ func InsertWeeklyItems(items []models.WeeklyItem) error {
 	return nil
 }
 
-// goal of this func is to test out the FIFO on db where we keep +- 3 days of item data
-// this func should be passed the items for the third day in the future ie if today is monday then pass the items for thursday
+// UpdateWeeklyItems replaces the rows for the dates represented by items and
+// prunes menu history older than MenuRetentionDays.
 func UpdateWeeklyItems(items []models.DailyItem) error {
 	if len(items) == 0 {
-		log.Println("No available items, skipping all data insert")
+		return errors.New("cannot update weekly items with an empty scrape")
+	}
+
+	weeklyItems := make([]models.WeeklyItem, 0, len(items))
+	for _, item := range items {
+		weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: item})
+	}
+
+	return PersistScrapedMenu(weeklyItems, nil, nil, time.Now())
+}
+
+// PersistScrapedMenu atomically replaces scraped dates, records newly observed
+// food names, and prunes menu rows older than the configured retention window.
+func PersistScrapedMenu(items []models.WeeklyItem, allDataItems []models.AllDataItem, scrapedDates []string, now time.Time) error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+
+	cleanItems, itemDates, err := normalizeWeeklyItems(items)
+	if err != nil {
+		return err
+	}
+	dates, err := normalizeScrapedDates(scrapedDates)
+	if err != nil {
+		return err
+	}
+	if len(dates) == 0 {
+		dates = itemDates
+	}
+	if len(dates) == 0 {
+		return errors.New("cannot persist a scrape without any dates")
+	}
+
+	cutoff := now.AddDate(0, 0, -MenuRetentionDays).Format("2006-01-02")
+	return DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Where("date IN ?", dates).Delete(&GormWeeklyItem{}).Error; err != nil {
+			return fmt.Errorf("replace scraped menu dates: %w", err)
+		}
+		if err := insertWeeklyItems(tx, cleanItems); err != nil {
+			return fmt.Errorf("insert scraped menu items: %w", err)
+		}
+		if err := tx.Unscoped().Where("date < ?", cutoff).Delete(&GormWeeklyItem{}).Error; err != nil {
+			return fmt.Errorf("prune menu history before %s: %w", cutoff, err)
+		}
+
+		uniqueAllData := uniqueAllDataItems(allDataItems)
+		if len(uniqueAllData) == 0 {
+			return nil
+		}
+		gormItems := make([]GormAllDataItem, 0, len(uniqueAllData))
+		for _, item := range uniqueAllData {
+			gormItems = append(gormItems, AllDataItemToGorm(item))
+		}
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(&gormItems, 500).Error; err != nil {
+			return fmt.Errorf("insert all-data items: %w", err)
+		}
 		return nil
-	}
+	})
+}
 
-	// delete the oldest day that would now be 4 days old
-	if err := DB.Where("day_index = ?", -3).Delete(&GormWeeklyItem{}).Error; err != nil {
-		log.Println("Error deleting records:", err)
-		return err
-	}
-
-	// slide the window of days to be one older
-	if err := DB.Model(&GormWeeklyItem{}).Where("day_index > ?", -3).
-		Update("day_index", gorm.Expr("day_index - 1")).Error; err != nil {
-		log.Println("Error updating records:", err)
-		return err
-	}
-
-	var weeklyItems []models.WeeklyItem
+func normalizeWeeklyItems(items []models.WeeklyItem) ([]models.WeeklyItem, []string, error) {
+	seenItems := make(map[string]struct{}, len(items))
+	seenDates := make(map[string]struct{})
+	cleanItems := make([]models.WeeklyItem, 0, len(items))
+	dates := make([]string, 0)
 
 	for _, item := range items {
-		appendable := models.WeeklyItem{DailyItem: item, DayIndex: NEWEST_DAY_INDEX}
-		weeklyItems = append(weeklyItems, appendable)
+		dailyItem := item.DailyItem
+		if _, err := time.Parse("2006-01-02", dailyItem.Date); err != nil {
+			return nil, nil, fmt.Errorf("invalid menu date %q: %w", dailyItem.Date, err)
+		}
+		if _, exists := seenDates[dailyItem.Date]; !exists {
+			seenDates[dailyItem.Date] = struct{}{}
+			dates = append(dates, dailyItem.Date)
+		}
+
+		key := strings.Join([]string{
+			dailyItem.Date,
+			dailyItem.Location,
+			dailyItem.TimeOfDay,
+			dailyItem.StationName,
+			dailyItem.Name,
+		}, "\x00")
+		if _, exists := seenItems[key]; exists {
+			continue
+		}
+		seenItems[key] = struct{}{}
+		item.DayIndex = 0
+		cleanItems = append(cleanItems, item)
 	}
 
-	if err := InsertWeeklyItems(weeklyItems); err != nil {
-		log.Println("Error inserting weekly items in update:", err)
-		return err
-	}
+	return cleanItems, dates, nil
+}
 
-	return nil
+func normalizeScrapedDates(dates []string) ([]string, error) {
+	seen := make(map[string]struct{}, len(dates))
+	result := make([]string, 0, len(dates))
+	for _, date := range dates {
+		if _, err := time.Parse("2006-01-02", date); err != nil {
+			return nil, fmt.Errorf("invalid scraped date %q: %w", date, err)
+		}
+		if _, exists := seen[date]; exists {
+			continue
+		}
+		seen[date] = struct{}{}
+		result = append(result, date)
+	}
+	return result, nil
+}
+
+func uniqueAllDataItems(items []models.AllDataItem) []models.AllDataItem {
+	seen := make(map[string]struct{}, len(items))
+	result := make([]models.AllDataItem, 0, len(items))
+	for _, item := range items {
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		result = append(result, models.AllDataItem{Name: name})
+	}
+	return result
 }
 
 // InsertAllDataItems inserts a list of AllDataItem objects into the all data table.
@@ -184,33 +286,18 @@ func UpdateWeeklyItems(items []models.DailyItem) error {
 // Returns:
 // - error: An error if the insertion fails.
 func InsertAllDataItems(items []models.AllDataItem) error {
-	if len(items) == 0 {
+	uniqueItems := uniqueAllDataItems(items)
+	if len(uniqueItems) == 0 {
 		log.Println("No available items, skipping all data insert")
 		return nil
 	}
 
-	cleanedItems, err := CleanAllData(items)
-
-	if err != nil {
-		log.Println("Error cleaning the items before inserting to all data table: ", err)
-		return nil
+	gormItems := make([]GormAllDataItem, 0, len(uniqueItems))
+	for _, item := range uniqueItems {
+		gormItems = append(gormItems, AllDataItemToGorm(item))
 	}
 
-	if len(cleanedItems) == 0 {
-		log.Println("No new items, skipping all data insert")
-		return nil
-	}
-
-	var gormItems []GormAllDataItem
-
-	for _, item := range cleanedItems {
-		appendable := AllDataItemToGorm(item)
-		gormItems = append(gormItems, appendable)
-	}
-
-	// Insert the unique item into the allData using batches
-	batchSize := 500
-	result := DB.CreateInBatches(&gormItems, batchSize)
+	result := DB.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(&gormItems, 500)
 	if result.Error != nil {
 		log.Println("Error inserting items:", result.Error)
 		return result.Error
@@ -230,6 +317,10 @@ func InsertAllDataItems(items []models.AllDataItem) error {
 // Returns:
 // - error: An error if the insertion fails.
 func InsertLocationOperatingTimes(locations []models.LocationOperatingTimes) error {
+	return insertLocationOperatingTimes(DB, locations)
+}
+
+func insertLocationOperatingTimes(tx *gorm.DB, locations []models.LocationOperatingTimes) error {
 	var gormLocationOperatingTimes []GormLocationOperatingTimes
 
 	for _, locationOperatingTimes := range locations {
@@ -250,12 +341,27 @@ func InsertLocationOperatingTimes(locations []models.LocationOperatingTimes) err
 
 	// Insert into the database using batches
 	batchSize := 500
-	result := DB.CreateInBatches(&gormLocationOperatingTimes, batchSize)
+	result := tx.CreateInBatches(&gormLocationOperatingTimes, batchSize)
 	if result.Error != nil {
 		return fmt.Errorf("failed to insert locationOperatingTimes: %v", result.Error)
 	}
 
 	return nil
+}
+
+func ReplaceLocationOperatingTimes(locations []models.LocationOperatingTimes) error {
+	if len(locations) == 0 {
+		return errors.New("cannot replace operating times with an empty scrape")
+	}
+	return DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Where("1 = 1").Delete(&GormLocationOperatingTimes{}).Error; err != nil {
+			return fmt.Errorf("delete old operating times: %w", err)
+		}
+		if err := insertLocationOperatingTimes(tx, locations); err != nil {
+			return fmt.Errorf("insert new operating times: %w", err)
+		}
+		return nil
+	})
 }
 
 // SaveUserPreferences saves user-specific preferences into the database.
@@ -332,36 +438,32 @@ func SaveDisplayPreferences(userID string, displayPreferences models.DisplayPref
 	return DB.Save(&userPreferences).Error
 }
 
-// ReturnDateOfDailyItems retrieves the date associated with the daily items in the database.
-// Should index into the weeklyItems table and return the date of an item with the day index field of 0
-//
-// Returns:
-// - string: The date of the daily items.
-// - error: An error if no items are found or the query fails.
+// ReturnDateOfDailyItems returns today's date when present, otherwise the most
+// recent retained menu date.
 func ReturnDateOfDailyItems() (date string, err error) {
-	var weeklyItems []GormWeeklyItem
-	result := DB.Find(&weeklyItems)
-	if result.Error != nil {
+	var item GormWeeklyItem
+	today := time.Now().Format("2006-01-02")
+	result := DB.Where("date = ?", today).First(&item)
+	if result.Error == nil {
+		return item.Date, nil
+	}
+	if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return "", result.Error
 	}
 
-	if len(weeklyItems) == 0 {
-		return "", NoItemsInDB
-	}
-
-	// Find the item with the day index of 0
-	for _, item := range weeklyItems {
-		if item.DayIndex == 0 {
-			return item.Date, nil
+	result = DB.Order("date DESC").First(&item)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return "", NoItemsInDB
 		}
+		return "", result.Error
 	}
-
-	return "", errors.New("no item with day index 0 found")
+	return item.Date, nil
 }
 
 func GetAllWeeklyItems() (map[string][]models.DailyItem, error) {
 	var weeklyItems []GormWeeklyItem
-	result := DB.Find(&weeklyItems)
+	result := DB.Order("date ASC, location ASC, time_of_day ASC, station_name ASC, name ASC").Find(&weeklyItems)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -370,23 +472,9 @@ func GetAllWeeklyItems() (map[string][]models.DailyItem, error) {
 		return nil, NoItemsInDB
 	}
 
-	// items := make(map[string][]models.DailyItem, 7)
-	// today := time.Now()
-
-	// for i := -3; i <= 3; i++ {
-	// 	dateKey := today.AddDate(0, 0, i).Format("2006-01-02")
-	// 	items[dateKey] = make([]models.DailyItem, 0)
-	// }
-
-	// for _, item := range weeklyItems {
-	// 	dateKey := today.AddDate(0, 0, item.DayIndex).Format("2006-01-02")
-	// 	items[dateKey] = append(items[dateKey], item.DailyItem)
-	// }
-
 	weeklyItemsMap := make(map[string][]models.DailyItem)
 	for _, wItem := range weeklyItems {
-		dateKey := time.Now().AddDate(0, 0, wItem.DayIndex).Format("2006-01-02")
-		weeklyItemsMap[dateKey] = append(weeklyItemsMap[dateKey], wItem.DailyItem)
+		weeklyItemsMap[wItem.Date] = append(weeklyItemsMap[wItem.Date], wItem.DailyItem)
 	}
 
 	return weeklyItemsMap, nil
@@ -540,10 +628,13 @@ func GetAvailableFavoritesBatch(userID string) ([]models.DailyItem, error) {
 	for _, pref := range userPreferences {
 		search = append(search, pref.Name)
 	}
+	if len(search) == 0 {
+		return []models.DailyItem{}, nil
+	}
+
 	var matchingItems []models.DailyItem
-	// search instead in weeklyItems table where day_index = 0
 	result := DB.Table("gorm_weekly_items").
-		Where("name IN ? AND day_index = 0", search).
+		Where("name IN ? AND date = ?", search, time.Now().Format("2006-01-02")).
 		Find(&matchingItems)
 
 	if result.Error != nil {
