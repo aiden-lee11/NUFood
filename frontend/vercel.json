@@ -4,7 +4,11 @@
       "handle": "filesystem"
     },
     {
-      "src": "/[^.]+",
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(?!api/).*",
       "dest": "/index.html"
     }
   ],
