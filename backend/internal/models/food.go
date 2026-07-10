@@ -99,7 +99,7 @@ type WeeklyItem struct {
 }
 
 type AllDataItem struct {
-	Name string `gorm:"uniqueIndex"`
+	Name string
 }
 
 type PreferenceReturn struct {

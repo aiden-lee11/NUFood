@@ -19,13 +19,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
 	testDB, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, testDB.AutoMigrate(
-		&db.GormAllDataItem{},
-		&db.GormUserPreferences{},
-		&db.GormLocationOperatingTimes{},
-		&db.GormWeeklyItem{},
-		&db.GormNutritionGoals{},
-	))
+	require.NoError(t, db.Migrate(testDB))
 	db.DB = testDB
 	t.Cleanup(func() {
 		sqlDB, err := testDB.DB()
@@ -220,4 +214,19 @@ func TestInsertAllDataItemsIgnoresDuplicates(t *testing.T) {
 	items, err := db.GetAllDataItems()
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []models.AllDataItem{{Name: "Eggs"}, {Name: "Bacon"}}, items)
+}
+
+func TestMigrateDeduplicatesExistingAllDataItems(t *testing.T) {
+	testDB, err := gorm.Open(sqlite.Open("file:migration-test?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, testDB.AutoMigrate(&db.GormAllDataItem{}))
+	require.NoError(t, testDB.Create(&db.GormAllDataItem{AllDataItem: models.AllDataItem{Name: "Eggs"}}).Error)
+	require.NoError(t, testDB.Create(&db.GormAllDataItem{AllDataItem: models.AllDataItem{Name: "Eggs"}}).Error)
+
+	require.NoError(t, db.Migrate(testDB))
+
+	var count int64
+	require.NoError(t, testDB.Model(&db.GormAllDataItem{}).Where("name = ?", "Eggs").Count(&count).Error)
+	assert.EqualValues(t, 1, count)
+	assert.Error(t, testDB.Create(&db.GormAllDataItem{AllDataItem: models.AllDataItem{Name: "Eggs"}}).Error)
 }

@@ -35,7 +35,7 @@ type GormWeeklyItem struct {
 // GormAllDataItem represents a unique menu item in the database.
 type GormAllDataItem struct {
 	gorm.Model
-	models.AllDataItem `gorm:"unique"`
+	models.AllDataItem
 }
 
 // GormUserPreferences represents user-specific preferences for menu items.
@@ -105,14 +105,42 @@ func InitDB(databasePath string) error {
 		return err
 	}
 
-	// Auto migrate the schemas
-	err = DB.AutoMigrate(&GormAllDataItem{}, &GormUserPreferences{}, &GormLocationOperatingTimes{}, &GormWeeklyItem{}, &GormNutritionGoals{})
-	if err != nil {
+	if err = Migrate(DB); err != nil {
 		return err
 	}
 
 	log.Println("Database initialized and schema migrated successfully")
 	return nil
+}
+
+func Migrate(database *gorm.DB) error {
+	if err := database.AutoMigrate(
+		&GormAllDataItem{},
+		&GormUserPreferences{},
+		&GormLocationOperatingTimes{},
+		&GormWeeklyItem{},
+		&GormNutritionGoals{},
+	); err != nil {
+		return err
+	}
+
+	return database.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`
+			DELETE FROM gorm_all_data_items
+			WHERE id NOT IN (
+				SELECT MIN(id) FROM gorm_all_data_items GROUP BY name
+			)
+		`).Error; err != nil {
+			return fmt.Errorf("deduplicate all-data items: %w", err)
+		}
+		if err := tx.Exec(`
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_gorm_all_data_items_name
+			ON gorm_all_data_items (name)
+		`).Error; err != nil {
+			return fmt.Errorf("create all-data name index: %w", err)
+		}
+		return nil
+	})
 }
 
 func InsertWeeklyItems(items []models.WeeklyItem) error {
