@@ -5,6 +5,7 @@ import (
 	"backend/internal/db"
 	"backend/internal/models"
 	"fmt"
+	"html"
 	"log"
 	"net/url"
 	"os"
@@ -14,19 +15,17 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/joho/godotenv"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 func GenerateUnsubscribeToken(userID string) (string, error) {
-	// Create a unique token using userID and a secret key
-	env_err := godotenv.Load()
-	if env_err != nil {
-		log.Printf("Error loading .env file: %v", env_err)
+	secret := os.Getenv("SECRET_KEY")
+	if secret == "" {
+		return "", fmt.Errorf("SECRET_KEY is required")
 	}
 
-	h := hmac.New(sha256.New, []byte(os.Getenv("SECRET_KEY")))
+	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte(userID))
 	token := hex.EncodeToString(h.Sum(nil))
 	return token, nil
@@ -36,19 +35,21 @@ func SendEmails() error {
 	preferencesData, err := db.GetMailingList()
 
 	if err != nil {
-		log.Fatal("Error selecting all preferences in twilio attempt: ", err)
-		return err
-	}
-
-	env_err := godotenv.Load()
-	if env_err != nil {
-		log.Printf("Error loading .env file: %v", env_err)
+		return fmt.Errorf("select mailing preferences: %w", err)
 	}
 
 	apiKey := os.Getenv("SENDGRID_API_KEY")
 	baseURL := os.Getenv("BASE_URL")
+	if apiKey == "" {
+		return fmt.Errorf("SENDGRID_API_KEY is required")
+	}
+	if baseURL == "" {
+		return fmt.Errorf("BASE_URL is required")
+	}
+
 	from := mail.NewEmail("NUFood", "nufoodfinder11@gmail.com")
 	subject := "Available Favorites Today"
+	client := sendgrid.NewSendClient(apiKey)
 
 	for _, userData := range preferencesData {
 		userID := userData.UserID
@@ -81,19 +82,20 @@ func SendEmails() error {
 		}
 
 		message := mail.NewSingleEmail(from, subject, to, plainText, htmlContent)
-		client := sendgrid.NewSendClient(apiKey)
 		response, err := client.Send(message)
 		if err != nil {
-			log.Println(err)
-		} else {
-			fmt.Println(response.StatusCode)
-			fmt.Println(response.Body)
-			fmt.Println(response.Headers)
+			return fmt.Errorf("send favorites email to user %s: %w", userID, err)
 		}
-
+		if response.StatusCode < 200 || response.StatusCode >= 300 {
+			return fmt.Errorf(
+				"send favorites email to user %s: sendgrid status=%d body=%s",
+				userID,
+				response.StatusCode,
+				response.Body,
+			)
+		}
 	}
 	return nil
-
 }
 
 func FormatPreferences(preferences []models.DailyItem, unsubscribeURL string) (string, error) {
@@ -170,19 +172,30 @@ func FormatPreferences(preferences []models.DailyItem, unsubscribeURL string) (s
 				  <div class="container">
 				    <h1>Your Daily Favorites</h1>
 				`)
+	locations := make([]string, 0, len(categories))
+	for location := range categories {
+		locations = append(locations, location)
+	}
+	sort.Strings(locations)
+
 	// Iterate through each dining hall
-	for location, items := range categories {
+	for _, location := range locations {
+		items := categories[location]
 		items = sortByTimeOfDay(items)
-		htmlBuilder.WriteString(fmt.Sprintf("<h2>%s</h2>\n<ul>\n", location))
+		htmlBuilder.WriteString(fmt.Sprintf("<h2>%s</h2>\n<ul>\n", html.EscapeString(location)))
 		for _, item := range items {
-			htmlBuilder.WriteString(fmt.Sprintf("<li><strong>%s</strong> <span class=\"time-label\">for %s</span></li>\n", item.Name, item.TimeOfDay))
+			htmlBuilder.WriteString(fmt.Sprintf(
+				"<li><strong>%s</strong> <span class=\"time-label\">for %s</span></li>\n",
+				html.EscapeString(item.Name),
+				html.EscapeString(item.TimeOfDay),
+			))
 		}
 		htmlBuilder.WriteString("</ul>\n")
 	}
 
 	htmlBuilder.WriteString(`  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eaeaea; text-align: center; color: #999; font-size: 12px;">
     <p>If you no longer wish to receive these emails, <a href="`)
-	htmlBuilder.WriteString(unsubscribeURL)
+	htmlBuilder.WriteString(html.EscapeString(unsubscribeURL))
 	htmlBuilder.WriteString(`">click here to unsubscribe</a>.</p>
   </div>`)
 

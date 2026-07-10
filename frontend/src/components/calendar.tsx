@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useDataStore } from "@/store"
+import type { DailyItem } from "@/types/ItemTypes"
 
 interface DatePickerProps {
   selectedDate: Date
   setSelectedDate: (date: Date) => void
-  setDailyItems?: (items: any) => void
+  setDailyItems?: (items: DailyItem[] | undefined) => void
   minDate?: Date
   maxDate?: Date
 }

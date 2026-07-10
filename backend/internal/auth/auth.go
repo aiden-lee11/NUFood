@@ -43,7 +43,7 @@ type FirebaseConfig struct {
 	TokenURI                string `json:"token_uri"`
 	AuthProviderX509CertURL string `json:"auth_provider_x509_cert_url"`
 	ClientX509CertURL       string `json:"client_x509_cert_url"`
-	universe_domain         string `json:universe_domain`
+	UniverseDomain          string `json:"universe_domain"`
 }
 
 // CreateFirebaseConfig creates and writes a Firebase JSON configuration file.
@@ -68,7 +68,7 @@ func CreateFirebaseConfig(filename string) error {
 		TokenURI:                os.Getenv("FIREBASE_TOKEN_URI"),
 		AuthProviderX509CertURL: os.Getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
 		ClientX509CertURL:       os.Getenv("FIREBASE_CLIENT_X509_CERT_URL"),
-		universe_domain:         os.Getenv("FIREBASE_UNIVERSE_DOMAIN"),
+		UniverseDomain:          os.Getenv("FIREBASE_UNIVERSE_DOMAIN"),
 	}
 
 	// Marshal the config struct to JSON format
@@ -78,7 +78,7 @@ func CreateFirebaseConfig(filename string) error {
 	}
 
 	// Write the JSON data to the file
-	err = os.WriteFile(filename, data, 0644)
+	err = os.WriteFile(filename, data, 0600)
 	if err != nil {
 		return fmt.Errorf("error writing Firebase config to file: %v", err)
 	}

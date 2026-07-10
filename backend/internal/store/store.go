@@ -30,11 +30,11 @@ func (s *MemoryStore) Set(value any) {
 
 	switch v := value.(type) {
 	case []models.AllDataItem:
-		s.allData = v
+		s.allData = append([]models.AllDataItem(nil), v...)
 	case []models.LocationOperatingTimes:
-		s.locationOperatingTimes = v
+		s.locationOperatingTimes = append([]models.LocationOperatingTimes(nil), v...)
 	case map[string][]models.DailyItem:
-		s.weeklyItems = v
+		s.weeklyItems = cloneWeeklyItems(v)
 	default:
 		panic("Setting an unsupported type")
 	}
@@ -51,21 +51,32 @@ func (s *MemoryStore) Clear() {
 }
 
 func (s *MemoryStore) getAllDataItems() []models.AllDataItem {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.allData
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]models.AllDataItem(nil), s.allData...)
 }
 
 func (s *MemoryStore) getLocationOperatingTimes() []models.LocationOperatingTimes {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.locationOperatingTimes
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]models.LocationOperatingTimes(nil), s.locationOperatingTimes...)
 }
 
 func (s *MemoryStore) getWeeklyItems() map[string][]models.DailyItem {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.weeklyItems
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return cloneWeeklyItems(s.weeklyItems)
+}
+
+func cloneWeeklyItems(items map[string][]models.DailyItem) map[string][]models.DailyItem {
+	if items == nil {
+		return nil
+	}
+	cloned := make(map[string][]models.DailyItem, len(items))
+	for date, dateItems := range items {
+		cloned[date] = append([]models.DailyItem(nil), dateItems...)
+	}
+	return cloned
 }
 
 // Exported functions to access the global store

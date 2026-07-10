@@ -711,8 +711,7 @@ func GetMailingList() ([]models.PreferenceReturn, error) {
 // Returns:
 // - error: An error if the deletion operation fails.
 func DeleteWeeklyItems() error {
-	// Attempt to delete all items from gorm_weekly_items table
-	result := DB.Exec("DELETE FROM gorm_weekly_items WHERE EXISTS (SELECT 1 FROM gorm_weekly_items LIMIT 1)")
+	result := DB.Unscoped().Where("1 = 1").Delete(&GormWeeklyItem{})
 	if result.Error != nil {
 		fmt.Println("Error deleting weekly items:", result.Error)
 		return result.Error
@@ -727,8 +726,7 @@ func DeleteWeeklyItems() error {
 // Returns:
 // - error: An error if the deletion operation fails.
 func DeleteAllDataItems() error {
-	// Attempt to delete all items from gorm_daily_items table
-	result := DB.Exec("DELETE FROM gorm_all_data_items WHERE EXISTS (SELECT 1 FROM gorm_daily_items LIMIT 1)")
+	result := DB.Unscoped().Where("1 = 1").Delete(&GormAllDataItem{})
 	if result.Error != nil {
 		fmt.Println("Error deleting items:", result.Error)
 		return result.Error
@@ -743,8 +741,7 @@ func DeleteAllDataItems() error {
 // Returns:
 // - error: An error if the deletion operation fails.
 func DeleteLocationOperatingTimes() error {
-	// Attempt to delete all items from gorm_location_operations table
-	result := DB.Exec("DELETE FROM gorm_location_operating_times WHERE EXISTS (SELECT 1 FROM gorm_location_operating_times  LIMIT 1)")
+	result := DB.Unscoped().Where("1 = 1").Delete(&GormLocationOperatingTimes{})
 	if result.Error != nil {
 		fmt.Println("Error deleting location operations:", result.Error)
 		return result.Error

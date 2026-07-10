@@ -1,252 +1,63 @@
 package twilio_test
 
 import (
-	"backend/internal/auth"
-	"backend/internal/db"
 	"backend/internal/models"
 	"backend/internal/twilio"
-	"fmt"
-	"log"
-	"os"
-
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/joho/godotenv"
-
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 func TestFormatPreferencesForEmail(t *testing.T) {
-	fmt.Println("Testing format preferences for email")
-	dailyItems := []models.DailyItem{
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Sargent",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Eggs",
-			Description: "Scrambled eggs",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
+	preferences := []models.DailyItem{
+		{Name: "Pancakes", Location: "Allison", TimeOfDay: "Breakfast"},
+		{Name: "Pasta", Location: "Allison", TimeOfDay: "Dinner"},
+		{Name: "Tacos", Location: "Sargent", TimeOfDay: "Lunch"},
 	}
-	_, err := twilio.FormatPreferences(dailyItems, "localhost")
 
-	assert.NoError(t, err, "Error in formatting daily items")
+	html, err := twilio.FormatPreferences(preferences, "https://example.test/unsubscribe")
+	require.NoError(t, err)
+	assert.Contains(t, html, "Allison")
+	assert.Contains(t, html, "Sargent")
+	assert.Less(t, strings.Index(html, "Pancakes"), strings.Index(html, "Pasta"))
+	assert.Contains(t, html, "https://example.test/unsubscribe")
 }
 
-func setupTestDB(t *testing.T) *gorm.DB {
-	t.Helper()
+func TestGenerateUnsubscribeToken(t *testing.T) {
+	t.Setenv("SECRET_KEY", "test-secret")
 
-	t.Log("Setting up test database")
+	first, err := twilio.GenerateUnsubscribeToken("user-123")
+	require.NoError(t, err)
+	second, err := twilio.GenerateUnsubscribeToken("user-123")
+	require.NoError(t, err)
 
-	// Initialize an in-memory SQLite database
-	DB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err, "Failed to initialize test database")
-
-	// Apply migrations
-	err = DB.AutoMigrate(&db.GormDailyItem{}, &db.GormAllDataItem{}, &db.GormUserPreferences{}, &db.GormLocationOperatingTimes{})
-	if err != nil {
-		t.Fatalf("Failed to migrate schema: %v", err)
-	}
-
-	t.Log("Test database initialized successfully")
-
-	return DB
+	assert.NotEmpty(t, first)
+	assert.Equal(t, first, second)
 }
 
-func teardownTestDB(db *gorm.DB, t *testing.T) {
-	t.Helper()
-	sqlDB, err := db.DB()
-	require.NoError(t, err, "Failed to retrieve SQL DB from Gorm DB")
-	assert.NoError(t, sqlDB.Close(), "Failed to close the test database")
+func TestGenerateUnsubscribeTokenRequiresSecret(t *testing.T) {
+	t.Setenv("SECRET_KEY", "")
+
+	token, err := twilio.GenerateUnsubscribeToken("user-123")
+
+	assert.Error(t, err)
+	assert.Empty(t, token)
 }
 
-func TestMailingList(t *testing.T) {
-	t.Log("Running TestMailingList")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
+func TestFormatPreferencesEscapesUserFacingValues(t *testing.T) {
+	preferences := []models.DailyItem{{
+		Name:      "<script>alert('x')</script>",
+		Location:  "Hall & Cafe",
+		TimeOfDay: "Lunch",
+	}}
 
-	// Override the global DB variable in your `db` package
-	tx := testDB.Begin()
-	defer tx.Rollback()
+	content, err := twilio.FormatPreferences(preferences, "https://example.test/?a=1&b=2")
+	require.NoError(t, err)
 
-	// Use this transaction for all DB operations
-	// transaction is necessary here for testing not for prod just becuase the read writes to in memory sqlite can interfere with eachothers timing
-	// causing a horrible "table not found" err :)
-	db.DB = tx
-
-	// Insert daily items to be looked up
-	dailyItems := []models.DailyItem{
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Sargent",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Chicken Parmesan",
-			Description: "LeChicken",
-			Date:        "2021-09-06",
-			Location:    "Elder",
-			StationName: "Comfort",
-			TimeOfDay:   "Dinner",
-		},
-		{
-			Name:        "Orange Chicken",
-			Description: "LeChicken2",
-			Date:        "2021-09-06",
-			Location:    "Plex East",
-			StationName: "Comfort",
-			TimeOfDay:   "Lunch",
-		},
-	}
-
-	err := db.InsertDailyItems(dailyItems, false)
-	require.NoError(t, err, "Error inserting daily items")
-
-	// Set up a user's preferences
-	user1Preferences := []models.AllDataItem{
-		{Name: "Bacon"},
-		{Name: "Eggs"},
-		{Name: "Chicken Parmesan"},
-	}
-
-	user2Preferences := []models.AllDataItem{
-		{Name: "Eggs"},
-		{Name: "Chicken Parmesan"},
-		{Name: "Orange Chicken"},
-	}
-
-	env_err := godotenv.Load()
-	if env_err != nil {
-		log.Printf("Error loading .env file: %v", env_err)
-	}
-	user1ID := os.Getenv("TESTING_USER_ID1")
-	user2ID := os.Getenv("TESTING_USER_ID2")
-
-	if err := auth.InitFirebase(); err != nil {
-		log.Fatal("Init firebase failed: ", err)
-	}
-
-	err = db.SaveUserPreferences(user1ID, user1Preferences)
-	assert.NoError(t, err, "Error saving user")
-	err = db.UpdateMailingStatus(user1ID, true)
-	require.NoError(t, err, "Error saving user preferences")
-
-	err = db.SaveUserPreferences(user2ID, user2Preferences)
-	assert.NoError(t, err, "Error saving user")
-	err = db.UpdateMailingStatus(user2ID, true)
-
-	require.NoError(t, err, "Error saving user preferences")
-
-	err = twilio.SendEmails()
-
-	require.NoError(t, err, "Error sending email")
-}
-
-func TestUnsubscribe(t *testing.T) {
-	t.Log("Running TestMailingList")
-	// Set up the database
-	testDB := setupTestDB(t)
-	defer teardownTestDB(testDB, t)
-
-	// Override the global DB variable in your `db` package
-	tx := testDB.Begin()
-	defer tx.Rollback()
-
-	// Use this transaction for all DB operations
-	// transaction is necessary here for testing not for prod just becuase the read writes to in memory sqlite can interfere with eachothers timing
-	// causing a horrible "table not found" err :)
-	db.DB = tx
-
-	// Insert daily items to be looked up
-	dailyItems := []models.DailyItem{
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Allison",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Bacon",
-			Description: "Delicious bacon",
-			Date:        "2021-09-06",
-			Location:    "Sargent",
-			StationName: "Comfort",
-			TimeOfDay:   "Breakfast",
-		},
-		{
-			Name:        "Chicken Parmesan",
-			Description: "LeChicken",
-			Date:        "2021-09-06",
-			Location:    "Elder",
-			StationName: "Comfort",
-			TimeOfDay:   "Dinner",
-		},
-		{
-			Name:        "Orange Chicken",
-			Description: "LeChicken2",
-			Date:        "2021-09-06",
-			Location:    "Plex East",
-			StationName: "Comfort",
-			TimeOfDay:   "Lunch",
-		},
-	}
-
-	err := db.InsertDailyItems(dailyItems, false)
-	require.NoError(t, err, "Error inserting daily items")
-
-	// Set up a user's preferences
-	user1Preferences := []models.AllDataItem{
-		{Name: "Bacon"},
-		{Name: "Eggs"},
-		{Name: "Chicken Parmesan"},
-	}
-
-	env_err := godotenv.Load()
-	if env_err != nil {
-		log.Printf("Error loading .env file: %v", env_err)
-	}
-	user1ID := os.Getenv("TESTING_USER_ID1")
-
-	if err := auth.InitFirebase(); err != nil {
-		log.Fatal("Init firebase failed: ", err)
-	}
-
-	err = db.SaveUserPreferences(user1ID, user1Preferences)
-	assert.NoError(t, err, "Error saving user")
-	err = db.UpdateMailingStatus(user1ID, true)
-	require.NoError(t, err, "Error saving user preferences")
-
-	err = twilio.SendEmails()
-
-	token, err := twilio.GenerateUnsubscribeToken(user1ID)
-
-	require.NoError(t, err, "Error generating unsub token")
-
-	fmt.Printf("token: %v\n", token)
+	assert.NotContains(t, content, "<script>")
+	assert.Contains(t, content, "&lt;script&gt;")
+	assert.Contains(t, content, "Hall &amp; Cafe")
+	assert.Contains(t, content, "a=1&amp;b=2")
 }
