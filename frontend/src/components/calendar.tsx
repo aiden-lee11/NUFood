@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useDataStore } from "@/store"
 import type { DailyItem } from "@/types/ItemTypes"
+import { toLocalISODate } from "@/util/date"
 
 interface DatePickerProps {
   selectedDate: Date
@@ -20,13 +21,6 @@ export function DatePicker({ selectedDate, setSelectedDate, setDailyItems, minDa
   const staticData = useDataStore((state) => state.UserDataResponse)
   const weeklyItems = staticData.weeklyItems
   const [isOpen, setIsOpen] = useState(false)
-
-  function toLocalISODate(d: Date) {
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
 
   function onSubmit(date: Date | undefined) {
     if (date) {

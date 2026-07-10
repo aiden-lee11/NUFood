@@ -11,6 +11,8 @@ import ErrorPopup from '../components/error-popup';
 import { useDataStore } from '@/store';
 import { HeaderControls } from "../components/header-controls"
 import SEO from '../components/SEO';
+import { toLocalISODate } from '../util/date';
+import { loadDisplayPreferences, saveDisplayPreferences } from '../util/displayPreferences';
 
 const DEFAULT_LOCATIONS = ["Sargent", "Elder", "Allison", "Plex East", "Plex West"];
 
@@ -19,13 +21,22 @@ const DailyItems: React.FC = () => {
   const [showPopup, setShowPopup] = useState(false);
   const { token, authLoading } = useAuth();
 
+  // Read browser-native display preferences synchronously so the very first paint
+  // is already correct — no popup flash, no "all halls -> your halls" collapse.
+  const initialDisplayPrefs = useMemo(() => loadDisplayPreferences(DEFAULT_LOCATIONS), []);
+
   // Data involved with display of items
   const locations = DEFAULT_LOCATIONS;
-  const [visibleLocations, setVisibleLocations] = useState<string[]>(DEFAULT_LOCATIONS);
+  const [visibleLocations, setVisibleLocations] = useState<string[]>(initialDisplayPrefs.visibleLocations);
   const [visibleTimes, setVisibleTimes] = useState<string[]>([]);
   const [expandFolders, setExpandFolders] = useState(false);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
-  const [showPreferences, setShowPreferences] = useState(false);
+  // Auto-open the settings popup only for a brand-new browser that has never saved
+  // preferences and hasn't dismissed the popup this session.
+  const [showPreferences, setShowPreferences] = useState(
+    !initialDisplayPrefs.hasSavedDisplayPreferences &&
+    sessionStorage.getItem("showPreferences") !== "false"
+  );
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [openLocations, setOpenLocations] = useState<string[]>([])
@@ -36,36 +47,42 @@ const DailyItems: React.FC = () => {
   const staticData = useDataStore((state) => state.UserDataResponse);
   const weeklyItems = staticData.weeklyItems;
   const memoizedLocationHours = useMemo(
-    () => getDailyLocationOperationTimes(staticData.locationOperationHours, new Date()),
+    () => getDailyLocationOperationTimes(staticData.locationOperationHours, selectedDate),
     [staticData.locationOperationHours, selectedDate]
   );
   const userPreferences = staticData.userPreferences;
   const displayPreferences = staticData.displayPreferences;
   const setUserPreferences = useDataStore((state) => state.setUserPreferences)
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
+  // On sign-out, allow the backend-adopt below to run again if the user signs back in.
+  // Note: we intentionally do NOT reset visibleLocations here — display preferences are
+  // browser-native and should survive sign-out without a flash.
   useEffect(() => {
     if (!authLoading && !token) {
-      setShowPreferences(sessionStorage.getItem("showPreferences") !== "false");
-      setVisibleLocations(DEFAULT_LOCATIONS);
       hasHydratedSignedInDisplayPrefs.current = false;
     }
   }, [authLoading, token]);
 
+  // Cross-device sync: on a fresh browser (nothing saved locally yet) adopt the
+  // signed-in user's server-side preferences once. If this browser already has saved
+  // preferences, localStorage wins and we never overwrite it — that's what avoids the
+  // late "third hydration" the user was seeing.
   useEffect(() => {
     if (!token || !displayPreferences || hasHydratedSignedInDisplayPrefs.current) {
+      return;
+    }
+    hasHydratedSignedInDisplayPrefs.current = true;
+
+    if (initialDisplayPrefs.hasSavedDisplayPreferences) {
       return;
     }
 
     if (displayPreferences.hasSavedDisplayPreferences) {
       setVisibleLocations(displayPreferences.visibleLocations);
       setShowPreferences(false);
-    } else {
-      setVisibleLocations(DEFAULT_LOCATIONS);
-      setShowPreferences(true);
+      saveDisplayPreferences(displayPreferences.visibleLocations);
     }
-
-    hasHydratedSignedInDisplayPrefs.current = true;
-  }, [token, displayPreferences]);
+  }, [token, displayPreferences, initialDisplayPrefs]);
 
   // Data involved with fuse
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,14 +107,14 @@ const DailyItems: React.FC = () => {
 
   useEffect(() => {
     if (weeklyItems && Object.keys(weeklyItems).length != 0) {
-      const todaysItems = weeklyItems[new Date().toISOString().split("T")[0]] || []
-      setDailyItems(todaysItems);
+      const selectedItems = weeklyItems[toLocalISODate(selectedDate)] || []
+      setDailyItems(selectedItems);
       // Determine if there is some location that is open, but no items are available
       // If this is the case then there was an error in scraping data and we should display
       // an error message popup to the user
-      setShowErrorPopup(!todaysItems && memoizedLocationHours);
+      setShowErrorPopup(selectedItems.length === 0 && Boolean(memoizedLocationHours));
     }
-  }, [weeklyItems])
+  }, [weeklyItems, selectedDate, memoizedLocationHours])
 
   useEffect(() => {
     // Set available favorites based on items that match user preferences
@@ -151,6 +168,9 @@ const DailyItems: React.FC = () => {
   };
 
   const persistVisibleLocations = (nextVisibleLocations: string[]) => {
+    // Browser-native first (source of truth for the next paint)...
+    saveDisplayPreferences(nextVisibleLocations);
+    // ...then mirror to the backend for signed-in cross-device sync.
     if (token) {
       postDisplayPreferences(nextVisibleLocations, token);
     }
@@ -183,8 +203,9 @@ const DailyItems: React.FC = () => {
 
   const handleTogglePreferences = (show: boolean) => {
     setShowPreferences(show);
-    if (!token) {
-      sessionStorage.setItem("showPreferences", show.toString());
+    // Remember an explicit dismissal so the popup doesn't auto-reopen this session.
+    if (!show) {
+      sessionStorage.setItem("showPreferences", "false");
     }
   };
 

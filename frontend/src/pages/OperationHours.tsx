@@ -1,11 +1,12 @@
 // components/OperationHours.tsx
 import React, { useState, useEffect } from "react";
 import { getWeekday, formatTime, locationAliases } from "../util/helper";
-import { OperationHoursData, OperatingTime } from "../types/OperationTypes";
+import { Day, OperationHoursData, OperatingTime } from "../types/OperationTypes";
 import { useDataStore } from "@/store";
 import SEO from '../components/SEO';
 import { ColumnDividerOverlay } from '../components/Table';
 import { DatePicker } from '../components/calendar';
+import { toLocalISODate } from "../util/date";
 
 type LocationGrouping = { [category: string]: string[] };
 
@@ -53,22 +54,16 @@ const OperationHours: React.FC = () => {
 
   // grab days header from the first available entry
   const weekDays = rawData[0]?.Week || [];
-  const toLocalISODate = (d: Date) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
   const parseLocalYYYYMMDD = (s: string) => {
     const [y, m, d] = s.split('-').map((n: string) => parseInt(n, 10));
     return new Date(y, (m as number) - 1, d);
   };
   const selectedDateStr = toLocalISODate(selectedDate);
-  let selectedDayIndex = weekDays.findIndex((d: any) => d.Date === selectedDateStr);
+  let selectedDayIndex = weekDays.findIndex((day: Day) => day.Date === selectedDateStr);
   if (selectedDayIndex < 0) {
     // Fallback to day-of-week index if date string mismatch due to TZ
     const dow = selectedDate.getDay(); // 0 (Sun) - 6 (Sat)
-    selectedDayIndex = weekDays.findIndex((d: any) => parseInt(d.Day, 10) === dow);
+    selectedDayIndex = weekDays.findIndex((day: Day) => parseInt(day.Day, 10) === dow);
     if (selectedDayIndex < 0) selectedDayIndex = 0;
   }
 

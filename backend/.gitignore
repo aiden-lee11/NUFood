@@ -6,3 +6,4 @@ coverage/
 .air.toml
 backend
 example.json
+example_todays_menu.json
