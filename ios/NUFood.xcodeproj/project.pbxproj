@@ -7,37 +7,67 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0490963B4F67928EE7A89E53 /* NutritionGoalsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B034CE38F3391F03516C359 /* NutritionGoalsSheet.swift */; };
+		0F3137FD5EA5F34FF140B48E /* AuthPromptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A95557C9AED507C687251FA /* AuthPromptSheet.swift */; };
 		222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */; };
+		2A90C64A26EED0ED3EF6AD1C /* ThemeToggleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */; };
+		2D26A548240779B7F3F3E2D1 /* HoursLocationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6C5DD380B80B154531CE75 /* HoursLocationCard.swift */; };
+		3E36CB9E07F8E587B2EA5121 /* LocationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC8ADC79C4C3486CF6D5EE4 /* LocationCard.swift */; };
 		4011D6964773C67CD01B4B44 /* FavoritesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E38EF5A23664793022B5F7 /* FavoritesScreen.swift */; };
+		4799FBC3B71AA1A1257FAF84 /* PlannerComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E03B769007FE00D3F7348B /* PlannerComponents.swift */; };
 		4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E36975476A6967D8323F95 /* AuthManager.swift */; };
+		66B0E677301383BFB95A55AF /* DisplaySettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2842E158375F9EA956A253CE /* DisplaySettingsSheet.swift */; };
+		6D76E8E4EE59FDCDCE3912F3 /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3BEDFF3484E417AEC1C2ABA /* DatePickerSheet.swift */; };
 		75141495FBE973B8C0F78AD6 /* OperationHoursScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1BE573D840E5E584E2427ED /* OperationHoursScreen.swift */; };
 		7C6F75756F52A4C52B18F9E3 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 2641B7D880C6C67B80BDB7EC /* GoogleSignInSwift */; };
 		7F148E6A77CA1276A5E681C1 /* OperatingHoursLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D60B65E990686DFBDA664F /* OperatingHoursLogic.swift */; };
+		7F4119C63475A5E6A9667B01 /* PlannerMyPlanTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 241066A7E5F58C2BFA01378B /* PlannerMyPlanTab.swift */; };
+		81BA45A66E01F2B4DABB6580 /* PlannerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593942FE8FB74E5805335877 /* PlannerModel.swift */; };
 		856CADCA281A090FF14AD172 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B458505E194DD2015043E21E /* FirebaseAuth */; };
 		8E9538D5CD67482DF750AA1A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A48E804687C7E263F74DFB /* Theme.swift */; };
 		9BEF61303B286F3AE514F782 /* NutrientPlannerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */; };
 		A2D989D417F982444E89354C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 6EB1C5423C74308D69FCF83E /* GoogleSignIn */; };
 		B5C68A64ECB4C886CCB49CF9 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB9E752386CD9DD8CC8385C6 /* AppStore.swift */; };
 		C71C051220DC5A0004C3A40D /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81CBE1FFBEF34D5DDF408607 /* APIClient.swift */; };
+		CBB3C6208061C943EDD31A7D /* ItemRowButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6219DDB37648DF94F90B986 /* ItemRowButton.swift */; };
+		CF9575604D559AAB5851CC97 /* PlannerFoodItemsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81015BD8DE9E5285ACC31EA1 /* PlannerFoodItemsTab.swift */; };
+		E93E4D0A99DCCD21E3A773E6 /* DailyItemAccordion.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDC27FCB49914EA7B62107D0 /* DailyItemAccordion.swift */; };
 		EC725A3E67F26053B1F21199 /* NUFoodApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B6CB076F6291FD4FCB0004 /* NUFoodApp.swift */; };
+		EE5BA1923546FE624A74C775 /* GoogleSignInButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BABB0299B522AE7D7053E36 /* GoogleSignInButton.swift */; };
+		F620634A378568B5A38ECABB /* AccountToolbarButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1399D462A8ED5DD6BA9396A6 /* AccountToolbarButton.swift */; };
 		F75779977D60CE6B2E952589 /* DailyItemsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3272191D9066A9DD5CE0EEAB /* DailyItemsScreen.swift */; };
 		FDC30F4C64B0F9EE2101AE52 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447ADF8A120946D8B086A145 /* Models.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0C6C5DD380B80B154531CE75 /* HoursLocationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursLocationCard.swift; sourceTree = "<group>"; };
+		1399D462A8ED5DD6BA9396A6 /* AccountToolbarButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountToolbarButton.swift; sourceTree = "<group>"; };
+		241066A7E5F58C2BFA01378B /* PlannerMyPlanTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerMyPlanTab.swift; sourceTree = "<group>"; };
+		2842E158375F9EA956A253CE /* DisplaySettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplaySettingsSheet.swift; sourceTree = "<group>"; };
+		2B034CE38F3391F03516C359 /* NutritionGoalsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionGoalsSheet.swift; sourceTree = "<group>"; };
+		2BABB0299B522AE7D7053E36 /* GoogleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInButton.swift; sourceTree = "<group>"; };
 		3272191D9066A9DD5CE0EEAB /* DailyItemsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyItemsScreen.swift; sourceTree = "<group>"; };
+		332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeToggleButton.swift; sourceTree = "<group>"; };
 		447ADF8A120946D8B086A145 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		44D1858AF72E63F5EDC37160 /* NUFood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NUFood.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		593942FE8FB74E5805335877 /* PlannerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerModel.swift; sourceTree = "<group>"; };
+		67E03B769007FE00D3F7348B /* PlannerComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerComponents.swift; sourceTree = "<group>"; };
+		81015BD8DE9E5285ACC31EA1 /* PlannerFoodItemsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerFoodItemsTab.swift; sourceTree = "<group>"; };
 		81CBE1FFBEF34D5DDF408607 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		8A95557C9AED507C687251FA /* AuthPromptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthPromptSheet.swift; sourceTree = "<group>"; };
 		90B6CB076F6291FD4FCB0004 /* NUFoodApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NUFoodApp.swift; sourceTree = "<group>"; };
 		A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllItemsScreen.swift; sourceTree = "<group>"; };
 		AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutrientPlannerScreen.swift; sourceTree = "<group>"; };
 		C1A48E804687C7E263F74DFB /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		C6219DDB37648DF94F90B986 /* ItemRowButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemRowButton.swift; sourceTree = "<group>"; };
+		CEC8ADC79C4C3486CF6D5EE4 /* LocationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationCard.swift; sourceTree = "<group>"; };
 		D1BE573D840E5E584E2427ED /* OperationHoursScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationHoursScreen.swift; sourceTree = "<group>"; };
 		DB9E752386CD9DD8CC8385C6 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		E0E38EF5A23664793022B5F7 /* FavoritesScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesScreen.swift; sourceTree = "<group>"; };
 		E9D60B65E990686DFBDA664F /* OperatingHoursLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperatingHoursLogic.swift; sourceTree = "<group>"; };
+		EDC27FCB49914EA7B62107D0 /* DailyItemAccordion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyItemAccordion.swift; sourceTree = "<group>"; };
 		F1E36975476A6967D8323F95 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		F3BEDFF3484E417AEC1C2ABA /* DatePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,7 +87,11 @@
 		0F205BAC963453B3B3806C13 /* DailyItems */ = {
 			isa = PBXGroup;
 			children = (
+				EDC27FCB49914EA7B62107D0 /* DailyItemAccordion.swift */,
 				3272191D9066A9DD5CE0EEAB /* DailyItemsScreen.swift */,
+				F3BEDFF3484E417AEC1C2ABA /* DatePickerSheet.swift */,
+				2842E158375F9EA956A253CE /* DisplaySettingsSheet.swift */,
+				CEC8ADC79C4C3486CF6D5EE4 /* LocationCard.swift */,
 			);
 			path = DailyItems;
 			sourceTree = "<group>";
@@ -89,6 +123,7 @@
 		183E3AA789E27F9A385515AE /* Hours */ = {
 			isa = PBXGroup;
 			children = (
+				0C6C5DD380B80B154531CE75 /* HoursLocationCard.swift */,
 				D1BE573D840E5E584E2427ED /* OperationHoursScreen.swift */,
 			);
 			path = Hours;
@@ -102,6 +137,7 @@
 				12457489D5812A723E82C7E7 /* Favorites */,
 				183E3AA789E27F9A385515AE /* Hours */,
 				AA1DB980F14DF0A02BB51954 /* Planner */,
+				AC162BD7F4A2BCBDDDC598FD /* Shared */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -182,8 +218,25 @@
 			isa = PBXGroup;
 			children = (
 				AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */,
+				2B034CE38F3391F03516C359 /* NutritionGoalsSheet.swift */,
+				67E03B769007FE00D3F7348B /* PlannerComponents.swift */,
+				81015BD8DE9E5285ACC31EA1 /* PlannerFoodItemsTab.swift */,
+				593942FE8FB74E5805335877 /* PlannerModel.swift */,
+				241066A7E5F58C2BFA01378B /* PlannerMyPlanTab.swift */,
 			);
 			path = Planner;
+			sourceTree = "<group>";
+		};
+		AC162BD7F4A2BCBDDDC598FD /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				1399D462A8ED5DD6BA9396A6 /* AccountToolbarButton.swift */,
+				8A95557C9AED507C687251FA /* AuthPromptSheet.swift */,
+				2BABB0299B522AE7D7053E36 /* GoogleSignInButton.swift */,
+				C6219DDB37648DF94F90B986 /* ItemRowButton.swift */,
+				332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		DF216BFF5B0C25FBB1DADAB2 /* Resources */ = {
@@ -291,17 +344,32 @@
 			buildActionMask = 2147483647;
 			files = (
 				C71C051220DC5A0004C3A40D /* APIClient.swift in Sources */,
+				F620634A378568B5A38ECABB /* AccountToolbarButton.swift in Sources */,
 				222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */,
 				B5C68A64ECB4C886CCB49CF9 /* AppStore.swift in Sources */,
 				4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */,
+				0F3137FD5EA5F34FF140B48E /* AuthPromptSheet.swift in Sources */,
+				E93E4D0A99DCCD21E3A773E6 /* DailyItemAccordion.swift in Sources */,
 				F75779977D60CE6B2E952589 /* DailyItemsScreen.swift in Sources */,
+				6D76E8E4EE59FDCDCE3912F3 /* DatePickerSheet.swift in Sources */,
+				66B0E677301383BFB95A55AF /* DisplaySettingsSheet.swift in Sources */,
 				4011D6964773C67CD01B4B44 /* FavoritesScreen.swift in Sources */,
+				EE5BA1923546FE624A74C775 /* GoogleSignInButton.swift in Sources */,
+				2D26A548240779B7F3F3E2D1 /* HoursLocationCard.swift in Sources */,
+				CBB3C6208061C943EDD31A7D /* ItemRowButton.swift in Sources */,
+				3E36CB9E07F8E587B2EA5121 /* LocationCard.swift in Sources */,
 				FDC30F4C64B0F9EE2101AE52 /* Models.swift in Sources */,
 				EC725A3E67F26053B1F21199 /* NUFoodApp.swift in Sources */,
 				9BEF61303B286F3AE514F782 /* NutrientPlannerScreen.swift in Sources */,
+				0490963B4F67928EE7A89E53 /* NutritionGoalsSheet.swift in Sources */,
 				7F148E6A77CA1276A5E681C1 /* OperatingHoursLogic.swift in Sources */,
 				75141495FBE973B8C0F78AD6 /* OperationHoursScreen.swift in Sources */,
+				4799FBC3B71AA1A1257FAF84 /* PlannerComponents.swift in Sources */,
+				CF9575604D559AAB5851CC97 /* PlannerFoodItemsTab.swift in Sources */,
+				81BA45A66E01F2B4DABB6580 /* PlannerModel.swift in Sources */,
+				7F4119C63475A5E6A9667B01 /* PlannerMyPlanTab.swift in Sources */,
 				8E9538D5CD67482DF750AA1A /* Theme.swift in Sources */,
+				2A90C64A26EED0ED3EF6AD1C /* ThemeToggleButton.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

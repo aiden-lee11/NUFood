@@ -18,7 +18,7 @@ struct NUFoodApp: App {
                 .environment(auth)
                 .environment(store)
                 .preferredColorScheme(appearance.colorScheme)
-                .tint(Theme.accentStrong)
+                .tint(Theme.primary)
                 .onOpenURL { url in
                     _ = auth.handle(url: url)
                 }
