@@ -319,7 +319,7 @@ const NutrientPlanner: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow overflow-hidden">
                 {/* Left Column: Food Items List (visible on medium+ or when 'food-items' tab is active) */}
-                <div className={`flex-1 flex-col ${activeTab === 'food-items' ? 'flex' : 'hidden'} md:flex overflow-y-auto bg-card rounded-lg border-2 border-border p-4 shadow-md`}>
+                <div className={`flex-1 flex-col ${activeTab === 'food-items' ? 'flex' : 'hidden'} md:flex overflow-y-auto bg-card rounded-xl border border-border p-4 shadow-md`}>
                     <FoodItemsList
                         sortedItems={sortedItems}
                         selectedItems={selectedItems}
@@ -342,7 +342,7 @@ const NutrientPlanner: React.FC = () => {
                 </div>
 
                 {/* Selected Items Section */}
-                <div className={`flex flex-col h-[calc(100vh-180px)] pb-12 md:h-full overflow-hidden bg-card rounded-lg border-2 border-border p-4 shadow-md ${activeTab === "my-plan" ? "block" : "hidden md:flex"}`}>
+                <div className={`flex flex-col h-[calc(100vh-180px)] pb-12 md:h-full overflow-hidden bg-card rounded-xl border border-border p-4 shadow-md ${activeTab === "my-plan" ? "block" : "hidden md:flex"}`}>
                     <SelectedItemsList
                         selectedItems={selectedItems}
                         totalCalories={totalCalories}

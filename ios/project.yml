@@ -1,0 +1,61 @@
+name: NUFood
+options:
+  bundleIdPrefix: me.nufood
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 11.0.0
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 8.0.0
+
+targets:
+  NUFood:
+    type: application
+    platform: iOS
+    sources:
+      - path: NUFood/Sources
+      - path: NUFood/Resources
+        optional: true
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: GoogleSignIn
+        product: GoogleSignInSwift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.nufood.app
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.10"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: JTVXA37TK2
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: NUFood
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+    postBuildScripts:
+      - name: Inject Google Sign-In URL scheme
+        basedOnDependencyAnalysis: false
+        script: |
+          GSI="$SRCROOT/NUFood/Resources/GoogleService-Info.plist"
+          PLIST="$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH"
+          if [ -f "$GSI" ] && [ -f "$PLIST" ]; then
+            RCID=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" "$GSI" 2>/dev/null || true)
+            if [ -n "$RCID" ]; then
+              /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$PLIST" 2>/dev/null || true
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $RCID" "$PLIST"
+            fi
+          fi

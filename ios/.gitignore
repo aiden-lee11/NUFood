@@ -1,0 +1,7 @@
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.DS_Store
+# Firebase iOS config is a local secret-ish artifact; each dev drops in their own.
+NUFood/Resources/GoogleService-Info.plist
+build/

@@ -49,45 +49,45 @@ const FoodItemRow: React.FC<RowProps> = React.memo(({ index, style, data }) => {
         <div
             style={style}
             className={cn(
-                "cursor-pointer border-2 rounded-lg hover:bg-item-hover hover:shadow-md transition-all duration-200 p-4 mb-3",
-                isSelected 
-                    ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm" 
+                "cursor-pointer border rounded-xl hover:bg-item-hover hover:shadow-md transition-all duration-200 p-4 mb-3",
+                isSelected
+                    ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm"
                     : "bg-card text-card-foreground border-border hover:border-muted-foreground"
             )}
             onClick={handleClick}
         >
             <div className="flex flex-col">
-                <div className="flex justify-between items-center mb-2">
-                    <div className={cn("font-medium", isSelected && "font-semibold")}>
+                <div className="flex justify-between items-center gap-2 mb-1">
+                    <div className="text-base font-semibold">
                         {item.Name}
                     </div>
-                    {isSelected && <Badge className="ml-1 bg-primary text-primary-foreground">Added</Badge>}
+                    {isSelected && <Badge className="ml-1 shrink-0 bg-primary text-primary-foreground">Added</Badge>}
                 </div>
 
                 <span className="text-xs text-muted-foreground mb-3">
                     {item.Location} ({item.TimeOfDay})
                 </span>
 
-                <div className="flex flex-col space-y-2 text-xs">
-                    <div className="flex justify-between">
-                        <span className="font-medium">Portion Size:</span>
-                        <span>{item.portion || 'N/A'}</span>
+                <div className="flex flex-col gap-1.5 text-sm">
+                    <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Portion Size:</span>
+                        <span className="text-foreground font-medium text-right">{item.portion || 'N/A'}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="font-medium">Calories:</span>
-                        <span>{item.calories || 'N/A'}</span>
+                    <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Calories:</span>
+                        <span className="text-foreground font-medium text-right">{item.calories || 'N/A'}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="font-medium">Protein:</span>
-                        <span>{formatNutritionValue(item.protein)}</span>
+                    <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Protein:</span>
+                        <span className="text-foreground font-medium text-right">{formatNutritionValue(item.protein)}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="font-medium">Carbs:</span>
-                        <span>{formatNutritionValue(item.carbs)}</span>
+                    <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Carbs:</span>
+                        <span className="text-foreground font-medium text-right">{formatNutritionValue(item.carbs)}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="font-medium">Fat:</span>
-                        <span>{formatNutritionValue(item.fat)}</span>
+                    <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Fat:</span>
+                        <span className="text-foreground font-medium text-right">{formatNutritionValue(item.fat)}</span>
                     </div>
                 </div>
             </div>
