@@ -7,6 +7,11 @@ struct NUFoodApp: App {
     @AppStorage("appearance") private var appearance: AppearanceSetting = .dark
 
     init() {
+        // Session-scoped like the web's sessionStorage: a user who dismissed the
+        // onboarding Display Settings sheet without saving prefs is re-prompted
+        // on the next launch (the sheet itself still guards on saved prefs).
+        UserDefaults.standard.removeObject(forKey: "displaySettingsSeen")
+
         let auth = AuthManager()
         _auth = State(initialValue: auth)
         _store = State(initialValue: AppStore(auth: auth))
@@ -17,7 +22,12 @@ struct NUFoodApp: App {
             RootView()
                 .environment(auth)
                 .environment(store)
-                .preferredColorScheme(appearance.colorScheme)
+                // Theme is applied to the UIKit windows (with a cross-dissolve on
+                // change) rather than preferredColorScheme, which cannot animate.
+                .onAppear { appearance.apply(animated: false) }
+                .onChange(of: appearance) { _, newValue in
+                    newValue.apply(animated: true)
+                }
                 .tint(Theme.primary)
                 .onOpenURL { url in
                     _ = auth.handle(url: url)

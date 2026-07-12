@@ -81,4 +81,35 @@ enum AppearanceSetting: String, CaseIterable, Identifiable {
         case .dark: return "Dark"
         }
     }
+
+    var interfaceStyle: UIUserInterfaceStyle {
+        switch self {
+        case .system: return .unspecified
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+
+    /// Applies the appearance at the window level instead of via
+    /// `preferredColorScheme`, which snaps with no way to animate.
+    /// A window-level cross-dissolve fades every view (nav bars, sheets,
+    /// tab bar) between themes at once.
+    func apply(animated: Bool) {
+        let windows = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+        for window in windows where window.overrideUserInterfaceStyle != interfaceStyle {
+            let change = { window.overrideUserInterfaceStyle = self.interfaceStyle }
+            if animated {
+                UIView.transition(
+                    with: window,
+                    duration: 0.5,
+                    options: [.transitionCrossDissolve, .allowUserInteraction],
+                    animations: change
+                )
+            } else {
+                change()
+            }
+        }
+    }
 }
