@@ -254,6 +254,42 @@ const OperationHours: React.FC = () => {
     return { isOpen, topHalf, bottomHalf };
   };
 
+  // Resolve a location's open intervals for a day as [start, end) minutes-since-midnight
+  // (end may exceed 1440 for post-midnight closings). Used to label the open blocks.
+  const getOpenIntervals = (shortName: string, dayIndex: number): { start: number; end: number }[] => {
+    if (dayIndex == null || dayIndex < 0) return [];
+    const loc = findByAlias(shortName);
+    if (!loc || !loc.Week[dayIndex]?.Hours || loc.Week[dayIndex].Status === "closed") return [];
+    return loc.Week[dayIndex].Hours.map(({ StartHour, StartMinutes, EndHour, EndMinutes }) => {
+      const sh = typeof StartHour === 'string' ? parseInt(StartHour, 10) : StartHour;
+      const sm = typeof StartMinutes === 'string' ? parseInt(StartMinutes, 10) : StartMinutes;
+      const eh = typeof EndHour === 'string' ? parseInt(EndHour, 10) : EndHour;
+      const em = typeof EndMinutes === 'string' ? parseInt(EndMinutes, 10) : EndMinutes;
+      const start = sh * 60 + sm;
+      let end = eh * 60 + em;
+      if (end <= start) end += 1440; // closes after midnight
+      return { start, end };
+    });
+  };
+
+  // Human-readable "Open 11:00 AM – 2:00 PM" label for the interval covering a slot.
+  const getOpenLabel = (shortName: string, timeSlot: number, dayIndex: number): string => {
+    const intervals = getOpenIntervals(shortName, dayIndex);
+    const slotStart = timeSlot * 60;
+    const slotEnd = (timeSlot + 1) * 60;
+    const covering = intervals.find((iv) => {
+      // Compare directly, and also shifted back a day to catch post-midnight slots.
+      const overlaps = (s: number, e: number) => s < slotEnd && e > slotStart;
+      return overlaps(iv.start, iv.end) || overlaps(iv.start - 1440, iv.end - 1440);
+    });
+    if (!covering) return "Open";
+    const fmt = (mins: number) => {
+      const dayMin = ((mins % 1440) + 1440) % 1440;
+      return formatTime(Math.floor(dayMin / 60), dayMin % 60);
+    };
+    return `Open ${fmt(covering.start)} – ${fmt(covering.end)}`;
+  };
+
   // Note: timeSlots and currentTimePosition are now calculated per category
 
   return (
@@ -358,7 +394,8 @@ const OperationHours: React.FC = () => {
 
                             {/* Location status cells */}
                             {shortNames.map((shortName, index) => {
-                              const { topHalf, bottomHalf } = getLocationTimeInfo(shortName, timeSlot.hour, selectedDayIndex);
+                              const { isOpen, topHalf, bottomHalf } = getLocationTimeInfo(shortName, timeSlot.hour, selectedDayIndex);
+                              const openLabel = isOpen ? getOpenLabel(shortName, timeSlot.hour, selectedDayIndex) : undefined;
 
                               // Check if previous/next locations and time slots are open for continuous appearance
                               const prevLocationInfo = index > 0
@@ -382,11 +419,13 @@ const OperationHours: React.FC = () => {
                                   key={shortName}
                                   className="relative"
                                   style={{ minHeight: '48px' }}
+                                  title={openLabel}
+                                  aria-label={openLabel}
                                 >
                                   {/* Top half (first 30 minutes) */}
                                   {topHalf && (
                                     <div
-                                      className="bg-green-600 absolute left-0 z-20"
+                                      className="bg-primary absolute left-0 z-20"
                                       style={{
                                         top: shouldExtendUp ? '-2px' : '0',
                                         height: shouldExtendUp ? 'calc(50% + 2px)' : '50%',
@@ -406,7 +445,7 @@ const OperationHours: React.FC = () => {
                                   {/* Bottom half (last 30 minutes) */}
                                   {bottomHalf && (
                                     <div
-                                      className="bg-green-600 absolute left-0 z-20"
+                                      className="bg-primary absolute left-0 z-20"
                                       style={{
                                         bottom: shouldExtendDown ? '-2px' : '0',
                                         height: shouldExtendDown ? 'calc(50% + 2px)' : '50%',

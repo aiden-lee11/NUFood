@@ -125,6 +125,15 @@ const NutrientPlanner: React.FC = () => {
         setActiveTab(tab);
     }, []);
 
+    // Instant clear + exact restore for the "Clear All" undo toast.
+    const handleClearAll = useCallback(() => {
+        setSelectedItems([]);
+    }, []);
+
+    const handleRestoreItems = useCallback((items: SelectedDailyItem[]) => {
+        setSelectedItems(items);
+    }, []);
+
     const setSelectedLocationCallback = useCallback((location: string | null) => {
         setSelectedLocation(location);
     }, []);
@@ -346,6 +355,8 @@ const NutrientPlanner: React.FC = () => {
                         totalFat={totalFat}
                         handleSelectItem={handleSelectItem}
                         handleQuantityChange={handleQuantityChange}
+                        handleClearAll={handleClearAll}
+                        handleRestoreItems={handleRestoreItems}
                         setActiveTab={setActiveTabCallback}
                         nutritionGoals={nutritionGoals}
                         handleSaveGoals={handleSaveGoals}

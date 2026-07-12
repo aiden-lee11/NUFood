@@ -78,8 +78,10 @@ const DailyItemAccordion: React.FC<Props> = ({
                 <li key={`fav-${item.Name}-${index}`}>
                   <button
                     onClick={() => handleItemClick(item)}
+                    aria-pressed={true}
+                    aria-label={`Remove ${item.Name} from favorites`}
                     className={clsx(
-                      "w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2 mb-2",
+                      "w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.99] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-2 mb-2",
                       "bg-item-selected text-item-selected-foreground border-chart-5 shadow-sm"
                     )}
                   >
@@ -110,8 +112,10 @@ const DailyItemAccordion: React.FC<Props> = ({
                   <li key={`${item.Name}-${index}`}>
                     <button
                       onClick={() => handleItemClick(item)}
+                      aria-pressed={availableFavorites.some((fav) => fav.Name === item.Name)}
+                      aria-label={availableFavorites.some((fav) => fav.Name === item.Name) ? `Remove ${item.Name} from favorites` : `Add ${item.Name} to favorites`}
                       className={clsx(
-                        "w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2 mb-2",
+                        "w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.99] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-2 mb-2",
                         availableFavorites.some((fav) => fav.Name === item.Name)
                           ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm"
                           : "bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
@@ -149,8 +153,10 @@ const DailyItemAccordion: React.FC<Props> = ({
                   <li key={`${item.Name}-${index}`}>
                     <button
                       onClick={() => handleItemClick(item)}
+                      aria-pressed={availableFavorites.some((fav) => fav.Name === item.Name)}
+                      aria-label={availableFavorites.some((fav) => fav.Name === item.Name) ? `Remove ${item.Name} from favorites` : `Add ${item.Name} to favorites`}
                       className={clsx(
-                        "w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2 mb-2",
+                        "w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.99] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-2 mb-2",
                         availableFavorites.some((fav) => fav.Name === item.Name)
                           ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm"
                           : "bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"

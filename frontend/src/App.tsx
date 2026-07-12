@@ -1,5 +1,5 @@
 import ReactGA from 'react-ga4';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Banner from './components/banner';
 import DataLoader from './components/data-loader';
 import Layout from './components/layout';
@@ -11,6 +11,7 @@ import NutrientPlanner from './pages/NutrientPlanner';
 import DailyItems from './pages/DailyItems';
 import OperationHours from './pages/OperationHours';
 import Preferences from './pages/Preferences';
+import { Toaster } from './components/ui/toaster';
 
 function App() {
   ReactGA.initialize(import.meta.env.VITE_GA_MEASUREMENT_ID);
@@ -29,9 +30,11 @@ function App() {
                 <Route path="/preferences" element={<Preferences />} />
                 <Route path="/all" element={<AllItems />} />
                 <Route path="/planner" element={<NutrientPlanner />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </DataLoader>
           </Layout>
+          <Toaster />
         </BannerProvider>
       </MyMUIThemeProvider>
     </ThemeProvider >

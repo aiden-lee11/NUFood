@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ToastAction } from '@/components/ui/toast';
+import { useToast } from '@/hooks/use-toast';
 import { Minus, Plus, Settings, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { cn } from '../../lib/utils';
@@ -63,6 +65,8 @@ interface SelectedItemsListProps {
     totalFat: number;
     handleSelectItem: (item: DailyItem) => void;
     handleQuantityChange: (item: SelectedDailyItem, change: number) => void;
+    handleClearAll: () => void;
+    handleRestoreItems: (items: SelectedDailyItem[]) => void;
     setActiveTab: (tab: string) => void;
     nutritionGoals: NutritionGoals;
     handleSaveGoals: (goalsToSave: NutritionGoals) => Promise<void>;
@@ -76,12 +80,15 @@ const SelectedItemsList: React.FC<SelectedItemsListProps> = ({
     totalFat,
     handleSelectItem,
     handleQuantityChange,
+    handleClearAll,
+    handleRestoreItems,
     setActiveTab,
     nutritionGoals,
     handleSaveGoals
 }) => {
     const [showGoalsDialog, setShowGoalsDialog] = useState(false);
     const { updateNutritionGoals } = useDataStore();
+    const { toast } = useToast();
 
     const handleOpenGoalsDialog = () => setShowGoalsDialog(true);
     const handleCloseGoalsDialog = () => setShowGoalsDialog(false);
@@ -91,22 +98,35 @@ const SelectedItemsList: React.FC<SelectedItemsListProps> = ({
         handleSaveGoals(newGoals);
     };
 
-    // Clear the whole plan by toggling each selected item off via the existing handler.
-    const handleClearAll = () => {
-        selectedItems.forEach(item => handleSelectItem(item));
+    // Clear the whole plan instantly, but keep a snapshot so the toast's Undo can
+    // restore the exact previous selection.
+    const handleClearAllWithUndo = () => {
+        const previousItems = selectedItems;
+        handleClearAll();
+        toast({
+            title: 'Plan cleared',
+            action: (
+                <ToastAction
+                    altText="Undo clearing the plan"
+                    onClick={() => handleRestoreItems(previousItems)}
+                >
+                    Undo
+                </ToastAction>
+            ),
+        });
     };
 
     return (
         <Card className="flex flex-col h-full overflow-hidden">
-            <CardHeader className="p-4 space-y-0 border-b flex flex-row justify-between items-center gap-2">
-                <h3 className="text-lg font-bold">My Food Plan</h3>
-                <div className="flex items-center gap-1">
+            <CardHeader className="p-4 space-y-0 border-b flex flex-row flex-wrap justify-between items-center gap-2">
+                <h3 className="text-lg font-bold whitespace-nowrap">My Food Plan</h3>
+                <div className="flex items-center gap-1 ml-auto">
                     {selectedItems.length > 0 && (
                         <Button
                             variant="ghost"
                             size="sm"
                             className="text-destructive font-semibold hover:text-destructive hover:bg-destructive/10"
-                            onClick={handleClearAll}
+                            onClick={handleClearAllWithUndo}
                         >
                             Clear All
                         </Button>

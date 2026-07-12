@@ -22,7 +22,11 @@ const Preferences: React.FC = () => {
         tempPreferences = [...userPreferences, item.Name];
       }
       setUserPreferences(tempPreferences);
-      postUserPreferences(tempPreferences, token as string);
+      // postUserPreferences rejects on failure; swallow here so an unresolved
+      // promise doesn't surface as an unhandled rejection.
+      postUserPreferences(tempPreferences, token as string).catch((err) =>
+        console.error('Error posting userPreferences:', err)
+      );
     }
   };
 
@@ -42,7 +46,9 @@ const Preferences: React.FC = () => {
             <li key={index}>
               <button
                 onClick={() => handleItemClick({ Name: itemName })}
-                className="w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2 bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
+                aria-pressed={true}
+                aria-label={`Remove ${itemName} from favorites`}
+                className="w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.99] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-2 bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
               >
                 <span className="flex justify-between items-center">
                   <span>{itemName} ★</span>

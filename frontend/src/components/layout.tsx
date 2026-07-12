@@ -163,7 +163,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="flex-1">
               <h1 className="text-lg font-semibold">
                 {navItems.find((item) => item.href === location.pathname)?.title ||
-                  (preferences.href === location.pathname ? preferences.title : "Dashboard")}
+                  (preferences.href === location.pathname ? preferences.title : "NUFood")}
               </h1>
             </div>
             <Button variant="outline" size="icon" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>

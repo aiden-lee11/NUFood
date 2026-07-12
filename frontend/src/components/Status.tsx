@@ -91,15 +91,15 @@ const Status: React.FC<LocationOperatingTimes> = ({ operatingTimes }) => {
 
   // Conditional rendering based on operatingTimes.
   if (!operatingTimes || (typeof operatingTimes === "string" && operatingTimes === "closed")) {
-    return <div className="text-red-500">Status -- Closed</div>;
+    return <div className="text-destructive">Status: Closed</div>;
   }
   if (typeof operatingTimes === "string") {
-    return <div className="text-yellow-500">Status -- Invalid Data</div>;
+    return <div className="text-yellow-500">Status: Invalid Data</div>;
   }
 
   return (
-    <div className={isOpen ? "text-green-500" : "text-red-500"}>
-      Status -- {statusText}
+    <div className={isOpen ? "text-primary" : "text-destructive"}>
+      Status: {statusText}
     </div>
   );
 };
