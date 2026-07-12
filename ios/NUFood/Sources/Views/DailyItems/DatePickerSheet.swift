@@ -1,39 +1,12 @@
 import SwiftUI
 
-/// Graphical date picker (SPEC §2.1) limited to the loaded menu's date span
+/// Daily Items date picker (SPEC §2.1) limited to the loaded menu's date span
 /// (`store.availableDates` min…max), falling back to today ±3 days when empty.
-/// The picker runs on the Central calendar/timezone so the selected day round-trips
-/// cleanly through `CentralTime.dateFormat` regardless of the device's timezone.
 struct DatePickerSheet: View {
     @Environment(AppStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                DatePicker(
-                    "Select Date",
-                    selection: dateBinding,
-                    in: selectableRange,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.graphical)
-                .tint(Theme.primary)
-                .environment(\.calendar, CentralTime.calendar)
-                .environment(\.timeZone, CentralTime.timeZone)
-                .padding()
-
-                Spacer()
-            }
-            .background(Theme.background)
-            .navigationTitle("Select Date")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
+        CalendarSheet(selection: dateBinding, range: selectableRange)
     }
 
     private var dateBinding: Binding<Date> {

@@ -73,20 +73,10 @@ struct OperationHoursScreen: View {
             )
         }
         .buttonStyle(.plain)
-        .popover(isPresented: $showDatePicker) {
-            DatePicker(
-                "Select date",
-                selection: $selectedDate,
-                in: dateRange,
-                displayedComponents: .date
-            )
-            .datePickerStyle(.graphical)
-            .labelsHidden()
-            .environment(\.calendar, CentralTime.calendar)
-            .environment(\.timeZone, CentralTime.timeZone)
-            .tint(Theme.primary)
-            .padding()
-            .presentationCompactAdaptation(.popover)
+        // Same calendar sheet as Daily Items; a popover here collapsed the
+        // graphical DatePicker to a sliver on iPhone.
+        .sheet(isPresented: $showDatePicker) {
+            CalendarSheet(selection: $selectedDate, range: dateRange)
         }
     }
 
