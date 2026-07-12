@@ -289,6 +289,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					C4C3F8CDE0BAE56776491435 = {
+						DevelopmentTeam = JTVXA37TK2;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -439,6 +440,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JTVXA37TK2;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NUFood;
@@ -527,6 +529,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JTVXA37TK2;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NUFood;

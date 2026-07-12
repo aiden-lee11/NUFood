@@ -19,8 +19,8 @@ struct FavoritesScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    AccountToolbarButton()
                     ThemeToggleButton()
+                    AccountToolbarButton()
                 }
             }
         }
