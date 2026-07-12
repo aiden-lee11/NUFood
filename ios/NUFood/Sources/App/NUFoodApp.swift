@@ -7,11 +7,6 @@ struct NUFoodApp: App {
     @AppStorage("appearance") private var appearance: AppearanceSetting = .dark
 
     init() {
-        // Session-scoped like the web's sessionStorage: a user who dismissed the
-        // onboarding Display Settings sheet without saving prefs is re-prompted
-        // on the next launch (the sheet itself still guards on saved prefs).
-        UserDefaults.standard.removeObject(forKey: "displaySettingsSeen")
-
         let auth = AuthManager()
         _auth = State(initialValue: auth)
         _store = State(initialValue: AppStore(auth: auth))

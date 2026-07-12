@@ -9,9 +9,6 @@ struct DailyItemsScreen: View {
     @Environment(AuthManager.self) private var auth
     @Environment(\.openURL) private var openURL
 
-    // Persisted: once the onboarding Display Settings sheet is seen it won't auto-open again.
-    @AppStorage("displaySettingsSeen") private var displaySettingsSeen = false
-
     /// Wall-clock used for live status text / open count; refreshed every 60s.
     @State private var now = Date()
     @State private var query = ""
@@ -44,7 +41,6 @@ struct DailyItemsScreen: View {
                 }
             }
             .onReceive(clock) { now = $0 }
-            .onAppear(perform: maybeAutoPresentSettings)
             .sheet(isPresented: $showDisplaySettings) { DisplaySettingsSheet() }
             .sheet(isPresented: $showDatePicker) { DatePickerSheet() }
             .sheet(isPresented: $showAuthPrompt) { AuthPromptSheet() }
@@ -205,13 +201,7 @@ struct DailyItemsScreen: View {
         return Self.buttonDateFormatter.string(from: date)
     }
 
-    // MARK: - Onboarding & error popup
-
-    private func maybeAutoPresentSettings() {
-        guard !store.displayPreferences.hasSavedDisplayPreferences, !displaySettingsSeen else { return }
-        showDisplaySettings = true
-        displaySettingsSeen = true
-    }
+    // MARK: - Error popup
 
     /// True when the selected day has zero menu items yet operating-hours data says a hall
     /// should be open — i.e. the menu likely failed to scrape (SPEC §2.1.6).
