@@ -5,11 +5,15 @@ import SwiftUI
 struct LocationCard: View {
     let location: DiningLocation
     let meals: [MealSection]
+    /// Whether the hall has items at ANY meal today (post-search), not just the
+    /// visible ones — a hall serving only Dinner while "Breakfast" is the visible
+    /// meal must not claim "No items available" (web parity).
+    let hasItems: Bool
     let status: OperatingHoursLogic.LocationStatus
     /// Called when a signed-out user taps an item (present the auth prompt).
     var onRequestAuth: () -> Void
 
-    private var isEmpty: Bool { meals.isEmpty }
+    private var isEmpty: Bool { !hasItems }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

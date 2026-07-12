@@ -24,6 +24,8 @@ struct NutrientPlannerScreen: View {
             content
                 .background(Theme.background)
                 .navigationTitle("Nutrient Planner")
+                // Inline like every sibling tab; the content renders its own big title.
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) { ThemeToggleButton() }
                     ToolbarItem(placement: .topBarTrailing) { AccountToolbarButton() }

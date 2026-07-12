@@ -13,6 +13,17 @@ struct AuthPromptSheet: View {
     init() {}
 
     var body: some View {
+        ScrollView {
+            content
+        }
+        .background(Theme.background)
+        // .medium fallback keeps the sign-in button reachable when the error
+        // text or a large Dynamic Type size pushes content past 280pt.
+        .presentationDetents([.height(280), .medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var content: some View {
         VStack(spacing: 20) {
             HStack {
                 Spacer()
@@ -50,10 +61,7 @@ struct AuthPromptSheet: View {
             Spacer(minLength: 0)
         }
         .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Theme.background)
-        .presentationDetents([.height(280)])
-        .presentationDragIndicator(.visible)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     private func signIn() {

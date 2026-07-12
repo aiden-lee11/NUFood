@@ -62,9 +62,25 @@ enum NutrientParsing {
 
     /// "N/A" for junk, else `(value * quantity).toFixed(1) + unit` exactly like the web
     /// (e.g. "24.0g" — the trailing .0 is intentional web parity).
+    /// "less than 1 gram" passes through verbatim like the web; it's real data, not junk.
     static func display(_ raw: String?, quantity: Double = 1, unit: String = "") -> String {
+        if let verbatim = lessThanOneGram(raw) { return verbatim }
         guard let value = value(raw) else { return "N/A" }
         return String(format: "%.1f", value * quantity) + unit
+    }
+
+    /// Browse-list display: the web renders the scraper string raw here ("220", "12" + "g"),
+    /// with no toFixed normalization. Junk still shows "N/A" (better than the web's
+    /// leaked "NaN"/"undefined").
+    static func browseDisplay(_ raw: String?, unit: String = "") -> String {
+        if let verbatim = lessThanOneGram(raw) { return verbatim }
+        guard let raw, value(raw) != nil else { return "N/A" }
+        return raw.trimmingCharacters(in: .whitespaces) + unit
+    }
+
+    private static func lessThanOneGram(_ raw: String?) -> String? {
+        guard let raw, raw.lowercased().contains("less than 1 gram") else { return nil }
+        return raw.trimmingCharacters(in: .whitespaces)
     }
 }
 

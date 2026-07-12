@@ -149,14 +149,3 @@ final class PlannerModel {
         }
     }
 }
-
-// MARK: - Goal percentage helper (SPEC §2.4.3)
-
-enum PlannerGoals {
-    /// `round(value / goal * 100)`; falls back to the default goal when `goal <= 0`.
-    static func percentage(value: Double, goal: Double, fallback: Double) -> Int {
-        let denominator = goal > 0 ? goal : fallback
-        guard denominator > 0 else { return 0 }
-        return Int((value / denominator * 100).rounded())
-    }
-}

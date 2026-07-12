@@ -25,6 +25,9 @@ struct PlannerMyPlanTab: View {
                 .font(.title3)
                 .fontWeight(.bold)
                 .foregroundStyle(Theme.textPrimary)
+                // Shares the row with Clear All + Edit Goals; shrink over wrapping.
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Spacer(minLength: 8)
             if !plan.entries.isEmpty {
                 Button {
@@ -181,6 +184,9 @@ private struct PlannerPlanItemRow: View {
                         .foregroundStyle(Theme.destructive)
                         .frame(width: 30, height: 30)
                         .overlay(Circle().stroke(Theme.destructive, lineWidth: 1))
+                        // 44pt minimum hit target; the circle stays 30pt visually.
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Remove \(item.name)")
@@ -205,6 +211,9 @@ private struct PlannerPlanItemRow: View {
                     disabled ? Theme.secondary : Theme.primary,
                     in: Circle()
                 )
+                // 44pt minimum hit target; the circle stays 30pt visually.
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(disabled)

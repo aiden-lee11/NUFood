@@ -7,6 +7,7 @@ import SwiftUI
 struct DailyItemsScreen: View {
     @Environment(AppStore.self) private var store
     @Environment(AuthManager.self) private var auth
+    @Environment(\.openURL) private var openURL
 
     // Persisted: once the onboarding Display Settings sheet is seen it won't auto-open again.
     @AppStorage("displaySettingsSeen") private var displaySettingsSeen = false
@@ -48,6 +49,12 @@ struct DailyItemsScreen: View {
             .sheet(isPresented: $showDatePicker) { DatePickerSheet() }
             .sheet(isPresented: $showAuthPrompt) { AuthPromptSheet() }
             .alert("Error Loading Data", isPresented: errorBinding) {
+                // Web parity: the error dialog offers a feedback path right there.
+                Button("Send Feedback") {
+                    if let url = URL(string: "mailto:nufoodfinder@gmail.com?subject=NUFood%20Feedback") {
+                        openURL(url)
+                    }
+                }
                 Button("Dismiss", role: .cancel) {}
             } message: {
                 Text("We're having trouble loading the menu items. This could be due to a temporary issue with our data source. Please try again later or contact support if the problem persists.")
@@ -77,7 +84,7 @@ struct DailyItemsScreen: View {
             .modifier(OutlineButton())
 
             Button { showDatePicker = true } label: {
-                Label(headerDateString, systemImage: "calendar")
+                Label(buttonDateString, systemImage: "calendar")
             }
             .modifier(OutlineButton())
 
@@ -108,6 +115,7 @@ struct DailyItemsScreen: View {
                 LocationCard(
                     location: location,
                     meals: mealSections(for: location),
+                    hasItems: hasAnyItems(for: location),
                     status: status(for: location),
                     onRequestAuth: { showAuthPrompt = true }
                 )
@@ -153,12 +161,18 @@ struct DailyItemsScreen: View {
             }
     }
 
+    /// Any items today at ANY meal (post-search). The web's has-items check ignores
+    /// `visibleTimes`, so dimming/sorting must too — only section rendering filters.
+    private func hasAnyItems(for location: DiningLocation) -> Bool {
+        mealPeriodOrder.contains { !items(for: location, meal: $0).isEmpty }
+    }
+
     /// Visible locations in canonical order, stably sorted so those with items come first.
     private var sortedVisibleLocations: [DiningLocation] {
         let visible = Set(store.displayPreferences.visibleLocations)
         let locations = DiningLocation.allCases.filter { visible.contains($0.rawValue) }
-        let withItems = locations.filter { !mealSections(for: $0).isEmpty }
-        let withoutItems = locations.filter { mealSections(for: $0).isEmpty }
+        let withItems = locations.filter { hasAnyItems(for: $0) }
+        let withoutItems = locations.filter { !hasAnyItems(for: $0) }
         return withItems + withoutItems
     }
 
@@ -177,12 +191,18 @@ struct DailyItemsScreen: View {
             dateString: store.selectedDate,
             now: now
         ).count
-        return count >= 1 ? "(\(count) locations open)" : "(All locations closed)"
+        guard count >= 1 else { return "(All locations closed)" }
+        return count == 1 ? "(1 location open)" : "(\(count) locations open)"
     }
 
     private var headerDateString: String {
         let date = CentralTime.date(from: store.selectedDate) ?? Date()
         return Self.headerDateFormatter.string(from: date)
+    }
+
+    private var buttonDateString: String {
+        let date = CentralTime.date(from: store.selectedDate) ?? Date()
+        return Self.buttonDateFormatter.string(from: date)
     }
 
     // MARK: - Onboarding & error popup
@@ -216,7 +236,18 @@ struct DailyItemsScreen: View {
         )
     }
 
+    /// Full month in the page title — "July 12, 2026". The web abbreviates here
+    /// (date-fns "PP") but "Jul" reads as truncation at largeTitle size.
     private static let headerDateFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "MMMM d, yyyy"
+        df.timeZone = CentralTime.timeZone
+        df.locale = Locale(identifier: "en_US_POSIX")
+        return df
+    }()
+
+    /// Compact form for the pill button so the controls row fits on one line.
+    private static let buttonDateFormatter: DateFormatter = {
         let df = DateFormatter()
         df.dateFormat = "MMM d, yyyy"
         df.timeZone = CentralTime.timeZone
