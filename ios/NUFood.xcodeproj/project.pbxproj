@@ -12,6 +12,7 @@
 		222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */; };
 		2A90C64A26EED0ED3EF6AD1C /* ThemeToggleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */; };
 		2D26A548240779B7F3F3E2D1 /* HoursLocationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6C5DD380B80B154531CE75 /* HoursLocationCard.swift */; };
+		3575888AECCCC5BC83DC7BDD /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5C79418F09978BE310B646F8 /* GoogleService-Info.plist */; };
 		3E36CB9E07F8E587B2EA5121 /* LocationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC8ADC79C4C3486CF6D5EE4 /* LocationCard.swift */; };
 		4011D6964773C67CD01B4B44 /* FavoritesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E38EF5A23664793022B5F7 /* FavoritesScreen.swift */; };
 		4799FBC3B71AA1A1257FAF84 /* PlannerComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E03B769007FE00D3F7348B /* PlannerComponents.swift */; };
@@ -52,6 +53,7 @@
 		447ADF8A120946D8B086A145 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		44D1858AF72E63F5EDC37160 /* NUFood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NUFood.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		593942FE8FB74E5805335877 /* PlannerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerModel.swift; sourceTree = "<group>"; };
+		5C79418F09978BE310B646F8 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		67E03B769007FE00D3F7348B /* PlannerComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerComponents.swift; sourceTree = "<group>"; };
 		81015BD8DE9E5285ACC31EA1 /* PlannerFoodItemsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerFoodItemsTab.swift; sourceTree = "<group>"; };
 		81CBE1FFBEF34D5DDF408607 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
@@ -245,6 +247,7 @@
 		DF216BFF5B0C25FBB1DADAB2 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				5C79418F09978BE310B646F8 /* GoogleService-Info.plist */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -265,6 +268,7 @@
 			buildConfigurationList = 99A860FAA288FB00D6B547F9 /* Build configuration list for PBXNativeTarget "NUFood" */;
 			buildPhases = (
 				5647680DDFF44A2DD703BD51 /* Sources */,
+				0AFD73509A156E5EF32DEE1E /* Resources */,
 				56D55E0C0E8ADB79CD649937 /* Frameworks */,
 				668C649D72A5CE01673CAE68 /* Inject Google Sign-In URL scheme */,
 			);
@@ -319,6 +323,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0AFD73509A156E5EF32DEE1E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3575888AECCCC5BC83DC7BDD /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		668C649D72A5CE01673CAE68 /* Inject Google Sign-In URL scheme */ = {

@@ -21,7 +21,7 @@ struct LocationCard: View {
                 .font(.title2.bold())
                 .foregroundStyle(Theme.textPrimary)
 
-            Text("Status -- \(status.text)")
+            Text("Status: \(status.text)")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(status.isOpen ? Theme.openGreen : Theme.closedRed)
 
