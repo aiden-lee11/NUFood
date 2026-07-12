@@ -1,0 +1,541 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */; };
+		4011D6964773C67CD01B4B44 /* FavoritesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E38EF5A23664793022B5F7 /* FavoritesScreen.swift */; };
+		4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E36975476A6967D8323F95 /* AuthManager.swift */; };
+		75141495FBE973B8C0F78AD6 /* OperationHoursScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1BE573D840E5E584E2427ED /* OperationHoursScreen.swift */; };
+		7C6F75756F52A4C52B18F9E3 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 2641B7D880C6C67B80BDB7EC /* GoogleSignInSwift */; };
+		7F148E6A77CA1276A5E681C1 /* OperatingHoursLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D60B65E990686DFBDA664F /* OperatingHoursLogic.swift */; };
+		856CADCA281A090FF14AD172 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B458505E194DD2015043E21E /* FirebaseAuth */; };
+		8E9538D5CD67482DF750AA1A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A48E804687C7E263F74DFB /* Theme.swift */; };
+		9BEF61303B286F3AE514F782 /* NutrientPlannerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */; };
+		A2D989D417F982444E89354C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 6EB1C5423C74308D69FCF83E /* GoogleSignIn */; };
+		B5C68A64ECB4C886CCB49CF9 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB9E752386CD9DD8CC8385C6 /* AppStore.swift */; };
+		C71C051220DC5A0004C3A40D /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81CBE1FFBEF34D5DDF408607 /* APIClient.swift */; };
+		EC725A3E67F26053B1F21199 /* NUFoodApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B6CB076F6291FD4FCB0004 /* NUFoodApp.swift */; };
+		F75779977D60CE6B2E952589 /* DailyItemsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3272191D9066A9DD5CE0EEAB /* DailyItemsScreen.swift */; };
+		FDC30F4C64B0F9EE2101AE52 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447ADF8A120946D8B086A145 /* Models.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		3272191D9066A9DD5CE0EEAB /* DailyItemsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyItemsScreen.swift; sourceTree = "<group>"; };
+		447ADF8A120946D8B086A145 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		44D1858AF72E63F5EDC37160 /* NUFood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NUFood.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		81CBE1FFBEF34D5DDF408607 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		90B6CB076F6291FD4FCB0004 /* NUFoodApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NUFoodApp.swift; sourceTree = "<group>"; };
+		A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllItemsScreen.swift; sourceTree = "<group>"; };
+		AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutrientPlannerScreen.swift; sourceTree = "<group>"; };
+		C1A48E804687C7E263F74DFB /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		D1BE573D840E5E584E2427ED /* OperationHoursScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationHoursScreen.swift; sourceTree = "<group>"; };
+		DB9E752386CD9DD8CC8385C6 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
+		E0E38EF5A23664793022B5F7 /* FavoritesScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesScreen.swift; sourceTree = "<group>"; };
+		E9D60B65E990686DFBDA664F /* OperatingHoursLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperatingHoursLogic.swift; sourceTree = "<group>"; };
+		F1E36975476A6967D8323F95 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		56D55E0C0E8ADB79CD649937 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				856CADCA281A090FF14AD172 /* FirebaseAuth in Frameworks */,
+				A2D989D417F982444E89354C /* GoogleSignIn in Frameworks */,
+				7C6F75756F52A4C52B18F9E3 /* GoogleSignInSwift in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0F205BAC963453B3B3806C13 /* DailyItems */ = {
+			isa = PBXGroup;
+			children = (
+				3272191D9066A9DD5CE0EEAB /* DailyItemsScreen.swift */,
+			);
+			path = DailyItems;
+			sourceTree = "<group>";
+		};
+		0F3DC40E3B5861A5EC463A67 = {
+			isa = PBXGroup;
+			children = (
+				572F5EF26C573AFF8E6FA36E /* NUFood */,
+				F171B77B3078C00835E008C1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		113ACBA081336652845C86C3 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				C1A48E804687C7E263F74DFB /* Theme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		12457489D5812A723E82C7E7 /* Favorites */ = {
+			isa = PBXGroup;
+			children = (
+				E0E38EF5A23664793022B5F7 /* FavoritesScreen.swift */,
+			);
+			path = Favorites;
+			sourceTree = "<group>";
+		};
+		183E3AA789E27F9A385515AE /* Hours */ = {
+			isa = PBXGroup;
+			children = (
+				D1BE573D840E5E584E2427ED /* OperationHoursScreen.swift */,
+			);
+			path = Hours;
+			sourceTree = "<group>";
+		};
+		1A14D2DC0EBA58A4C4AFE4F3 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				81E2FA971A1E35E86589A74C /* AllItems */,
+				0F205BAC963453B3B3806C13 /* DailyItems */,
+				12457489D5812A723E82C7E7 /* Favorites */,
+				183E3AA789E27F9A385515AE /* Hours */,
+				AA1DB980F14DF0A02BB51954 /* Planner */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		1AF714BB0A6F47C958995553 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				665B6522E28E61E88F0F5176 /* App */,
+				672F3193182F23752A1E0A49 /* Auth */,
+				75EE99B6D88421A8D8BFDB52 /* Models */,
+				2383046524EB5DAACFC4E3A3 /* Networking */,
+				88686783B63054886CB2155B /* State */,
+				113ACBA081336652845C86C3 /* Theme */,
+				1A14D2DC0EBA58A4C4AFE4F3 /* Views */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		2383046524EB5DAACFC4E3A3 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				81CBE1FFBEF34D5DDF408607 /* APIClient.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		572F5EF26C573AFF8E6FA36E /* NUFood */ = {
+			isa = PBXGroup;
+			children = (
+				DF216BFF5B0C25FBB1DADAB2 /* Resources */,
+				1AF714BB0A6F47C958995553 /* Sources */,
+			);
+			path = NUFood;
+			sourceTree = "<group>";
+		};
+		665B6522E28E61E88F0F5176 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				90B6CB076F6291FD4FCB0004 /* NUFoodApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		672F3193182F23752A1E0A49 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				F1E36975476A6967D8323F95 /* AuthManager.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		75EE99B6D88421A8D8BFDB52 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				447ADF8A120946D8B086A145 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		81E2FA971A1E35E86589A74C /* AllItems */ = {
+			isa = PBXGroup;
+			children = (
+				A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */,
+			);
+			path = AllItems;
+			sourceTree = "<group>";
+		};
+		88686783B63054886CB2155B /* State */ = {
+			isa = PBXGroup;
+			children = (
+				DB9E752386CD9DD8CC8385C6 /* AppStore.swift */,
+				E9D60B65E990686DFBDA664F /* OperatingHoursLogic.swift */,
+			);
+			path = State;
+			sourceTree = "<group>";
+		};
+		AA1DB980F14DF0A02BB51954 /* Planner */ = {
+			isa = PBXGroup;
+			children = (
+				AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */,
+			);
+			path = Planner;
+			sourceTree = "<group>";
+		};
+		DF216BFF5B0C25FBB1DADAB2 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		F171B77B3078C00835E008C1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				44D1858AF72E63F5EDC37160 /* NUFood.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C4C3F8CDE0BAE56776491435 /* NUFood */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 99A860FAA288FB00D6B547F9 /* Build configuration list for PBXNativeTarget "NUFood" */;
+			buildPhases = (
+				5647680DDFF44A2DD703BD51 /* Sources */,
+				56D55E0C0E8ADB79CD649937 /* Frameworks */,
+				668C649D72A5CE01673CAE68 /* Inject Google Sign-In URL scheme */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NUFood;
+			packageProductDependencies = (
+				B458505E194DD2015043E21E /* FirebaseAuth */,
+				6EB1C5423C74308D69FCF83E /* GoogleSignIn */,
+				2641B7D880C6C67B80BDB7EC /* GoogleSignInSwift */,
+			);
+			productName = NUFood;
+			productReference = 44D1858AF72E63F5EDC37160 /* NUFood.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3EC0A0CB49202AEEB63979E2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					C4C3F8CDE0BAE56776491435 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 274E0E3E98DB9D4DEF518CF0 /* Build configuration list for PBXProject "NUFood" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 0F3DC40E3B5861A5EC463A67;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				74C854BCCCC04E62D44890B2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				7A3D396F531B422D46AC68D8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F171B77B3078C00835E008C1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C4C3F8CDE0BAE56776491435 /* NUFood */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		668C649D72A5CE01673CAE68 /* Inject Google Sign-In URL scheme */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Inject Google Sign-In URL scheme";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "GSI=\"$SRCROOT/NUFood/Resources/GoogleService-Info.plist\"\nPLIST=\"$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH\"\nif [ -f \"$GSI\" ] && [ -f \"$PLIST\" ]; then\n  RCID=$(/usr/libexec/PlistBuddy -c \"Print :REVERSED_CLIENT_ID\" \"$GSI\" 2>/dev/null || true)\n  if [ -n \"$RCID\" ]; then\n    /usr/libexec/PlistBuddy -c \"Delete :CFBundleURLTypes\" \"$PLIST\" 2>/dev/null || true\n    /usr/libexec/PlistBuddy -c \"Add :CFBundleURLTypes array\" \"$PLIST\"\n    /usr/libexec/PlistBuddy -c \"Add :CFBundleURLTypes:0 dict\" \"$PLIST\"\n    /usr/libexec/PlistBuddy -c \"Add :CFBundleURLTypes:0:CFBundleURLSchemes array\" \"$PLIST\"\n    /usr/libexec/PlistBuddy -c \"Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $RCID\" \"$PLIST\"\n  fi\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5647680DDFF44A2DD703BD51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C71C051220DC5A0004C3A40D /* APIClient.swift in Sources */,
+				222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */,
+				B5C68A64ECB4C886CCB49CF9 /* AppStore.swift in Sources */,
+				4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */,
+				F75779977D60CE6B2E952589 /* DailyItemsScreen.swift in Sources */,
+				4011D6964773C67CD01B4B44 /* FavoritesScreen.swift in Sources */,
+				FDC30F4C64B0F9EE2101AE52 /* Models.swift in Sources */,
+				EC725A3E67F26053B1F21199 /* NUFoodApp.swift in Sources */,
+				9BEF61303B286F3AE514F782 /* NutrientPlannerScreen.swift in Sources */,
+				7F148E6A77CA1276A5E681C1 /* OperatingHoursLogic.swift in Sources */,
+				75141495FBE973B8C0F78AD6 /* OperationHoursScreen.swift in Sources */,
+				8E9538D5CD67482DF750AA1A /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		209C3137A4D418F11BC1B304 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		4AF8D5839F5FBF6F0A89B97D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = NUFood;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.nufood.app;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		82E65867E43094C92A0B09F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E3DF239C3B099C9339B8C7D0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = NUFood;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.nufood.app;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		274E0E3E98DB9D4DEF518CF0 /* Build configuration list for PBXProject "NUFood" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				82E65867E43094C92A0B09F4 /* Debug */,
+				209C3137A4D418F11BC1B304 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		99A860FAA288FB00D6B547F9 /* Build configuration list for PBXNativeTarget "NUFood" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E3DF239C3B099C9339B8C7D0 /* Debug */,
+				4AF8D5839F5FBF6F0A89B97D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		74C854BCCCC04E62D44890B2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+		7A3D396F531B422D46AC68D8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2641B7D880C6C67B80BDB7EC /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A3D396F531B422D46AC68D8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		6EB1C5423C74308D69FCF83E /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A3D396F531B422D46AC68D8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		B458505E194DD2015043E21E /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 74C854BCCCC04E62D44890B2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 3EC0A0CB49202AEEB63979E2 /* Project object */;
+}
