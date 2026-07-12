@@ -33,23 +33,41 @@ struct NUFoodApp: App {
     }
 }
 
+enum AppTab: String {
+    case daily, all, hours, planner, favorites
+}
+
 struct RootView: View {
     @Environment(AuthManager.self) private var auth
+    @State private var selection: AppTab = .daily
 
     var body: some View {
-        TabView {
+        TabView(selection: $selection) {
             DailyItemsScreen()
                 .tabItem { Label("Daily Items", systemImage: "house") }
+                .tag(AppTab.daily)
             AllItemsScreen()
                 .tabItem { Label("All Items", systemImage: "checklist") }
+                .tag(AppTab.all)
             OperationHoursScreen()
                 .tabItem { Label("Hours", systemImage: "calendar") }
+                .tag(AppTab.hours)
             NutrientPlannerScreen()
                 .tabItem { Label("Planner", systemImage: "chart.pie") }
+                .tag(AppTab.planner)
             // Matches web: "Your Favorites" nav item only exists when signed in.
             if auth.isSignedIn {
                 FavoritesScreen()
                     .tabItem { Label("Favorites", systemImage: "heart") }
+                    .tag(AppTab.favorites)
+            }
+        }
+        .onAppear {
+            // Dev affordance: `simctl launch ... -initialTab hours` lands in
+            // UserDefaults and preselects a tab (used for automated screenshots).
+            if let raw = UserDefaults.standard.string(forKey: "initialTab"),
+               let tab = AppTab(rawValue: raw) {
+                selection = tab
             }
         }
     }
