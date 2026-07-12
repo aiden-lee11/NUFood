@@ -31,17 +31,15 @@ const DailyItems: React.FC = () => {
   const [visibleTimes, setVisibleTimes] = useState<string[]>([]);
   const [expandFolders, setExpandFolders] = useState(false);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
-  // Auto-open the settings popup only for a brand-new browser that has never saved
-  // preferences and hasn't dismissed the popup this session.
-  const [showPreferences, setShowPreferences] = useState(
-    !initialDisplayPrefs.hasSavedDisplayPreferences &&
-    sessionStorage.getItem("showPreferences") !== "false"
-  );
+  // The Display Settings dialog opens only when the user clicks the Display Settings button
+  // (no first-visit auto-open — the slow first load it once masked has since been optimized).
+  const [showPreferences, setShowPreferences] = useState(false);
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [openLocations, setOpenLocations] = useState<string[]>([])
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const hasHydratedSignedInDisplayPrefs = useRef(false);
+  const hasAutoSelectedTimes = useRef(false);
 
   // Data involved with API
   const staticData = useDataStore((state) => state.UserDataResponse);
@@ -95,8 +93,14 @@ const DailyItems: React.FC = () => {
   useEffect(() => {
     if (memoizedLocationHours) {
       const { timeOfDay, openLocations } = getCurrentTimeOfDayWithLocations(memoizedLocationHours);
-      if (timeOfDay) {
-        setVisibleTimes([timeOfDay]);
+
+      // Auto-select the current meal only once on initial mount. Re-running on every date
+      // change would clobber the user's Display Settings meal toggles.
+      if (!hasAutoSelectedTimes.current) {
+        hasAutoSelectedTimes.current = true;
+        // Outside serving hours getCurrentTimeOfDay() returns "" — default to all three meals
+        // so the home page never renders an empty meal list late at night.
+        setVisibleTimes(timeOfDay ? [timeOfDay] : ["Breakfast", "Lunch", "Dinner"]);
       }
 
       if (openLocations) {
@@ -112,7 +116,11 @@ const DailyItems: React.FC = () => {
       // Determine if there is some location that is open, but no items are available
       // If this is the case then there was an error in scraping data and we should display
       // an error message popup to the user
-      setShowErrorPopup(selectedItems.length === 0 && Boolean(memoizedLocationHours));
+      // Only flag a scrape error when there are zero items AND at least one hall is
+      // actually open that day. memoizedLocationHours is always a truthy object whose
+      // values are Hour[] (open) or null (closed), so check the values, not the object.
+      const anyHallOpen = Object.values(memoizedLocationHours).some(Boolean);
+      setShowErrorPopup(selectedItems.length === 0 && anyHallOpen);
     }
   }, [weeklyItems, selectedDate, memoizedLocationHours])
 
@@ -203,10 +211,6 @@ const DailyItems: React.FC = () => {
 
   const handleTogglePreferences = (show: boolean) => {
     setShowPreferences(show);
-    // Remember an explicit dismissal so the popup doesn't auto-reopen this session.
-    if (!show) {
-      sessionStorage.setItem("showPreferences", "false");
-    }
   };
 
   return (

@@ -1,6 +1,6 @@
 // components/OperationHours.tsx
 import React, { useState, useEffect } from "react";
-import { getWeekday, formatTime, locationAliases } from "../util/helper";
+import { getWeekday, formatTime, locationAliases, getCentralNow } from "../util/helper";
 import { Day, OperationHoursData, OperatingTime } from "../types/OperationTypes";
 import { useDataStore } from "@/store";
 import SEO from '../components/SEO';
@@ -40,13 +40,15 @@ const OperationHours: React.FC = () => {
     (s) => s.UserDataResponse.locationOperationHours
   );
 
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // Minute tick to re-render the current-time indicator; "now" itself is read from
+  // getCentralNow() so the line reflects Central time, not the device's timezone.
+  const [, setTick] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Update current time every minute
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      setTick((t) => t + 1);
     }, 60000); // Update every minute
 
     return () => clearInterval(timer);
@@ -67,10 +69,44 @@ const OperationHours: React.FC = () => {
     if (selectedDayIndex < 0) selectedDayIndex = 0;
   }
 
-  // helper: given a shortName, find the actual payload entry
+  // Explicit aliases for Norris/Retail display names whose backend record Name differs
+  // (e.g. "847 at Fran's Cafe" is stored as "847 Late Night | Fran's Cafe"). Kept local to
+  // this screen so it does not leak into getDailyLocationOperationTimes' open-location counts.
+  const displayNameAliases: Record<string, string[]> = {
+    "847 at Fran's Cafe": ["847 Late Night | Fran's Cafe"],
+  };
+
+  const normalizeName = (name: string) => name.toLowerCase().trim();
+
+  // helper: given a shortName, find the actual payload entry using a tiered matcher
+  // (mirrors the iOS port's record(forDisplayName:) resolution).
   const findByAlias = (shortName: string) => {
-    const aliases = locationAliases[shortName] || [shortName];
-    return rawData.find((d) => aliases.includes(d.Name));
+    const aliases =
+      locationAliases[shortName] || displayNameAliases[shortName] || [shortName];
+
+    // 1. Exact alias/name match (original behavior; preferred).
+    const exactAlias = rawData.find((d) => aliases.includes(d.Name));
+    if (exactAlias) return exactAlias;
+
+    const target = normalizeName(shortName);
+
+    // 2. Normalized (lowercased/trimmed) exact match.
+    const normalizedExact = rawData.find((d) => normalizeName(d.Name) === target);
+    if (normalizedExact) return normalizedExact;
+
+    // 3. Case-insensitive containment in either direction.
+    const contained = rawData.find((d) => {
+      const name = normalizeName(d.Name);
+      return name.includes(target) || target.includes(name);
+    });
+    if (contained) return contained;
+
+    // 4. Match on the distinctive segment after "|" in record names, e.g. "… | Fran's Cafe".
+    return rawData.find((d) => {
+      if (!d.Name.includes("|")) return false;
+      const segment = normalizeName(d.Name.split("|").pop() || "");
+      return segment !== "" && (target.includes(segment) || segment.includes(target));
+    });
   };
 
   // helper to render one day's hours
@@ -246,9 +282,7 @@ const OperationHours: React.FC = () => {
 
           // Calculate current time position for this category's time range
           const getCurrentTimePositionForRange = () => {
-            const now = currentTime;
-            const currentHour = now.getHours();
-            const currentMinutes = now.getMinutes();
+            const { hours: currentHour, minutes: currentMinutes } = getCentralNow();
 
             // Check if current time is within this category's display range
             let adjustedCurrentHour = currentHour;

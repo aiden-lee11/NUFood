@@ -136,7 +136,6 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await fetchData(`${API_URL}/api/nutritionGoals`, userToken);
-      console.log('Fetched nutrition goals from backend:', response);
 
       // Map backend PascalCase keys to frontend camelCase keys
       const mappedGoals: NutritionGoals = {

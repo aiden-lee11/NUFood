@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { LocationOperatingTimes } from "../types/OperationTypes";
+import { getCentralNow } from "../util/helper";
 
-const formatTimeToAmPm = (date: Date): string => {
-  let hours = date.getHours();
-  const minutes = date.getMinutes();
+// Format a minutes-since-midnight value (may exceed 1440 for times past midnight) to "h:mm AM/PM".
+const formatMinutesToAmPm = (totalMinutes: number): string => {
+  const dayMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+  let hours = Math.floor(dayMinutes / 60);
+  const minutes = dayMinutes % 60;
   const ampm = hours >= 12 ? "PM" : "AM";
   hours = hours % 12 || 12; // convert 0 to 12
   const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
@@ -22,57 +25,55 @@ const Status: React.FC<LocationOperatingTimes> = ({ operatingTimes }) => {
     }
 
     const calculateStatus = () => {
-      const now = new Date();
-      let nextOpenTime: Date | null = null;
-      let nextCloseTime: Date | null = null;
+      // Compare minutes-since-midnight in Central time rather than device-local Date objects.
+      const { hours, minutes } = getCentralNow();
+      const nowMinutes = hours * 60 + minutes;
+      let nextOpenMinutes: number | null = null;
+      let nextCloseMinutes: number | null = null;
       let currentlyOpen = false;
 
       operatingTimes.forEach(({ StartHour, StartMinutes, EndHour, EndMinutes }) => {
-        const start = new Date();
-        const end = new Date();
         // Handle both string and number types for backward compatibility
         const startHour = typeof StartHour === 'string' ? parseInt(StartHour, 10) : StartHour;
         const startMinutes = typeof StartMinutes === 'string' ? parseInt(StartMinutes, 10) : StartMinutes;
         const endHour = typeof EndHour === 'string' ? parseInt(EndHour, 10) : EndHour;
         const endMinutes = typeof EndMinutes === 'string' ? parseInt(EndMinutes, 10) : EndMinutes;
-        
-        start.setHours(startHour, startMinutes, 0);
-        end.setHours(endHour, endMinutes, 0);
+
+        const start = startHour * 60 + startMinutes;
+        let end = endHour * 60 + endMinutes;
 
         // if end ≤ start, assume closing after midnight
-        if (end.getTime() <= start.getTime()) {
-          end.setDate(end.getDate() + 1)
+        if (end <= start) {
+          end += 1440;
         }
 
-        if (now >= start && now < end) {
+        if (nowMinutes >= start && nowMinutes < end) {
           currentlyOpen = true;
-          if (!nextCloseTime || end < nextCloseTime) {
-            nextCloseTime = end;
+          if (nextCloseMinutes === null || end < nextCloseMinutes) {
+            nextCloseMinutes = end;
           }
-        } else if (now < start) {
-          if (!nextOpenTime || start < nextOpenTime) {
-            nextOpenTime = start;
+        } else if (nowMinutes < start) {
+          if (nextOpenMinutes === null || start < nextOpenMinutes) {
+            nextOpenMinutes = start;
           }
         }
       });
 
       if (currentlyOpen) {
         setIsOpen(true);
-        if (nextCloseTime) {
-          const diffMs = (nextCloseTime as Date).getTime() - now.getTime();
-          const diffMins = Math.floor(diffMs / 60000);
+        if (nextCloseMinutes !== null) {
+          const diffMins = nextCloseMinutes - nowMinutes;
           return diffMins < 60
             ? `Closes in ${diffMins} minute${diffMins !== 1 ? "s" : ""}`
-            : `Open until ${formatTimeToAmPm(nextCloseTime)}`;
+            : `Open until ${formatMinutesToAmPm(nextCloseMinutes)}`;
         }
       } else {
         setIsOpen(false);
-        if (nextOpenTime) {
-          const diffMs = (nextOpenTime as Date).getTime() - now.getTime();
-          const diffMins = Math.floor(diffMs / 60000);
+        if (nextOpenMinutes !== null) {
+          const diffMins = nextOpenMinutes - nowMinutes;
           return diffMins < 60
             ? `Opens in ${diffMins} minute${diffMins !== 1 ? "s" : ""}`
-            : `Closed until ${formatTimeToAmPm(nextOpenTime)}`;
+            : `Closed until ${formatMinutesToAmPm(nextOpenMinutes)}`;
         }
       }
 

@@ -1,13 +1,51 @@
 import { LocationOperatingTimes, OperationHoursData, OperatingTime } from "../types/OperationTypes";
 
+// The backend serves wall-clock hours in America/Chicago, so "now" must be computed in
+// Central time regardless of the device timezone. Derive it via Intl.DateTimeFormat parts.
+const CENTRAL_TIME_ZONE = "America/Chicago";
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+};
+
+export const getCentralNow = (): {
+  hours: number;
+  minutes: number;
+  weekdayIndex: number;
+  dateString: string;
+} => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: CENTRAL_TIME_ZONE,
+    hour12: false,
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(new Date());
+
+  const map: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== "literal") map[part.type] = part.value;
+  }
+
+  // hour12:false can emit "24" for midnight in some engines — normalize to 0.
+  let hours = parseInt(map.hour, 10);
+  if (hours === 24) hours = 0;
+  const minutes = parseInt(map.minute, 10);
+  const weekdayIndex = WEEKDAY_INDEX[map.weekday] ?? new Date().getDay();
+  const dateString = `${map.year}-${map.month}-${map.day}`;
+
+  return { hours, minutes, weekdayIndex, dateString };
+};
+
 // Returns
 // -- Breakfast if current time is between 7:00 AM and 10:59 AM
 // -- Lunch if current time is between 11:00 AM and 4:59 PM
 // -- Dinner if current time is between 5:00 PM and 7:59 PM
 // -- Empty string if current time is outside of the above ranges
 export const getCurrentTimeOfDay = (): string => {
-  const currentTime = new Date();
-  const currentHour = currentTime.getHours();
+  const { hours: currentHour } = getCentralNow();
   if (currentHour >= 7 && currentHour <= 10) {
     return "Breakfast";
   } else if (currentHour >= 11 && currentHour <= 16) {
@@ -97,13 +135,12 @@ export const isLocationOpenNow = (operatingTimes: OperatingTime[] | null): boole
     return false;
   }
 
-  const now = new Date();
+  const { hours, minutes } = getCentralNow();
+  const nowMinutes = hours * 60 + minutes;
   return operatingTimes.some(({ StartHour, StartMinutes, EndHour, EndMinutes }) => {
-    const start = new Date();
-    const end = new Date();
-    start.setHours(StartHour, StartMinutes, 0);
-    end.setHours(EndHour, EndMinutes, 0);
-    return now >= start && now < end;
+    const start = Number(StartHour) * 60 + Number(StartMinutes);
+    const end = Number(EndHour) * 60 + Number(EndMinutes);
+    return nowMinutes >= start && nowMinutes < end;
   });
 };
 

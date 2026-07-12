@@ -24,8 +24,22 @@ const formatNutritionValue = (value: string | undefined): string => {
         return value; // Return as is, without adding 'g'
     }
 
+    // Guard scraped junk strings ("NaN"/"undefined"/unparseable) so they don't render as "NaNg"
+    if (isNaN(parseFloat(value))) {
+        return 'N/A';
+    }
+
     // For numeric values, add 'g' suffix
     return `${value}g`;
+};
+
+// Format a raw calories value, guarding scraped junk strings
+const formatCaloriesValue = (value: string | undefined): string => {
+    if (!value) return 'N/A';
+    if (value.toLowerCase().includes('less than 1 gram')) {
+        return value;
+    }
+    return isNaN(parseFloat(value)) ? 'N/A' : value;
 };
 
 const FoodItemRow: React.FC<RowProps> = React.memo(({ index, style, data }) => {
@@ -75,7 +89,7 @@ const FoodItemRow: React.FC<RowProps> = React.memo(({ index, style, data }) => {
                     </div>
                     <div className="flex justify-between gap-3">
                         <span className="text-muted-foreground">Calories:</span>
-                        <span className="text-foreground font-medium text-right">{item.calories || 'N/A'}</span>
+                        <span className="text-foreground font-medium text-right">{formatCaloriesValue(item.calories)}</span>
                     </div>
                     <div className="flex justify-between gap-3">
                         <span className="text-muted-foreground">Protein:</span>
