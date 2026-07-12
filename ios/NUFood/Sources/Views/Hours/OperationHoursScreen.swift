@@ -83,6 +83,7 @@ struct OperationHoursScreen: View {
             .datePickerStyle(.graphical)
             .labelsHidden()
             .environment(\.calendar, CentralTime.calendar)
+            .environment(\.timeZone, CentralTime.timeZone)
             .tint(Theme.primary)
             .padding()
             .presentationCompactAdaptation(.popover)

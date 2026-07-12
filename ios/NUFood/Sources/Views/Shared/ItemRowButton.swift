@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Visual variant of an item row.
 /// `.standard` — used everywhere favorited rows border with `Theme.primary`.

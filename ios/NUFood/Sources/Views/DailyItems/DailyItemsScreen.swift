@@ -168,7 +168,7 @@ struct DailyItemsScreen: View {
             location: location,
             dateString: store.selectedDate
         )
-        return OperatingHoursLogic.status(intervals: intervals, dateString: store.selectedDate, now: now)
+        return OperatingHoursLogic.status(intervals: intervals, now: now)
     }
 
     private var openCountText: String {

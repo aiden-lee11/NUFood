@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Rosé Pine palette matching the web app's CSS variables (SPEC §5.1).
 /// Light = Rosé Pine Dawn, Dark = Rosé Pine Main (app default).

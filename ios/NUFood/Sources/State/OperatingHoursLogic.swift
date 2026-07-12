@@ -46,16 +46,17 @@ enum OperatingHoursLogic {
         return hours
     }
 
-    /// Live status text per SPEC §2.1.4. `dateString` is the day the intervals belong to.
+    /// Live status text per SPEC §2.1.4. Web parity: the interval hour/minute values
+    /// (which may come from any selected day) are anchored onto TODAY's wall clock —
+    /// the status line is always "is it open right now"-shaped, like the website.
     static func status(
         intervals: [HourlyTimes]?,
-        dateString: String,
         now: Date = Date()
     ) -> LocationStatus {
-        guard let intervals, !intervals.isEmpty,
-              let dayStart = CentralTime.date(from: dateString) else {
+        guard let intervals, !intervals.isEmpty else {
             return LocationStatus(kind: .closed, text: "Closed")
         }
+        let dayStart = CentralTime.calendar.startOfDay(for: now)
 
         var currentlyOpen = false
         var nextClose: Date?
@@ -103,7 +104,7 @@ enum OperatingHoursLogic {
     ) -> [String] {
         DiningLocation.allCases.compactMap { location in
             let ivals = intervals(in: operatingTimes, location: location, dateString: dateString)
-            return status(intervals: ivals, dateString: dateString, now: now).isOpen
+            return status(intervals: ivals, now: now).isOpen
                 ? location.rawValue
                 : nil
         }

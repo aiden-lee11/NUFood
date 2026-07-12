@@ -23,10 +23,11 @@ struct NUFoodApp: App {
                     _ = auth.handle(url: url)
                 }
                 .task {
-                    await store.load()
+                    await auth.waitUntilResolved()
+                    await store.loadIfNeeded()
                 }
                 .onChange(of: auth.isSignedIn) {
-                    Task { await store.load() }
+                    Task { await store.loadIfNeeded() }
                 }
         }
     }

@@ -44,6 +44,14 @@ final class AppStore {
 
     // MARK: - Loading
 
+    /// Loads only when the auth state changed since the last successful load
+    /// (both the launch task and the auth-change observer call this; dedupes the
+    /// double-fire on cold launch for signed-in users).
+    func loadIfNeeded() async {
+        guard loadedForSignedIn != auth.isSignedIn else { return }
+        await load()
+    }
+
     func load() async {
         isLoading = true
         loadError = nil
@@ -57,28 +65,44 @@ final class AppStore {
                 nutritionGoals = data.nutritionGoals
                 favorites = Set(data.userPreferences)
                 mailing = data.mailing ?? false
-                displayPreferences = data.displayPreferences.hasSavedDisplayPreferences
-                    ? data.displayPreferences
-                    : displayPreferences
+                // Local display prefs win over the server's (SPEC §3.4): adopt the
+                // server value only when nothing has been saved on this device yet.
+                if !displayPreferences.hasSavedDisplayPreferences,
+                   data.displayPreferences.hasSavedDisplayPreferences {
+                    displayPreferences = data.displayPreferences
+                }
             } else {
                 let data = try await api.fetchGeneralData()
                 allItems = data.allItems
                 weeklyItems = data.weeklyItems
                 locationOperatingTimes = data.locationOperatingTimes
+                // Web parity: sign-out clears user data (display prefs survive).
+                favorites = []
+                mailing = false
             }
+            loadedForSignedIn = auth.isSignedIn
         } catch {
             loadError = error.localizedDescription
         }
         persistLocal()
     }
 
+    /// Auth state a successful load() last ran under; nil before the first load.
+    private var loadedForSignedIn: Bool?
+
     // MARK: - Mutations (optimistic; synced to backend when signed in)
 
     func toggleFavorite(_ name: String) {
-        if favorites.contains(name) {
-            favorites.remove(name)
-        } else {
+        // Web parity (SPEC §2.1.1): compare case-insensitively and trimmed;
+        // store the original-cased name when adding.
+        let key = name.trimmingCharacters(in: .whitespaces).lowercased()
+        let existing = favorites.filter {
+            $0.trimmingCharacters(in: .whitespaces).lowercased() == key
+        }
+        if existing.isEmpty {
             favorites.insert(name)
+        } else {
+            favorites.subtract(existing)
         }
         persistLocal()
         syncIfSignedIn { try await $0.saveFavorites($1.favorites.sorted()) }

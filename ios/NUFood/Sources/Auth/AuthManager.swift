@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import FirebaseCore
 import FirebaseAuth
 import GoogleSignIn
@@ -17,6 +18,11 @@ final class AuthManager {
     private(set) var user: AuthUser?
     var isSignedIn: Bool { user != nil }
 
+    /// True once Firebase has reported the persisted auth state (or immediately when
+    /// Firebase isn't configured). Data loading waits on this so a signed-in user
+    /// doesn't get a signed-out fetch on cold launch (SPEC §3.3 authLoading gate).
+    private(set) var hasResolvedInitialState = false
+
     struct AuthUser: Equatable {
         let uid: String
         let displayName: String?
@@ -28,6 +34,7 @@ final class AuthManager {
 
     init() {
         guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
+            hasResolvedInitialState = true
             return
         }
         FirebaseApp.configure()
@@ -37,7 +44,16 @@ final class AuthManager {
                 self?.user = firebaseUser.map {
                     AuthUser(uid: $0.uid, displayName: $0.displayName, email: $0.email, photoURL: $0.photoURL)
                 }
+                self?.hasResolvedInitialState = true
             }
+        }
+    }
+
+    /// Suspends until Firebase reports the persisted auth state (bounded at ~5s).
+    func waitUntilResolved() async {
+        for _ in 0..<100 {
+            if hasResolvedInitialState { return }
+            try? await Task.sleep(for: .milliseconds(50))
         }
     }
 
