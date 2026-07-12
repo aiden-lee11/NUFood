@@ -48,6 +48,10 @@ struct OperationHoursScreen: View {
             Text("Dining Hours")
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(Theme.textPrimary)
+                // Shares the row with the date pill; shrink instead of wrapping
+                // on narrow screens / large type.
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Spacer(minLength: 12)
             dateButton
         }

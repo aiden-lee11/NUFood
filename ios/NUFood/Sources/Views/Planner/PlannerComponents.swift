@@ -174,9 +174,14 @@ struct MacroProgressTile: View {
     let fallbackGoal: Double
     let color: Color
 
-    private var displayGoal: Double { goal > 0 ? goal : fallbackGoal }
+    // Render the raw goal even when it's 0 — a user who zeroes a goal to turn it
+    // off should see "/ 0" and an empty bar (web behavior), not the default goal
+    // substituted back in with fake progress. `fallbackGoal` is kept only for the
+    // pathological negative-goal decode case.
+    private var displayGoal: Double { goal >= 0 ? goal : fallbackGoal }
     private var percent: Int {
-        PlannerGoals.percentage(value: total, goal: goal, fallback: fallbackGoal)
+        guard goal > 0 else { return 0 }
+        return Int((total / goal * 100).rounded())
     }
     private var fraction: CGFloat {
         max(0, min(CGFloat(percent), 100)) / 100
@@ -197,6 +202,9 @@ struct MacroProgressTile: View {
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
             }
+            // Two tiles share a row; a 4-digit calorie total must shrink, not "245…".
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {

@@ -1,25 +1,21 @@
 const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 export const postUserPreferences = async (preferences: string[], userToken: string) => {
-  try {
-    // userPreferences returns an updated array of how these preferences changed the availableFavorites
-    const auth = `Bearer ${userToken}`;
-    const response = await fetch(`${API_URL}/api/userPreferences`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  // Rejects on network failure or non-2xx so callers can revert their optimistic
+  // update and surface an error. (No swallow here — the caller decides how to react.)
+  const auth = `Bearer ${userToken}`;
+  const response = await fetch(`${API_URL}/api/userPreferences`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
 
-        Authorization: auth,
-      },
-      body: JSON.stringify(preferences),
-    });
+      Authorization: auth,
+    },
+    body: JSON.stringify(preferences),
+  });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-  } catch (error) {
-    console.error('Error posting userPreferences:', error);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
 };
 

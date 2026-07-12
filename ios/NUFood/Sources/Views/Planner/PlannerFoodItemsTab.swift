@@ -138,15 +138,21 @@ struct PlannerFoodItemsTab: View {
     }
 
     /// "All Locations" + the canonical-ordered locations present in today's menu.
+    /// Locations the app doesn't know about are appended so they stay filterable.
     private var locationOptions: [String] {
         let present = Set(todaysItems.map(\.location))
-        return ["All Locations"] + DiningLocation.allNames.filter { present.contains($0) }
+        let known = DiningLocation.allNames.filter { present.contains($0) }
+        let unknown = present.subtracting(DiningLocation.allNames).sorted()
+        return ["All Locations"] + known + unknown
     }
 
     /// "All Times" + the meal periods present, ordered Breakfast/Lunch/Dinner.
+    /// Unrecognized periods (e.g. a future "Late Night") are appended, matching the web.
     private var timeOptions: [String] {
         let present = Set(todaysItems.map(\.timeOfDay))
-        return ["All Times"] + mealPeriodOrder.filter { present.contains($0) }
+        let known = mealPeriodOrder.filter { present.contains($0) }
+        let unknown = present.subtracting(mealPeriodOrder).sorted()
+        return ["All Times"] + known + unknown
     }
 
     private var filteredItems: [DailyItem] {
@@ -210,10 +216,10 @@ private struct PlannerFoodItemRow: View {
 
                 VStack(spacing: 4) {
                     PlannerFieldRow(label: "Portion Size:", value: portionDisplay)
-                    PlannerFieldRow(label: "Calories:", value: NutrientParsing.display(item.calories))
-                    PlannerFieldRow(label: "Protein:", value: NutrientParsing.display(item.protein, unit: "g"))
-                    PlannerFieldRow(label: "Carbs:", value: NutrientParsing.display(item.carbs, unit: "g"))
-                    PlannerFieldRow(label: "Fat:", value: NutrientParsing.display(item.fat, unit: "g"))
+                    PlannerFieldRow(label: "Calories:", value: NutrientParsing.browseDisplay(item.calories))
+                    PlannerFieldRow(label: "Protein:", value: NutrientParsing.browseDisplay(item.protein, unit: "g"))
+                    PlannerFieldRow(label: "Carbs:", value: NutrientParsing.browseDisplay(item.carbs, unit: "g"))
+                    PlannerFieldRow(label: "Fat:", value: NutrientParsing.browseDisplay(item.fat, unit: "g"))
                 }
                 .padding(.top, 2)
             }

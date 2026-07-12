@@ -14,24 +14,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../ui/select';
+import { useDebounce } from '../../hooks/useDebounce';
 import FoodItemRow from './FoodItemRow';
-
-// Debounce function to delay search updates
-const useDebounce = (value: string, delay: number) => {
-    const [debouncedValue, setDebouncedValue] = useState(value);
-
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [value, delay]);
-
-    return debouncedValue;
-};
 
 interface FoodItemsListProps {
     sortedItems: DailyItem[];

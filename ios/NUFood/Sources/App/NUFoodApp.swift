@@ -17,7 +17,12 @@ struct NUFoodApp: App {
             RootView()
                 .environment(auth)
                 .environment(store)
-                .preferredColorScheme(appearance.colorScheme)
+                // Theme is applied to the UIKit windows (with a cross-dissolve on
+                // change) rather than preferredColorScheme, which cannot animate.
+                .onAppear { appearance.apply(animated: false) }
+                .onChange(of: appearance) { _, newValue in
+                    newValue.apply(animated: true)
+                }
                 .tint(Theme.primary)
                 .onOpenURL { url in
                     _ = auth.handle(url: url)

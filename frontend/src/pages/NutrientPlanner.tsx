@@ -125,6 +125,15 @@ const NutrientPlanner: React.FC = () => {
         setActiveTab(tab);
     }, []);
 
+    // Instant clear + exact restore for the "Clear All" undo toast.
+    const handleClearAll = useCallback(() => {
+        setSelectedItems([]);
+    }, []);
+
+    const handleRestoreItems = useCallback((items: SelectedDailyItem[]) => {
+        setSelectedItems(items);
+    }, []);
+
     const setSelectedLocationCallback = useCallback((location: string | null) => {
         setSelectedLocation(location);
     }, []);
@@ -137,14 +146,11 @@ const NutrientPlanner: React.FC = () => {
     const todaysItems = useMemo(() => {
         // const dayName = getCurrentDayName(); // Old way using day name
         const currentDate = getCurrentDateFormatted(); // New way using YYYY-MM-DD
-        console.log("Fetching items for date:", currentDate); // Log the date being used
-        console.log("Available keys in weeklyItems:", UserDataResponse.weeklyItems ? Object.keys(UserDataResponse.weeklyItems) : 'weeklyItems is undefined'); // Log available keys
         return UserDataResponse.weeklyItems?.[currentDate] || [];
     }, [UserDataResponse.weeklyItems]);
 
     // Derive available locations from today's items
     const availableLocations = useMemo(() => {
-        console.log(todaysItems);
         const locations = new Set(todaysItems.map(item => item.Location));
         return Array.from(locations).sort();
     }, [todaysItems]);
@@ -266,13 +272,11 @@ const NutrientPlanner: React.FC = () => {
         if (user && token) {
             try {
                 await saveNutritionGoals(token, goalsToSave);
-                console.log('Goals saved to backend successfully.');
             } catch (err) {
                 console.error('Failed to save goals to backend:', err);
             }
         } else {
             saveGoalsToStorage(goalsToSave);
-            console.log('Goals saved to local storage.');
         }
     }, [user, token, saveNutritionGoals]);
 
@@ -351,6 +355,8 @@ const NutrientPlanner: React.FC = () => {
                         totalFat={totalFat}
                         handleSelectItem={handleSelectItem}
                         handleQuantityChange={handleQuantityChange}
+                        handleClearAll={handleClearAll}
+                        handleRestoreItems={handleRestoreItems}
                         setActiveTab={setActiveTabCallback}
                         nutritionGoals={nutritionGoals}
                         handleSaveGoals={handleSaveGoals}

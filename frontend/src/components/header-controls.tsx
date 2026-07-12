@@ -36,7 +36,7 @@ export function HeaderControls({
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
         Daily Items for {format(selectedDate, "PP")}
         <div className="text-lg font-normal">
-          {openLocations.length > 0 ? `(${openLocations.length} locations open)` : "(All locations closed)"}
+          {openLocations.length > 0 ? `(${openLocations.length} location${openLocations.length === 1 ? "" : "s"} open)` : "(All locations closed)"}
         </div>
       </h1>
 

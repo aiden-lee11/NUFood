@@ -10,7 +10,7 @@ enum OperatingHoursLogic {
             case closed    // red
         }
         let kind: Kind
-        /// Rendered as "Status -- {text}" on Daily Items cards.
+        /// Rendered as "Status: {text}" on Daily Items cards.
         let text: String
 
         var isOpen: Bool { kind == .open }

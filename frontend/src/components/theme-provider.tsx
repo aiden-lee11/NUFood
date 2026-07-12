@@ -32,23 +32,51 @@ export function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
+  // Skip the cross-fade on the very first paint so the initial load doesn't flash.
+  const isFirstRun = React.useRef(true)
 
   useEffect(() => {
     const root = window.document.documentElement
 
-    root.classList.remove('light', 'dark')
+    const applyTheme = () => {
+      root.classList.remove('light', 'dark')
 
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-        .matches
-        ? 'dark'
-        : 'light'
+      if (theme === 'system') {
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+          .matches
+          ? 'dark'
+          : 'light'
 
-      root.classList.add(systemTheme)
+        root.classList.add(systemTheme)
+        return
+      }
+
+      root.classList.add(theme)
+    }
+
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches
+
+    // View Transitions API cross-fades the whole page when the theme class swaps.
+    // Feature-detect it, skip it on first paint, and honor reduced-motion.
+    const startViewTransition = (
+      document as Document & {
+        startViewTransition?: (cb: () => void) => void
+      }
+    ).startViewTransition
+
+    if (
+      isFirstRun.current ||
+      prefersReducedMotion ||
+      typeof startViewTransition !== 'function'
+    ) {
+      isFirstRun.current = false
+      applyTheme()
       return
     }
 
-    root.classList.add(theme)
+    startViewTransition.call(document, applyTheme)
   }, [theme])
 
   const value = {

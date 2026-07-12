@@ -1,6 +1,6 @@
 // components/OperationHours.tsx
 import React, { useState, useEffect } from "react";
-import { getWeekday, formatTime, locationAliases } from "../util/helper";
+import { getWeekday, formatTime, locationAliases, getCentralNow } from "../util/helper";
 import { Day, OperationHoursData, OperatingTime } from "../types/OperationTypes";
 import { useDataStore } from "@/store";
 import SEO from '../components/SEO';
@@ -40,13 +40,15 @@ const OperationHours: React.FC = () => {
     (s) => s.UserDataResponse.locationOperationHours
   );
 
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // Minute tick to re-render the current-time indicator; "now" itself is read from
+  // getCentralNow() so the line reflects Central time, not the device's timezone.
+  const [, setTick] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Update current time every minute
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      setTick((t) => t + 1);
     }, 60000); // Update every minute
 
     return () => clearInterval(timer);
@@ -67,10 +69,44 @@ const OperationHours: React.FC = () => {
     if (selectedDayIndex < 0) selectedDayIndex = 0;
   }
 
-  // helper: given a shortName, find the actual payload entry
+  // Explicit aliases for Norris/Retail display names whose backend record Name differs
+  // (e.g. "847 at Fran's Cafe" is stored as "847 Late Night | Fran's Cafe"). Kept local to
+  // this screen so it does not leak into getDailyLocationOperationTimes' open-location counts.
+  const displayNameAliases: Record<string, string[]> = {
+    "847 at Fran's Cafe": ["847 Late Night | Fran's Cafe"],
+  };
+
+  const normalizeName = (name: string) => name.toLowerCase().trim();
+
+  // helper: given a shortName, find the actual payload entry using a tiered matcher
+  // (mirrors the iOS port's record(forDisplayName:) resolution).
   const findByAlias = (shortName: string) => {
-    const aliases = locationAliases[shortName] || [shortName];
-    return rawData.find((d) => aliases.includes(d.Name));
+    const aliases =
+      locationAliases[shortName] || displayNameAliases[shortName] || [shortName];
+
+    // 1. Exact alias/name match (original behavior; preferred).
+    const exactAlias = rawData.find((d) => aliases.includes(d.Name));
+    if (exactAlias) return exactAlias;
+
+    const target = normalizeName(shortName);
+
+    // 2. Normalized (lowercased/trimmed) exact match.
+    const normalizedExact = rawData.find((d) => normalizeName(d.Name) === target);
+    if (normalizedExact) return normalizedExact;
+
+    // 3. Case-insensitive containment in either direction.
+    const contained = rawData.find((d) => {
+      const name = normalizeName(d.Name);
+      return name.includes(target) || target.includes(name);
+    });
+    if (contained) return contained;
+
+    // 4. Match on the distinctive segment after "|" in record names, e.g. "… | Fran's Cafe".
+    return rawData.find((d) => {
+      if (!d.Name.includes("|")) return false;
+      const segment = normalizeName(d.Name.split("|").pop() || "");
+      return segment !== "" && (target.includes(segment) || segment.includes(target));
+    });
   };
 
   // helper to render one day's hours
@@ -218,6 +254,42 @@ const OperationHours: React.FC = () => {
     return { isOpen, topHalf, bottomHalf };
   };
 
+  // Resolve a location's open intervals for a day as [start, end) minutes-since-midnight
+  // (end may exceed 1440 for post-midnight closings). Used to label the open blocks.
+  const getOpenIntervals = (shortName: string, dayIndex: number): { start: number; end: number }[] => {
+    if (dayIndex == null || dayIndex < 0) return [];
+    const loc = findByAlias(shortName);
+    if (!loc || !loc.Week[dayIndex]?.Hours || loc.Week[dayIndex].Status === "closed") return [];
+    return loc.Week[dayIndex].Hours.map(({ StartHour, StartMinutes, EndHour, EndMinutes }) => {
+      const sh = typeof StartHour === 'string' ? parseInt(StartHour, 10) : StartHour;
+      const sm = typeof StartMinutes === 'string' ? parseInt(StartMinutes, 10) : StartMinutes;
+      const eh = typeof EndHour === 'string' ? parseInt(EndHour, 10) : EndHour;
+      const em = typeof EndMinutes === 'string' ? parseInt(EndMinutes, 10) : EndMinutes;
+      const start = sh * 60 + sm;
+      let end = eh * 60 + em;
+      if (end <= start) end += 1440; // closes after midnight
+      return { start, end };
+    });
+  };
+
+  // Human-readable "Open 11:00 AM – 2:00 PM" label for the interval covering a slot.
+  const getOpenLabel = (shortName: string, timeSlot: number, dayIndex: number): string => {
+    const intervals = getOpenIntervals(shortName, dayIndex);
+    const slotStart = timeSlot * 60;
+    const slotEnd = (timeSlot + 1) * 60;
+    const covering = intervals.find((iv) => {
+      // Compare directly, and also shifted back a day to catch post-midnight slots.
+      const overlaps = (s: number, e: number) => s < slotEnd && e > slotStart;
+      return overlaps(iv.start, iv.end) || overlaps(iv.start - 1440, iv.end - 1440);
+    });
+    if (!covering) return "Open";
+    const fmt = (mins: number) => {
+      const dayMin = ((mins % 1440) + 1440) % 1440;
+      return formatTime(Math.floor(dayMin / 60), dayMin % 60);
+    };
+    return `Open ${fmt(covering.start)} – ${fmt(covering.end)}`;
+  };
+
   // Note: timeSlots and currentTimePosition are now calculated per category
 
   return (
@@ -246,9 +318,7 @@ const OperationHours: React.FC = () => {
 
           // Calculate current time position for this category's time range
           const getCurrentTimePositionForRange = () => {
-            const now = currentTime;
-            const currentHour = now.getHours();
-            const currentMinutes = now.getMinutes();
+            const { hours: currentHour, minutes: currentMinutes } = getCentralNow();
 
             // Check if current time is within this category's display range
             let adjustedCurrentHour = currentHour;
@@ -324,7 +394,8 @@ const OperationHours: React.FC = () => {
 
                             {/* Location status cells */}
                             {shortNames.map((shortName, index) => {
-                              const { topHalf, bottomHalf } = getLocationTimeInfo(shortName, timeSlot.hour, selectedDayIndex);
+                              const { isOpen, topHalf, bottomHalf } = getLocationTimeInfo(shortName, timeSlot.hour, selectedDayIndex);
+                              const openLabel = isOpen ? getOpenLabel(shortName, timeSlot.hour, selectedDayIndex) : undefined;
 
                               // Check if previous/next locations and time slots are open for continuous appearance
                               const prevLocationInfo = index > 0
@@ -348,11 +419,13 @@ const OperationHours: React.FC = () => {
                                   key={shortName}
                                   className="relative"
                                   style={{ minHeight: '48px' }}
+                                  title={openLabel}
+                                  aria-label={openLabel}
                                 >
                                   {/* Top half (first 30 minutes) */}
                                   {topHalf && (
                                     <div
-                                      className="bg-green-600 absolute left-0 z-20"
+                                      className="bg-primary absolute left-0 z-20"
                                       style={{
                                         top: shouldExtendUp ? '-2px' : '0',
                                         height: shouldExtendUp ? 'calc(50% + 2px)' : '50%',
@@ -372,7 +445,7 @@ const OperationHours: React.FC = () => {
                                   {/* Bottom half (last 30 minutes) */}
                                   {bottomHalf && (
                                     <div
-                                      className="bg-green-600 absolute left-0 z-20"
+                                      className="bg-primary absolute left-0 z-20"
                                       style={{
                                         bottom: shouldExtendDown ? '-2px' : '0',
                                         height: shouldExtendDown ? 'calc(50% + 2px)' : '50%',

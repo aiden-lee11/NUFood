@@ -13,6 +13,8 @@ import { HeaderControls } from "../components/header-controls"
 import SEO from '../components/SEO';
 import { toLocalISODate } from '../util/date';
 import { loadDisplayPreferences, saveDisplayPreferences } from '../util/displayPreferences';
+import { useDebounce } from '../hooks/useDebounce';
+import { useToast } from '@/hooks/use-toast';
 
 const DEFAULT_LOCATIONS = ["Sargent", "Elder", "Allison", "Plex East", "Plex West"];
 
@@ -20,6 +22,7 @@ const DailyItems: React.FC = () => {
   // Data involved with auth
   const [showPopup, setShowPopup] = useState(false);
   const { token, authLoading } = useAuth();
+  const { toast } = useToast();
 
   // Read browser-native display preferences synchronously so the very first paint
   // is already correct — no popup flash, no "all halls -> your halls" collapse.
@@ -31,17 +34,15 @@ const DailyItems: React.FC = () => {
   const [visibleTimes, setVisibleTimes] = useState<string[]>([]);
   const [expandFolders, setExpandFolders] = useState(false);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
-  // Auto-open the settings popup only for a brand-new browser that has never saved
-  // preferences and hasn't dismissed the popup this session.
-  const [showPreferences, setShowPreferences] = useState(
-    !initialDisplayPrefs.hasSavedDisplayPreferences &&
-    sessionStorage.getItem("showPreferences") !== "false"
-  );
+  // The Display Settings dialog opens only when the user clicks the Display Settings button
+  // (no first-visit auto-open — the slow first load it once masked has since been optimized).
+  const [showPreferences, setShowPreferences] = useState(false);
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [openLocations, setOpenLocations] = useState<string[]>([])
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const hasHydratedSignedInDisplayPrefs = useRef(false);
+  const hasAutoSelectedTimes = useRef(false);
 
   // Data involved with API
   const staticData = useDataStore((state) => state.UserDataResponse);
@@ -87,7 +88,10 @@ const DailyItems: React.FC = () => {
   // Data involved with fuse
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<DailyItem[]>([]);
-  const fuse = new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 });
+  // Memoize the Fuse index (rebuild only when the day's items change) and debounce
+  // the query so typing doesn't fuzzy-search on every keystroke.
+  const fuse = useMemo(() => new Fuse(dailyItems, { keys: ['Name'], threshold: 0.5 }), [dailyItems]);
+  const debouncedQuery = useDebounce(searchQuery, 150);
 
 
 
@@ -95,8 +99,14 @@ const DailyItems: React.FC = () => {
   useEffect(() => {
     if (memoizedLocationHours) {
       const { timeOfDay, openLocations } = getCurrentTimeOfDayWithLocations(memoizedLocationHours);
-      if (timeOfDay) {
-        setVisibleTimes([timeOfDay]);
+
+      // Auto-select the current meal only once on initial mount. Re-running on every date
+      // change would clobber the user's Display Settings meal toggles.
+      if (!hasAutoSelectedTimes.current) {
+        hasAutoSelectedTimes.current = true;
+        // Outside serving hours getCurrentTimeOfDay() returns "" — default to all three meals
+        // so the home page never renders an empty meal list late at night.
+        setVisibleTimes(timeOfDay ? [timeOfDay] : ["Breakfast", "Lunch", "Dinner"]);
       }
 
       if (openLocations) {
@@ -112,7 +122,11 @@ const DailyItems: React.FC = () => {
       // Determine if there is some location that is open, but no items are available
       // If this is the case then there was an error in scraping data and we should display
       // an error message popup to the user
-      setShowErrorPopup(selectedItems.length === 0 && Boolean(memoizedLocationHours));
+      // Only flag a scrape error when there are zero items AND at least one hall is
+      // actually open that day. memoizedLocationHours is always a truthy object whose
+      // values are Hour[] (open) or null (closed), so check the values, not the object.
+      const anyHallOpen = Object.values(memoizedLocationHours).some(Boolean);
+      setShowErrorPopup(selectedItems.length === 0 && anyHallOpen);
     }
   }, [weeklyItems, selectedDate, memoizedLocationHours])
 
@@ -129,13 +143,13 @@ const DailyItems: React.FC = () => {
   }, [dailyItems, userPreferences]);
 
   useEffect(() => {
-    if (searchQuery) {
-      const result = fuse.search(searchQuery).map(({ item }) => item);
+    if (debouncedQuery) {
+      const result = fuse.search(debouncedQuery).map(({ item }) => item);
       setFilteredItems(result);
     } else {
       setFilteredItems(dailyItems);
     }
-  }, [searchQuery, dailyItems]);
+  }, [debouncedQuery, dailyItems, fuse]);
 
   const handleItemClick = (item: Item) => {
     if (!token) {
@@ -149,6 +163,9 @@ const DailyItems: React.FC = () => {
 
 
     if (userPreferences) {
+      const previousPreferences = userPreferences;
+      const previousAvailable = availableFavorites;
+
       if (userPreferences.some(i => i.toLowerCase().trim() === formattedItemName)) {
         tempPreferences = userPreferences.filter(i => i.toLowerCase().trim() !== formattedItemName);
       } else {
@@ -163,7 +180,15 @@ const DailyItems: React.FC = () => {
 
       setUserPreferences(tempPreferences);
       setAvailableFavorites(tempAvailable);
-      postUserPreferences(tempPreferences, token as string);
+      // Revert the optimistic update if the save fails.
+      postUserPreferences(tempPreferences, token as string).catch(() => {
+        setUserPreferences(previousPreferences);
+        setAvailableFavorites(previousAvailable);
+        toast({
+          variant: 'destructive',
+          title: "Couldn't save favorite — try again.",
+        });
+      });
     }
   };
 
@@ -203,10 +228,6 @@ const DailyItems: React.FC = () => {
 
   const handleTogglePreferences = (show: boolean) => {
     setShowPreferences(show);
-    // Remember an explicit dismissal so the popup doesn't auto-reopen this session.
-    if (!show) {
-      sessionStorage.setItem("showPreferences", "false");
-    }
   };
 
   return (
@@ -239,28 +260,37 @@ const DailyItems: React.FC = () => {
 
       <Input
         type="text"
+        aria-label="Search items"
         placeholder="Search for an item..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="mb-4 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent 
-          text-gray-900 border-gray-300 focus:ring-gray-500 
+        className="mb-4 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent
+          text-gray-900 border-gray-300 focus:ring-gray-500
           bg-background dark:text-white dark:border-gray-600 dark:focus:ring-gray-400"
       />
 
-      <LocationItemGrid
-        state={{
-          locationOperationHours: memoizedLocationHours,
-          visibleLocations,
-          timesOfDay,
-          visibleTimes,
-          filteredItems,
-          availableFavorites,
-          expandFolders,
-        }}
-        actions={{
-          handleItemClick,
-        }}
-      />
+      {searchQuery && filteredItems.length === 0 ? (
+        <div className="flex items-center justify-center py-16 text-center">
+          <p className="text-muted-foreground">
+            No items match "{searchQuery}" for this date.
+          </p>
+        </div>
+      ) : (
+        <LocationItemGrid
+          state={{
+            locationOperationHours: memoizedLocationHours,
+            visibleLocations,
+            timesOfDay,
+            visibleTimes,
+            filteredItems,
+            availableFavorites,
+            expandFolders,
+          }}
+          actions={{
+            handleItemClick,
+          }}
+        />
+      )}
 
       {showPopup && <AuthPopup isOpen={showPopup} onClose={() => setShowPopup(false)} />}
       <ErrorPopup isOpen={showErrorPopup} onClose={() => setShowErrorPopup(false)} />

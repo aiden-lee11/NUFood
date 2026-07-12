@@ -17,7 +17,7 @@
  * 
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Fuse from 'fuse.js';
 import { Input } from '@headlessui/react';
 import clsx from 'clsx';
@@ -38,6 +38,8 @@ import { useDataStore } from '@/store';
 import { postUserPreferences } from '@/util/data';
 import { useBanner } from '@/context/BannerContext';
 import SEO from '../components/SEO';
+import { useDebounce } from '../hooks/useDebounce';
+import { useToast } from '@/hooks/use-toast';
 
 const ITEMS_PER_PAGE = 100;
 
@@ -47,31 +49,43 @@ const AllItems: React.FC = () => {
   const allItemsStrings = staticData.allItems;
   const setUserPreferences = useDataStore((state) => state.setUserPreferences)
 
-  // Convert string array to Item array for UI compatibility
-  const allItems: Item[] = allItemsStrings.map(name => ({ Name: name }));
+  // Convert string array to Item array for UI compatibility.
+  // Memoized so it (and the Fuse index below) aren't rebuilt on every render.
+  const allItems: Item[] = useMemo(
+    () => allItemsStrings.map(name => ({ Name: name })),
+    [allItemsStrings]
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showPopup, setShowPopup] = useState(false);
   const { containerRef } = useBanner();
+  const { toast } = useToast();
 
   const { token } = useAuth();
 
-  const fuse = new Fuse(allItems, {
-    keys: ['Name'],
-    threshold: 0.5,
-  });
+  const fuse = useMemo(
+    () =>
+      new Fuse(allItems, {
+        keys: ['Name'],
+        threshold: 0.5,
+      }),
+    [allItems]
+  );
+
+  // Debounce so typing over thousands of items doesn't fuzzy-search on every keystroke.
+  const debouncedQuery = useDebounce(searchQuery, 150);
 
   useEffect(() => {
-    if (searchQuery) {
-      const result = fuse.search(searchQuery).map(({ item }) => item);
+    if (debouncedQuery) {
+      const result = fuse.search(debouncedQuery).map(({ item }) => item);
       setFilteredItems(result);
       setCurrentPage(1);
     } else {
       setFilteredItems(allItems);
     }
-  }, [searchQuery, allItems]);
+  }, [debouncedQuery, allItems, fuse]);
 
   const handleItemClick = (item: Item) => {
     if (!token) {
@@ -84,6 +98,8 @@ const AllItems: React.FC = () => {
 
 
     if (userPreferences) {
+      const previousPreferences = userPreferences;
+
       if (userPreferences.some(i => i.toLowerCase().trim() === formattedItemName)) {
         tempPreferences = userPreferences.filter(i => i.toLowerCase().trim() !== formattedItemName);
       } else {
@@ -91,7 +107,14 @@ const AllItems: React.FC = () => {
       }
 
       setUserPreferences(tempPreferences);
-      postUserPreferences(tempPreferences, token as string);
+      // Revert the optimistic update if the save fails.
+      postUserPreferences(tempPreferences, token as string).catch(() => {
+        setUserPreferences(previousPreferences);
+        toast({
+          variant: 'destructive',
+          title: "Couldn't save favorite — try again.",
+        });
+      });
     }
   };
 
@@ -245,6 +268,7 @@ const AllItems: React.FC = () => {
 
       <Input
         type="text"
+        aria-label="Search items"
         placeholder="Search for an item..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
@@ -252,21 +276,26 @@ const AllItems: React.FC = () => {
       />
 
       <ul className="space-y-2 mb-6">
-        {paginatedItems.map((item, index) => (
-          <li key={`${item.Name}-${index}`}>
-            <button
-              onClick={() => handleItemClick(item)}
-              className={clsx(
-                'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] hover:shadow-md focus:outline-none border-2',
-                (userPreferences && userPreferences.some((fav) => fav === item.Name))
-                  ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm"
-                  : "bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
-              )}
-            >
-              {item.Name} {userPreferences && userPreferences.some((fav) => fav === item.Name) ? "★" : "☆"}
-            </button>
-          </li>
-        ))}
+        {paginatedItems.map((item, index) => {
+          const isFavorited = !!(userPreferences && userPreferences.some((fav) => fav === item.Name));
+          return (
+            <li key={`${item.Name}-${index}`}>
+              <button
+                onClick={() => handleItemClick(item)}
+                aria-pressed={isFavorited}
+                aria-label={isFavorited ? `Remove ${item.Name} from favorites` : `Add ${item.Name} to favorites`}
+                className={clsx(
+                  'w-full text-left p-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.99] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring border-2',
+                  isFavorited
+                    ? "bg-item-selected text-item-selected-foreground border-primary shadow-sm"
+                    : "bg-card text-card-foreground border-border hover:bg-item-hover hover:border-muted-foreground"
+                )}
+              >
+                {item.Name} {isFavorited ? "★" : "☆"}
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       {totalPages > 1 && (
