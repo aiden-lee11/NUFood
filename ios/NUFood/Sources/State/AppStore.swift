@@ -108,6 +108,15 @@ final class AppStore {
         syncIfSignedIn { try await $0.saveFavorites($1.favorites.sorted()) }
     }
 
+    /// Batch removal (Your Favorites edit mode) — one local persist + one backend
+    /// sync for the whole batch instead of per-item toggles.
+    func removeFavorites(_ names: Set<String>) {
+        guard !names.isEmpty else { return }
+        favorites.subtract(names)
+        persistLocal()
+        syncIfSignedIn { try await $0.saveFavorites($1.favorites.sorted()) }
+    }
+
     func setNutritionGoals(_ goals: NutritionGoals) {
         nutritionGoals = goals
         persistLocal()
@@ -124,6 +133,22 @@ final class AppStore {
         displayPreferences.hasSavedDisplayPreferences = true
         persistLocal()
         syncIfSignedIn { try await $0.saveDisplayPreferences(visibleLocations: $1.displayPreferences.visibleLocations) }
+    }
+
+    /// Permanently deletes the account (server-side data + Firebase user) and wipes
+    /// every locally cached copy of user data. The Firebase auth listener flips
+    /// `isSignedIn` to false once the user is deleted, which reloads general data.
+    func deleteAccount() async throws {
+        try await auth.deleteAccount(using: api)
+        // Nothing about this account should survive on-device.
+        favorites = []
+        nutritionGoals = .default
+        mailing = false
+        displayPreferences = .default
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: Keys.favorites)
+        defaults.removeObject(forKey: Keys.goals)
+        defaults.removeObject(forKey: Keys.displayPrefs)
     }
 
     private func syncIfSignedIn(_ operation: @escaping (APIClient, AppStore) async throws -> Void) {
@@ -150,6 +175,24 @@ final class AppStore {
     /// Sorted date keys with any menu data, ascending.
     var availableDates: [String] {
         weeklyItems.keys.sorted()
+    }
+
+    /// The maximal run of consecutive dates ending at the latest available date.
+    /// Menu data can have historical gaps before the first scraped date, so only
+    /// this contiguous recent span (whatever past data we have, plus the future
+    /// scraped days) is safe to offer for selection — older gap dates would open
+    /// an empty screen. `nil` when no menu data is loaded.
+    var contiguousDateRange: ClosedRange<Date>? {
+        let calendar = CentralTime.calendar
+        let dates = availableDates.compactMap(CentralTime.date(from:))
+        guard let max = dates.last else { return nil }
+        var start = max
+        for date in dates.dropLast().reversed() {
+            guard let expected = calendar.date(byAdding: .day, value: -1, to: start),
+                  calendar.isDate(date, inSameDayAs: expected) else { break }
+            start = date
+        }
+        return start...max
     }
 
     func operatingTimes(for location: DiningLocation) -> LocationOperatingTimes? {

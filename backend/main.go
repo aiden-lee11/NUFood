@@ -81,6 +81,9 @@ func main() {
 	apiRouter.HandleFunc("/mailing", middleware.AuthMiddleware(api.SetUserMailing)).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/displayPreferences", middleware.AuthMiddleware(api.SetDisplayPreferences)).Methods("POST", "OPTIONS")
 
+	// Account deletion endpoint (required for App Store review)
+	apiRouter.HandleFunc("/user", middleware.AuthMiddleware(api.DeleteUserHandler)).Methods("DELETE", "OPTIONS")
+
 	// Scrape and Save Data endpoints
 	apiRouter.HandleFunc("/scrapeWeeklyItems", middleware.ScrapeMiddleware(api.ScrapeWeeklyItemsHandler)).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/updateWeeklyItems", middleware.ScrapeMiddleware(api.ScrapeUpdateWeekly)).Methods("POST", "OPTIONS")

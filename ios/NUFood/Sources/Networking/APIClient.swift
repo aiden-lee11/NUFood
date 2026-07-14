@@ -51,6 +51,18 @@ struct APIClient {
         try await post("/api/nutritionGoals", body: goals)
     }
 
+    /// Permanently deletes all server-side data for the signed-in user.
+    /// Treats any 2xx (including 200/204) as success.
+    func deleteAccount() async throws {
+        var request = URLRequest(url: Self.baseURL.appending(path: "/api/user"))
+        request.httpMethod = "DELETE"
+        if let token = try await tokenProvider() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try Self.checkStatus(response)
+    }
+
     // MARK: - Plumbing
 
     private func get<T: Decodable>(_ path: String, authenticated: Bool) async throws -> T {

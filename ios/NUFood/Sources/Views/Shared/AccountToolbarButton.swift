@@ -31,6 +31,10 @@ private struct AccountSheet: View {
     @State private var isSigningIn = false
     @State private var signInError: String?
 
+    @State private var isDeleting = false
+    @State private var showDeleteConfirm = false
+    @State private var deleteError: String?
+
     private static let feedbackURL = URL(string: "mailto:nufoodfinder@gmail.com?subject=NUFood%20Feedback")
     private static let supportURL = URL(string: "https://buymeacoffee.com/aidenlee11")
 
@@ -58,7 +62,22 @@ private struct AccountSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                        .disabled(isDeleting)
                 }
+            }
+            .alert("Delete Account?", isPresented: $showDeleteConfirm) {
+                Button("Delete", role: .destructive) { deleteAccount() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This permanently deletes your account. Your favorites, nutrition goals, and preferences will be permanently deleted. This cannot be undone.")
+            }
+            .alert(
+                "Couldn't Delete Account",
+                isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(deleteError ?? "")
             }
         }
     }
@@ -100,7 +119,30 @@ private struct AccountSheet: View {
                     .frame(maxWidth: .infinity)
                     .foregroundStyle(Theme.destructive)
             }
+            .disabled(isDeleting)
             .listRowBackground(Theme.card)
+        }
+
+        Section {
+            Button(role: .destructive) {
+                showDeleteConfirm = true
+            } label: {
+                HStack(spacing: 8) {
+                    if isDeleting {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Theme.destructive)
+                    }
+                    Text(isDeleting ? "Deleting Account..." : "Delete Account")
+                        .foregroundStyle(Theme.destructive)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .disabled(isDeleting)
+            .listRowBackground(Theme.card)
+        } footer: {
+            Text("Permanently deletes your account. Your favorites, nutrition goals, and preferences will be permanently deleted.")
+                .foregroundStyle(Theme.textSecondary)
         }
     }
 
@@ -124,9 +166,13 @@ private struct AccountSheet: View {
                 }
 
                 GoogleSignInButton(isWorking: isSigningIn) {
-                    signIn()
+                    signIn { try await auth.signInWithGoogle() }
                 }
                 .padding(.top, 4)
+
+                AppleSignInButton(isWorking: isSigningIn) {
+                    signIn { try await auth.signInWithApple() }
+                }
             }
             .padding(.vertical, 4)
             .listRowBackground(Theme.card)
@@ -169,15 +215,29 @@ private struct AccountSheet: View {
 
     // MARK: - Actions
 
-    private func signIn() {
+    private func signIn(_ operation: @escaping () async throws -> Void) {
         signInError = nil
         isSigningIn = true
         Task {
             defer { isSigningIn = false }
             do {
-                try await auth.signInWithGoogle()
+                try await operation()
             } catch {
                 signInError = error.localizedDescription
+            }
+        }
+    }
+
+    private func deleteAccount() {
+        deleteError = nil
+        isDeleting = true
+        Task {
+            defer { isDeleting = false }
+            do {
+                try await store.deleteAccount()
+                dismiss()
+            } catch {
+                deleteError = error.localizedDescription
             }
         }
     }

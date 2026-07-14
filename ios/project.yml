@@ -43,6 +43,11 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+      configs:
+        # Personal (free) dev teams can't sign the Sign in with Apple
+        # entitlement; keep it Release-only until the paid program is active.
+        Release:
+          CODE_SIGN_ENTITLEMENTS: NUFood/NUFood.entitlements
     postBuildScripts:
       - name: Inject Google Sign-In URL scheme
         basedOnDependencyAnalysis: false

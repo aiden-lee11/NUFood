@@ -817,6 +817,43 @@ func GetNutritionGoalsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteUserHandler deletes all server-side data owned by the authenticated
+// user. This backs the account-deletion flow required for App Store review.
+//
+// It removes the user's rows from every user-keyed table (preferences and
+// nutrition goals) and invalidates any cached copy of their data. The iOS
+// client is responsible for deleting the Firebase Auth user itself afterward,
+// so this handler only clears server-side state.
+//
+// Expected Authorization:
+//   - Authorization header containing a valid Firebase ID token (Bearer token).
+//
+// Expected Body:
+//   - No body is expected in this request.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request.
+func DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context (set by AuthMiddleware)
+	userID := r.Context().Value(middleware.UserIDKey).(string)
+
+	// Delete all server-side data owned by the user. Deleting zero rows is not
+	// an error, so this succeeds even if the user never saved any data.
+	if err := db.DeleteUserData(userID); err != nil {
+		http.Error(w, "Error deleting user data: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Drop any cached copy of the deleted user's data.
+	cache.InvalidateUser(userID)
+
+	log.Printf("Deleted all server-side data for user %s", userID)
+
+	// Return success status without a body.
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // GetCacheStatsHandler returns cache statistics for debugging purposes
 //
 // This handler requires admin access and responds with cache statistics including

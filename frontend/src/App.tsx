@@ -11,6 +11,9 @@ import NutrientPlanner from './pages/NutrientPlanner';
 import DailyItems from './pages/DailyItems';
 import OperationHours from './pages/OperationHours';
 import Preferences from './pages/Preferences';
+import Privacy from './pages/Privacy';
+import Support from './pages/Support';
+import Terms from './pages/Terms';
 import { Toaster } from './components/ui/toaster';
 
 function App() {
@@ -30,6 +33,9 @@ function App() {
                 <Route path="/preferences" element={<Preferences />} />
                 <Route path="/all" element={<AllItems />} />
                 <Route path="/planner" element={<NutrientPlanner />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/terms" element={<Terms />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </DataLoader>

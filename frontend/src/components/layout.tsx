@@ -94,6 +94,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Button>
             <FeedbackButton />
             <BuyMeCoffee className="w-full" />
+            <nav className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <Link to="/privacy" className="hover:text-foreground transition-colors">
+                Privacy
+              </Link>
+              <Link to="/terms" className="hover:text-foreground transition-colors">
+                Terms
+              </Link>
+              <Link to="/support" className="hover:text-foreground transition-colors">
+                Support
+              </Link>
+            </nav>
           </div>
         </aside>
 
@@ -157,6 +168,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Button>
                   <FeedbackButton />
                   <BuyMeCoffee className="w-full" />
+                  <nav className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <Link
+                      to="/privacy"
+                      className="hover:text-foreground transition-colors"
+                      onClick={() => setOpen(false)}
+                    >
+                      Privacy
+                    </Link>
+                    <Link
+                      to="/terms"
+                      className="hover:text-foreground transition-colors"
+                      onClick={() => setOpen(false)}
+                    >
+                      Terms
+                    </Link>
+                    <Link
+                      to="/support"
+                      className="hover:text-foreground transition-colors"
+                      onClick={() => setOpen(false)}
+                    >
+                      Support
+                    </Link>
+                  </nav>
                 </div>
               </SheetContent>
             </Sheet>

@@ -17,9 +17,9 @@ struct AuthPromptSheet: View {
             content
         }
         .background(Theme.background)
-        // .medium fallback keeps the sign-in button reachable when the error
-        // text or a large Dynamic Type size pushes content past 280pt.
-        .presentationDetents([.height(280), .medium])
+        // .medium fallback keeps the sign-in buttons reachable when the error
+        // text or a large Dynamic Type size pushes content past the compact detent.
+        .presentationDetents([.height(360), .medium])
         .presentationDragIndicator(.visible)
     }
 
@@ -55,7 +55,11 @@ struct AuthPromptSheet: View {
             }
 
             GoogleSignInButton(isWorking: isSigningIn) {
-                signIn()
+                signIn { try await auth.signInWithGoogle() }
+            }
+
+            AppleSignInButton(isWorking: isSigningIn) {
+                signIn { try await auth.signInWithApple() }
             }
 
             Spacer(minLength: 0)
@@ -64,13 +68,13 @@ struct AuthPromptSheet: View {
         .frame(maxWidth: .infinity, alignment: .top)
     }
 
-    private func signIn() {
+    private func signIn(_ operation: @escaping () async throws -> Void) {
         errorText = nil
         isSigningIn = true
         Task {
             defer { isSigningIn = false }
             do {
-                try await auth.signInWithGoogle()
+                try await operation()
                 dismiss()
             } catch {
                 errorText = error.localizedDescription

@@ -725,6 +725,32 @@ func SaveNutritionGoals(userID string, goals models.NutritionGoals) error {
 	return nil
 }
 
+// DeleteUserData removes all rows owned by a user across the user-keyed tables
+// (GormUserPreferences and GormNutritionGoals). It runs inside a transaction so
+// the deletion is all-or-nothing. Deleting zero rows is not an error, since a
+// user may have no stored data.
+//
+// Parameters:
+// - userID: The unique identifier for the user whose data should be deleted.
+//
+// Returns:
+// - error: An error if the deletion fails.
+func DeleteUserData(userID string) error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+
+	return DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Where("user_id = ?", userID).Delete(&GormUserPreferences{}).Error; err != nil {
+			return fmt.Errorf("delete user preferences: %w", err)
+		}
+		if err := tx.Unscoped().Where("user_id = ?", userID).Delete(&GormNutritionGoals{}).Error; err != nil {
+			return fmt.Errorf("delete user nutrition goals: %w", err)
+		}
+		return nil
+	})
+}
+
 // GetNutritionGoals retrieves a user's nutrition goals from the database.
 //
 // Parameters:

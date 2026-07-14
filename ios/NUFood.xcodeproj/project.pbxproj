@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0490963B4F67928EE7A89E53 /* NutritionGoalsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B034CE38F3391F03516C359 /* NutritionGoalsSheet.swift */; };
 		0F3137FD5EA5F34FF140B48E /* AuthPromptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A95557C9AED507C687251FA /* AuthPromptSheet.swift */; };
+		162CCF9825A47386733A58DA /* AppleSignInButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBEB7CFE7214AD60E9A756A /* AppleSignInButton.swift */; };
 		222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */; };
 		2A90C64A26EED0ED3EF6AD1C /* ThemeToggleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */; };
 		2D26A548240779B7F3F3E2D1 /* HoursLocationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6C5DD380B80B154531CE75 /* HoursLocationCard.swift */; };
@@ -19,6 +20,7 @@
 		4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E36975476A6967D8323F95 /* AuthManager.swift */; };
 		66B0E677301383BFB95A55AF /* DisplaySettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2842E158375F9EA956A253CE /* DisplaySettingsSheet.swift */; };
 		6D76E8E4EE59FDCDCE3912F3 /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3BEDFF3484E417AEC1C2ABA /* DatePickerSheet.swift */; };
+		7195D9026665A71D152E2C97 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8B4706AB3C44301A2A94B6DC /* Assets.xcassets */; };
 		75141495FBE973B8C0F78AD6 /* OperationHoursScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1BE573D840E5E584E2427ED /* OperationHoursScreen.swift */; };
 		7C6F75756F52A4C52B18F9E3 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 2641B7D880C6C67B80BDB7EC /* GoogleSignInSwift */; };
 		7F148E6A77CA1276A5E681C1 /* OperatingHoursLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D60B65E990686DFBDA664F /* OperatingHoursLogic.swift */; };
@@ -52,12 +54,14 @@
 		332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeToggleButton.swift; sourceTree = "<group>"; };
 		447ADF8A120946D8B086A145 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		44D1858AF72E63F5EDC37160 /* NUFood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NUFood.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4EBEB7CFE7214AD60E9A756A /* AppleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInButton.swift; sourceTree = "<group>"; };
 		593942FE8FB74E5805335877 /* PlannerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerModel.swift; sourceTree = "<group>"; };
 		5C79418F09978BE310B646F8 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		67E03B769007FE00D3F7348B /* PlannerComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerComponents.swift; sourceTree = "<group>"; };
 		81015BD8DE9E5285ACC31EA1 /* PlannerFoodItemsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerFoodItemsTab.swift; sourceTree = "<group>"; };
 		81CBE1FFBEF34D5DDF408607 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		8A95557C9AED507C687251FA /* AuthPromptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthPromptSheet.swift; sourceTree = "<group>"; };
+		8B4706AB3C44301A2A94B6DC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		90B6CB076F6291FD4FCB0004 /* NUFoodApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NUFoodApp.swift; sourceTree = "<group>"; };
 		A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllItemsScreen.swift; sourceTree = "<group>"; };
 		AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutrientPlannerScreen.swift; sourceTree = "<group>"; };
@@ -235,6 +239,7 @@
 			isa = PBXGroup;
 			children = (
 				1399D462A8ED5DD6BA9396A6 /* AccountToolbarButton.swift */,
+				4EBEB7CFE7214AD60E9A756A /* AppleSignInButton.swift */,
 				8A95557C9AED507C687251FA /* AuthPromptSheet.swift */,
 				E1FDC5D87903CB34A18BE5F2 /* CalendarSheet.swift */,
 				2BABB0299B522AE7D7053E36 /* GoogleSignInButton.swift */,
@@ -247,6 +252,7 @@
 		DF216BFF5B0C25FBB1DADAB2 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				8B4706AB3C44301A2A94B6DC /* Assets.xcassets */,
 				5C79418F09978BE310B646F8 /* GoogleService-Info.plist */,
 			);
 			path = Resources;
@@ -329,6 +335,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7195D9026665A71D152E2C97 /* Assets.xcassets in Resources */,
 				3575888AECCCC5BC83DC7BDD /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -366,6 +373,7 @@
 				F620634A378568B5A38ECABB /* AccountToolbarButton.swift in Sources */,
 				222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */,
 				B5C68A64ECB4C886CCB49CF9 /* AppStore.swift in Sources */,
+				162CCF9825A47386733A58DA /* AppleSignInButton.swift in Sources */,
 				4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */,
 				0F3137FD5EA5F34FF140B48E /* AuthPromptSheet.swift in Sources */,
 				FBC0BBCB84767E549CB4DF49 /* CalendarSheet.swift in Sources */,
@@ -456,6 +464,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NUFood/NUFood.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

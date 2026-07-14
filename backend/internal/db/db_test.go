@@ -191,6 +191,40 @@ func TestUserAndDisplayPreferences(t *testing.T) {
 	assert.Equal(t, updated, savedDisplay)
 }
 
+func TestDeleteUserData(t *testing.T) {
+	setupTestDB(t)
+	userID := "delete-me"
+	otherUser := "keep-me"
+
+	require.NoError(t, db.SaveUserPreferences(userID, []models.AllDataItem{{Name: "Bacon"}}))
+	require.NoError(t, db.SaveNutritionGoals(userID, models.NutritionGoals{Calories: 2000, Protein: 100, Carbs: 200, Fat: 70}))
+	require.NoError(t, db.SaveUserPreferences(otherUser, []models.AllDataItem{{Name: "Eggs"}}))
+	require.NoError(t, db.SaveNutritionGoals(otherUser, models.NutritionGoals{Calories: 1800, Protein: 90, Carbs: 180, Fat: 60}))
+
+	require.NoError(t, db.DeleteUserData(userID))
+
+	// The deleted user's data is gone.
+	_, err := db.GetUserPreferences(userID)
+	assert.ErrorIs(t, err, db.NoUserPreferencesInDB)
+	_, err = db.GetNutritionGoals(userID)
+	assert.ErrorIs(t, err, db.NoUserGoalsInDB)
+
+	// Other users are unaffected.
+	otherFavorites, err := db.GetUserPreferences(otherUser)
+	require.NoError(t, err)
+	assert.Equal(t, []models.AllDataItem{{Name: "Eggs"}}, otherFavorites)
+	otherGoals, err := db.GetNutritionGoals(otherUser)
+	require.NoError(t, err)
+	assert.Equal(t, models.NutritionGoals{Calories: 1800, Protein: 90, Carbs: 180, Fat: 60}, otherGoals)
+}
+
+func TestDeleteUserDataNoRowsIsNotAnError(t *testing.T) {
+	setupTestDB(t)
+
+	// Deleting a user with no stored data should succeed.
+	require.NoError(t, db.DeleteUserData("user-with-no-data"))
+}
+
 func TestDisplayPreferencesNotFound(t *testing.T) {
 	setupTestDB(t)
 
