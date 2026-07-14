@@ -26,11 +26,15 @@ export function DatePicker({ selectedDate, setSelectedDate, setDailyItems, minDa
     if (date) {
       setSelectedDate(date);
       if (setDailyItems && weeklyItems) {
-        setDailyItems(weeklyItems[toLocalISODate(date)]);
+        setDailyItems(weeklyItems[toLocalISODate(date)] ?? []);
       }
       setIsOpen(false);
     }
   }
+
+  // When no explicit min/max is provided, availability is data-driven:
+  // only dates that actually have a weeklyItems key are selectable.
+  const dataDriven = !minDateProp || !maxDateProp
 
   // Determine valid range (inclusive), using local dates to avoid TZ off-by-one
   let minDate = minDateProp
@@ -68,7 +72,12 @@ export function DatePicker({ selectedDate, setSelectedDate, setDailyItems, minDa
           mode="single"
           selected={selectedDate}
           onSelect={onSubmit}
-          disabled={(date) => !isWithinInterval(date, { start: minDate as Date, end: maxDate as Date })}
+          disabled={(date) => {
+            if (!isWithinInterval(date, { start: minDate as Date, end: maxDate as Date })) return true
+            // Data-driven mode: disable gap dates that were never scraped
+            if (dataDriven && !(toLocalISODate(date) in (weeklyItems || {}))) return true
+            return false
+          }}
           initialFocus
           fromDate={minDate}
           toDate={maxDate}

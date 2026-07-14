@@ -64,7 +64,7 @@ var (
 	NoUserGoalsInDB       = errors.New("no user nutrition goals found")
 )
 
-const MenuRetentionDays = 100
+const MenuRetentionDays = 30
 
 // AllDataItemToGorm converts an AllDataItem model to a GormAllDataItem.
 func AllDataItemToGorm(item models.AllDataItem) GormAllDataItem {

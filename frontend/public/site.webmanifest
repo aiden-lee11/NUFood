@@ -1,0 +1,12 @@
+{
+  "name": "NUFood - Northwestern University Dining Guide",
+  "short_name": "NUFood",
+  "icons": [
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ],
+  "theme_color": "#4E2A84",
+  "background_color": "#4E2A84",
+  "display": "standalone",
+  "start_url": "/"
+}

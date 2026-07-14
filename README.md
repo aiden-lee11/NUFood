@@ -14,7 +14,7 @@ Live at: [nufood.me](https://nufood.me)
 -  Mobile-friendly design
 -  Email notifications of where favorite foods are
 -  Nutrition tracking to hit your goals
--  Retain the last 100 days of successfully scraped menus
+-  Retain the last 30 days of successfully scraped menus
 
 ## Screenshots
 

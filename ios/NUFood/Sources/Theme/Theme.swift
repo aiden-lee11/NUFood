@@ -1,8 +1,10 @@
 import SwiftUI
 import UIKit
 
-/// Rosé Pine palette matching the web app's CSS variables (SPEC §5.1).
-/// Light = Rosé Pine Dawn, Dark = Rosé Pine Main (app default).
+/// Palette matching the web app's CSS variables (SPEC §5.1).
+/// Backgrounds/text: Rosé Pine (Light = Dawn, Dark = Main, the app default).
+/// Accents: saturated Tailwind violet/red — deliberately more vivid than
+/// Rosé Pine's pastels.
 /// Adjust here only, never inline in views.
 enum Theme {
     // Backgrounds
@@ -18,13 +20,13 @@ enum Theme {
     static let textSecondary = dynamic(light: 0x726A85, dark: 0x9F9BB8)  // muted-foreground
     static let itemSelectedText = dynamic(light: 0x3E3A4F, dark: 0xE4E1F4)
 
-    // Accents (iris)
-    static let primary = dynamic(light: 0x8B7AB8, dark: 0xCEADEE)
-    static let primaryForeground = dynamic(light: 0xFAF4ED, dark: 0x191724)
+    // Accents
+    static let primary = dynamic(light: 0x7C3AED, dark: 0xA78BFA)  // violet-600 / violet-400
+    static let primaryForeground = dynamic(light: 0xFFFFFF, dark: 0x191724)
     static let accent = dynamic(light: 0xA394C7, dark: 0xB89AD6)
 
     // Semantic / status
-    static let destructive = dynamic(light: 0xC85577, dark: 0xF16D96)  // love
+    static let destructive = dynamic(light: 0xDC2626, dark: 0xEF4444)  // red-600 / red-500
     static let openGreen = dynamic(light: 0x22C55E, dark: 0x22C55E)    // text-green-500
     static let closedRed = dynamic(light: 0xEF4444, dark: 0xEF4444)    // text-red-500
     static let warningYellow = dynamic(light: 0xEAB308, dark: 0xEAB308) // text-yellow-500

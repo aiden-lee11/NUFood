@@ -490,7 +490,7 @@ const OperationHours: React.FC = () => {
                         <span className="font-medium text-card-foreground">
                           {getWeekday(selectedDate.getDay())}
                         </span>
-                        <span className={dayToShow && dayToShow.Status !== "closed" ? "text-primary font-medium" : "text-destructive font-medium"}>
+                        <span className={dayToShow && dayToShow.Status !== "closed" ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
                           {!dayToShow || dayToShow.Status === "closed" ? "Closed" : renderHours(dayToShow.Hours)}
                         </span>
                       </div>

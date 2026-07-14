@@ -48,9 +48,10 @@ struct AllItemsScreen: View {
                         .id(Self.topAnchor)
 
                     Text("Select Your Favorite Items")
-                        .font(.largeTitle.bold())
+                        .font(.title.bold())
                         .foregroundStyle(Theme.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
 
                     if totalPages > 1 {
                         pagination(page: page, totalPages: totalPages, proxy: proxy)

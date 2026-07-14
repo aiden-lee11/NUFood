@@ -40,11 +40,11 @@ struct ItemRowButton: View {
         } label: {
             HStack(spacing: 6) {
                 Text(name)
-                    .font(.body.weight(.medium))
+                    .font(.subheadline.weight(.medium))
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(isFavorite ? "★" : "☆")
-                    .font(.body)
+                    .font(.subheadline)
                 Spacer(minLength: 0)
             }
             .foregroundStyle(textColor)

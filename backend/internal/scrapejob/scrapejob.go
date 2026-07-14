@@ -19,8 +19,8 @@ import (
 
 // Options controls a single scrape run.
 type Options struct {
-	BaseDate    time.Time // center of the scrape window
-	WindowDays  int       // scrape BaseDate +/- WindowDays
+	BaseDate    time.Time // first date of the scrape window
+	DaysForward int       // scrape BaseDate through BaseDate + DaysForward
 	Retries     int       // attempts per scrape call
 	ScrapeHours bool      // also refresh location operating hours
 }
@@ -29,7 +29,7 @@ type Options struct {
 func DefaultOptions(baseDate time.Time) Options {
 	return Options{
 		BaseDate:    baseDate,
-		WindowDays:  3,
+		DaysForward: 5,
 		Retries:     3,
 		ScrapeHours: true,
 	}
@@ -54,7 +54,7 @@ func Run(opts Options) error {
 	var scrapedDates []string
 	var failedDates []string
 
-	for dayIndex := -opts.WindowDays; dayIndex <= opts.WindowDays; dayIndex++ {
+	for dayIndex := 0; dayIndex <= opts.DaysForward; dayIndex++ {
 		scrapeDate := opts.BaseDate.AddDate(0, 0, dayIndex).Format("2006-01-02")
 		log.Printf("scraping menu for date=%s dayIndex=%d", scrapeDate, dayIndex)
 

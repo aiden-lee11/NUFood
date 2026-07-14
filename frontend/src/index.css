@@ -10,16 +10,16 @@
     --card-foreground: 248 25% 35%; /* Text: #4d4668 */
     --popover: 35 100% 98%; /* Surface: #fffaf3 */
     --popover-foreground: 248 25% 35%; /* Text: #4d4668 */
-    --primary: 268 35% 55%; /* Iris: More vibrant #8b7ab8 */
-    --primary-foreground: 32 57% 95%; /* Base: #faf4ed */
+    --primary: 262 83% 58%; /* Violet-600: #7C3AED */
+    --primary-foreground: 0 0% 100%; /* White */
     --secondary: 30 40% 88%; /* Overlay: More vibrant #ede0d3 */
     --secondary-foreground: 248 25% 35%; /* Text: #4d4668 */
     --muted: 30 40% 88%; /* Overlay: More vibrant #ede0d3 */
     --muted-foreground: 248 18% 48%; /* Subtle: More vibrant #726a85 */
     --accent: 268 25% 65%; /* Softer iris for nav: #a394c7 */
     --accent-foreground: 248 25% 25%; /* Much darker text: #3e3a4f */
-    --destructive: 343 45% 52%; /* Love: More vibrant #c85577 */
-    --destructive-foreground: 32 57% 95%; /* Base: #faf4ed */
+    --destructive: 0 72% 51%; /* Red-600: #DC2626 */
+    --destructive-foreground: 0 0% 100%; /* White */
     --border: 30 40% 88%; /* Overlay: #ede0d3 */
     --input: 30 40% 88%; /* Overlay: #ede0d3 */
     --ring: 268 35% 55%; /* Iris: #8b7ab8 */
@@ -41,16 +41,16 @@
     --card-foreground: 245 60% 92%; /* Text: #e6e3f7 */
     --popover: 249 20% 16%; /* Surface: #24202f */
     --popover-foreground: 245 60% 92%; /* Text: #e6e3f7 */
-    --primary: 267 65% 80%; /* Iris: More vibrant #ceadee */
-    --primary-foreground: 249 22% 12%; /* Base: #191724 */
+    --primary: 255 92% 76%; /* Violet-400: #A78BFA */
+    --primary-foreground: 249 22% 12%; /* Base: #191724 (dark text on light violet) */
     --secondary: 248 30% 22%; /* Overlay: More vibrant #2d2a42 */
     --secondary-foreground: 245 60% 92%; /* Text: #e6e3f7 */
     --muted: 248 30% 22%; /* Overlay: More vibrant #2d2a42 */
     --muted-foreground: 248 20% 65%; /* Subtle: More vibrant #9f9bb8 */
     --accent: 267 45% 70%; /* Muted iris for nav: #b89ad6 */
     --accent-foreground: 245 60% 92%; /* Light text: #e6e3f7 */
-    --destructive: 343 80% 70%; /* Love: More vibrant #f16d96 */
-    --destructive-foreground: 249 22% 12%; /* Base: #191724 */
+    --destructive: 0 84% 60%; /* Red-500: #EF4444 */
+    --destructive-foreground: 0 0% 100%; /* White */
     --border: 248 30% 22%; /* Overlay: #2d2a42 */
     --input: 248 30% 22%; /* Overlay: #2d2a42 */
     --ring: 267 65% 80%; /* Iris: #ceadee */

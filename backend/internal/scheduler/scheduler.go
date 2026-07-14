@@ -57,7 +57,7 @@ func StartDailyScrape() {
 
 // runOnce performs a single scrape, isolating panics so the scheduler loop (and
 // the server) survive any failure inside the scrape/persist path. The scrape
-// window is centered on the current Chicago day.
+// window runs forward from the current Chicago day.
 func runOnce(loc *time.Location) {
 	defer func() {
 		if r := recover(); r != nil {

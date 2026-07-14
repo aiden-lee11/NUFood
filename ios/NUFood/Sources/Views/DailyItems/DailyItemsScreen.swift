@@ -63,8 +63,10 @@ struct DailyItemsScreen: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Daily Items for \(headerDateString)")
-                .font(.largeTitle.bold())
+                .font(.title.bold())
                 .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(openCountText)
                 .font(.title3)
                 .foregroundStyle(Theme.textSecondary)
@@ -193,7 +195,25 @@ struct DailyItemsScreen: View {
 
     private var headerDateString: String {
         let date = CentralTime.date(from: store.selectedDate) ?? Date()
-        return Self.headerDateFormatter.string(from: date)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = CentralTime.timeZone
+        let day = calendar.component(.day, from: date)
+        let month = Self.headerMonthFormatter.string(from: date)
+        return "\(month) \(day)\(Self.ordinalSuffix(for: day))"
+    }
+
+    /// "st"/"nd"/"rd"/"th" for a day-of-month, with the 11th–13th "th" exception.
+    private static func ordinalSuffix(for day: Int) -> String {
+        switch day {
+        case 11, 12, 13: return "th"
+        default:
+            switch day % 10 {
+            case 1: return "st"
+            case 2: return "nd"
+            case 3: return "rd"
+            default: return "th"
+            }
+        }
     }
 
     private var buttonDateString: String {
@@ -226,11 +246,11 @@ struct DailyItemsScreen: View {
         )
     }
 
-    /// Full month in the page title — "July 12, 2026". The web abbreviates here
-    /// (date-fns "PP") but "Jul" reads as truncation at largeTitle size.
-    private static let headerDateFormatter: DateFormatter = {
+    /// Full month for the page title; combined with an ordinal day and no year
+    /// ("July 13th") so "Daily Items for <date>" stays short and on one line.
+    private static let headerMonthFormatter: DateFormatter = {
         let df = DateFormatter()
-        df.dateFormat = "MMMM d, yyyy"
+        df.dateFormat = "MMMM"
         df.timeZone = CentralTime.timeZone
         df.locale = Locale(identifier: "en_US_POSIX")
         return df

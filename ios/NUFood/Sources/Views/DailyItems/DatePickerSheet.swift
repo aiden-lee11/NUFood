@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Daily Items date picker (SPEC §2.1) limited to the loaded menu's date span
-/// (`store.availableDates` min…max), falling back to today ±3 days when empty.
+/// Daily Items date picker (SPEC §2.1) limited to the contiguous run of loaded
+/// menu dates ending at the latest available date (`store.contiguousDateRange`),
+/// falling back to today ±3 days when no menu data is loaded.
 struct DatePickerSheet: View {
     @Environment(AppStore.self) private var store
 
@@ -11,15 +12,20 @@ struct DatePickerSheet: View {
 
     private var dateBinding: Binding<Date> {
         Binding(
-            get: { CentralTime.date(from: store.selectedDate) ?? Date() },
+            get: {
+                let date = CentralTime.date(from: store.selectedDate) ?? Date()
+                let range = selectableRange
+                // Keep the picker's highlighted date inside the offered range even
+                // if the current selection points at a gap/absent date.
+                return min(max(date, range.lowerBound), range.upperBound)
+            },
             set: { store.selectedDate = CentralTime.dateFormat.string(from: $0) }
         )
     }
 
     private var selectableRange: ClosedRange<Date> {
-        let dates = store.availableDates.compactMap(CentralTime.date(from:))
-        if let min = dates.first, let max = dates.last, min <= max {
-            return min...max
+        if let range = store.contiguousDateRange {
+            return range
         }
         let calendar = CentralTime.calendar
         let today = CentralTime.date(from: CentralTime.todayString()) ?? Date()

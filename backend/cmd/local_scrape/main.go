@@ -14,12 +14,12 @@ import (
 
 func main() {
 	var dateStr string
-	var windowDays int
+	var daysForward int
 	var retries int
 	var scrapeHours bool
 
 	flag.StringVar(&dateStr, "date", time.Now().Format("2006-01-02"), "base date (YYYY-MM-DD)")
-	flag.IntVar(&windowDays, "window", 3, "scrape window (+/- days from base date)")
+	flag.IntVar(&daysForward, "forward", 5, "scrape base date through base date + forward days")
 	flag.IntVar(&retries, "retries", 3, "retries per scrape call")
 	flag.BoolVar(&scrapeHours, "hours", true, "also scrape and update location operating hours")
 	flag.Parse()
@@ -43,7 +43,7 @@ func main() {
 
 	if err := scrapejob.Run(scrapejob.Options{
 		BaseDate:    baseDate,
-		WindowDays:  windowDays,
+		DaysForward: daysForward,
 		Retries:     retries,
 		ScrapeHours: scrapeHours,
 	}); err != nil {
