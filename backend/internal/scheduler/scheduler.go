@@ -19,10 +19,10 @@ import (
 	_ "time/tzdata"
 )
 
-// scrapeZone anchors scheduling and the scrape window to the campus timezone, so
+// campusZone anchors scheduling (scrape and mailing) to the campus timezone, so
 // "today" always means the Chicago day (and DST is handled automatically —
 // fixed UTC hours would drift an hour between CST and CDT).
-const scrapeZone = "America/Chicago"
+const campusZone = "America/Chicago"
 
 // defaultHours: 6am catches the finalized menu for the day; 6pm catches the
 // mid-day menu edits dining services sometimes make and pre-fetches tomorrow.
@@ -37,9 +37,9 @@ func StartDailyScrape() {
 		return
 	}
 
-	loc, err := time.LoadLocation(scrapeZone)
+	loc, err := time.LoadLocation(campusZone)
 	if err != nil {
-		log.Printf("failed to load timezone %q (%v); scrape cron disabled", scrapeZone, err)
+		log.Printf("failed to load timezone %q (%v); scrape cron disabled", campusZone, err)
 		return
 	}
 
@@ -94,9 +94,16 @@ func nextRun(now time.Time, hours []int, loc *time.Location) time.Time {
 // scrapeHours parses SCRAPE_HOURS_CST into a sorted, de-duplicated hour list,
 // falling back to defaultHours when unset or fully invalid.
 func scrapeHours() []int {
-	raw := strings.TrimSpace(os.Getenv("SCRAPE_HOURS_CST"))
+	return parseHoursEnv("SCRAPE_HOURS_CST", defaultHours)
+}
+
+// parseHoursEnv reads a comma-separated list of hours (0-23) from the named env
+// var into a sorted, de-duplicated slice, falling back to def when unset or
+// fully invalid. Shared by the scrape and mailing schedulers.
+func parseHoursEnv(envName string, def []int) []int {
+	raw := strings.TrimSpace(os.Getenv(envName))
 	if raw == "" {
-		return defaultHours
+		return def
 	}
 
 	seen := make(map[int]bool)
@@ -108,7 +115,7 @@ func scrapeHours() []int {
 		}
 		h, err := strconv.Atoi(part)
 		if err != nil || h < 0 || h > 23 {
-			log.Printf("ignoring invalid SCRAPE_HOURS_CST entry %q", part)
+			log.Printf("ignoring invalid %s entry %q", envName, part)
 			continue
 		}
 		if !seen[h] {
@@ -118,8 +125,8 @@ func scrapeHours() []int {
 	}
 
 	if len(hours) == 0 {
-		log.Printf("SCRAPE_HOURS_CST=%q had no valid hours; using default %v", raw, defaultHours)
-		return defaultHours
+		log.Printf("%s=%q had no valid hours; using default %v", envName, raw, def)
+		return def
 	}
 
 	sort.Ints(hours)

@@ -31,6 +31,18 @@ func GenerateUnsubscribeToken(userID string) (string, error) {
 	return token, nil
 }
 
+// ValidateUnsubscribeToken reports whether token is the valid unsubscribe token
+// for userID, using a constant-time comparison to avoid leaking the expected
+// token through timing. The error is non-nil only when the token can't be
+// computed at all (e.g. SECRET_KEY unset).
+func ValidateUnsubscribeToken(userID, token string) (bool, error) {
+	expected, err := GenerateUnsubscribeToken(userID)
+	if err != nil {
+		return false, err
+	}
+	return hmac.Equal([]byte(token), []byte(expected)), nil
+}
+
 func SendEmails() error {
 	preferencesData, err := db.GetMailingList()
 
@@ -51,15 +63,20 @@ func SendEmails() error {
 	subject := "Available Favorites Today"
 	client := sendgrid.NewSendClient(apiKey)
 
+	// A single bad recipient (e.g. a deleted Firebase user still in the DB, or a
+	// transient SendGrid error) must not abort the whole run — every user is
+	// attempted, per-user failures are logged and counted, and a summary error
+	// is returned only after everyone has been tried.
+	var sent, failed int
 	for _, userData := range preferencesData {
 		userID := userData.UserID
 		preferences := userData.Preferences
 
 		email, err := auth.GetEmailFromUID(userID)
-
 		if err != nil {
-			log.Println("An error occurred:", err)
-			return err
+			log.Printf("mailing: skip user %s: resolve email: %v", userID, err)
+			failed++
+			continue
 		}
 
 		name := strings.Split(email, "@")[0]
@@ -69,38 +86,44 @@ func SendEmails() error {
 
 		unsubscribeToken, err := GenerateUnsubscribeToken(userID)
 		if err != nil {
-			return err
+			// SECRET_KEY missing is a config problem affecting everyone; stop now.
+			return fmt.Errorf("mailing: generate unsubscribe token: %w", err)
 		}
 		unsubscribeURL := fmt.Sprintf("%s/api/unsubscribe?user=%s&token=%s",
 			baseURL, url.QueryEscape(userID), url.QueryEscape(unsubscribeToken))
 
 		htmlContent, err := FormatPreferences(preferences, unsubscribeURL)
 		if err != nil {
-			// TODO for now if we see an error we just skip the user should prob implement retry
-			log.Println(err)
+			log.Printf("mailing: skip user %s: format preferences: %v", userID, err)
+			failed++
 			continue
 		}
 
 		message := mail.NewSingleEmail(from, subject, to, plainText, htmlContent)
 		response, err := client.Send(message)
 		if err != nil {
-			return fmt.Errorf("send favorites email to user %s: %w", userID, err)
+			log.Printf("mailing: skip user %s: send: %v", userID, err)
+			failed++
+			continue
 		}
 		if response.StatusCode < 200 || response.StatusCode >= 300 {
-			return fmt.Errorf(
-				"send favorites email to user %s: sendgrid status=%d body=%s",
-				userID,
-				response.StatusCode,
-				response.Body,
-			)
+			log.Printf("mailing: skip user %s: sendgrid status=%d body=%s",
+				userID, response.StatusCode, response.Body)
+			failed++
+			continue
 		}
+		sent++
+	}
+
+	log.Printf("mailing: complete (%d sent, %d failed of %d)", sent, failed, len(preferencesData))
+	if failed > 0 {
+		return fmt.Errorf("mailing: %d of %d recipients failed (see logs)", failed, len(preferencesData))
 	}
 	return nil
 }
 
 func FormatPreferences(preferences []models.DailyItem, unsubscribeURL string) (string, error) {
 	// Organize items by dining hall
-	fmt.Printf("preferences: %v\n", preferences)
 	categories := make(map[string][]models.DailyItem)
 	for _, item := range preferences {
 		categories[item.Location] = append(categories[item.Location], item)

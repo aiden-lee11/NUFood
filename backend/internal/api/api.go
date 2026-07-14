@@ -676,11 +676,9 @@ func HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user")
 	token := r.URL.Query().Get("token")
 
-	// Validate token
-	expectedToken, err := twilio.GenerateUnsubscribeToken(userID)
-	if err != nil || token != expectedToken {
-		fmt.Printf("token: %v\n", token)
-		fmt.Printf("expectedToken: %v\n", expectedToken)
+	// Validate token (constant-time comparison inside the helper).
+	valid, err := twilio.ValidateUnsubscribeToken(userID, token)
+	if err != nil || !valid {
 		http.Error(w, "Invalid unsubscribe link", http.StatusBadRequest)
 		return
 	}

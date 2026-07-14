@@ -46,6 +46,38 @@ func TestGenerateUnsubscribeTokenRequiresSecret(t *testing.T) {
 	assert.Empty(t, token)
 }
 
+func TestValidateUnsubscribeToken(t *testing.T) {
+	t.Setenv("SECRET_KEY", "test-secret")
+
+	valid, err := twilio.GenerateUnsubscribeToken("user-123")
+	require.NoError(t, err)
+
+	// Correct token for the user validates.
+	ok, err := twilio.ValidateUnsubscribeToken("user-123", valid)
+	require.NoError(t, err)
+	assert.True(t, ok)
+
+	// Wrong token, and a valid token belonging to a different user, both reject.
+	ok, err = twilio.ValidateUnsubscribeToken("user-123", "not-the-token")
+	require.NoError(t, err)
+	assert.False(t, ok)
+
+	otherUsersToken, err := twilio.GenerateUnsubscribeToken("user-456")
+	require.NoError(t, err)
+	ok, err = twilio.ValidateUnsubscribeToken("user-123", otherUsersToken)
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
+
+func TestValidateUnsubscribeTokenRequiresSecret(t *testing.T) {
+	t.Setenv("SECRET_KEY", "")
+
+	ok, err := twilio.ValidateUnsubscribeToken("user-123", "anything")
+
+	assert.Error(t, err)
+	assert.False(t, ok)
+}
+
 func TestFormatPreferencesEscapesUserFacingValues(t *testing.T) {
 	preferences := []models.DailyItem{{
 		Name:      "<script>alert('x')</script>",

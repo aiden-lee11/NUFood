@@ -7,9 +7,9 @@ import (
 
 func mustChicago(t *testing.T) *time.Location {
 	t.Helper()
-	loc, err := time.LoadLocation(scrapeZone)
+	loc, err := time.LoadLocation(campusZone)
 	if err != nil {
-		t.Fatalf("load %s: %v", scrapeZone, err)
+		t.Fatalf("load %s: %v", campusZone, err)
 	}
 	return loc
 }
