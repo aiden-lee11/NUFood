@@ -11,6 +11,7 @@ import (
 	"backend/internal/db"
 	"backend/internal/models"
 	"backend/internal/scraper"
+	"backend/internal/store"
 	"fmt"
 	"log"
 	"strings"
@@ -99,6 +100,13 @@ func Run(opts Options) error {
 		return fmt.Errorf("failed to persist scraped menu: %w", err)
 	}
 
+	// Refresh the in-memory store that serves read requests. Without this the
+	// scheduler updates only the DB while the store keeps serving the snapshot it
+	// lazily cached on the first request after deploy — so newly scraped future
+	// days never reach clients until a restart. The HTTP scrape handlers already
+	// do this; the scheduler must too. Non-fatal: the DB is the source of truth.
+	refreshMenuStore()
+
 	log.Printf("menu update complete weekly_items=%d all_items=%d", len(weeklyItems), len(totalAllItems))
 
 	if !opts.ScrapeHours {
@@ -131,7 +139,32 @@ func Run(opts Options) error {
 	if err := db.ReplaceLocationOperatingTimes(hours); err != nil {
 		return fmt.Errorf("failed to replace location operating times: %w", err)
 	}
+	// Keep the read store in sync with the freshly persisted hours (see above).
+	store.Set(hours)
 
 	log.Printf("hours update complete locations=%d", len(hours))
 	return nil
+}
+
+// refreshMenuStore reloads the persisted menu (weekly items + the searchable
+// all-items list) from the DB into the in-memory store that serves read
+// requests. Reloading from the DB — rather than reusing this run's slices —
+// picks up retained older dates the current scrape didn't touch. Store failures
+// are logged, not fatal: the DB is authoritative and a later request or restart
+// will recover. In the standalone CLI path the global store is nil and Set is a
+// safe no-op.
+func refreshMenuStore() {
+	weekly, err := db.GetAllWeeklyItems()
+	if err != nil {
+		log.Printf("warning: refresh weekly-items store failed: %v", err)
+	} else {
+		store.Set(weekly)
+	}
+
+	allData, err := db.GetAllDataItems()
+	if err != nil {
+		log.Printf("warning: refresh all-items store failed: %v", err)
+	} else {
+		store.Set(allData)
+	}
 }
