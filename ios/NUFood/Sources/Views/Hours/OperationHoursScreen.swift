@@ -38,6 +38,15 @@ struct OperationHoursScreen: View {
             .onChange(of: store.locationOperatingTimes.count) { _, _ in
                 clampSelectedDate()
             }
+            // `selectedDate` is set once at init and the process survives being
+            // backgrounded, so without this it still reads yesterday on reopen.
+            .onChange(of: store.syncedDay) { previousToday, _ in
+                // Only advance a picker that was tracking today; a hand-picked day stays.
+                if CentralTime.dateFormat.string(from: selectedDate) == previousToday {
+                    selectedDate = Self.noonToday()
+                }
+                clampSelectedDate()
+            }
         }
     }
 

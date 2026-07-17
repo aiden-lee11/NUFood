@@ -10,7 +10,15 @@ struct DailyItemsScreen: View {
     @Environment(\.openURL) private var openURL
 
     /// Wall-clock used for live status text / open count; refreshed every 60s.
-    @State private var now = Date()
+    @State private var now = DailyItemsScreen.initialNow
+
+    /// Dev affordance: `simctl launch ... -nowOverride 2026-07-10T17:00:00Z` pins
+    /// the reference clock (used for populated App Store screenshots).
+    private static var initialNow: Date {
+        if let s = UserDefaults.standard.string(forKey: "nowOverride"),
+           let d = ISO8601DateFormatter().date(from: s) { return d }
+        return Date()
+    }
     @State private var query = ""
     @State private var showDisplaySettings = false
     @State private var showDatePicker = false
@@ -40,7 +48,12 @@ struct DailyItemsScreen: View {
                     AccountToolbarButton()
                 }
             }
-            .onReceive(clock) { now = $0 }
+            .onReceive(clock) {
+                if UserDefaults.standard.string(forKey: "nowOverride") == nil { now = $0 }
+                // Keeps the shown day/meal on the same clock as the status text, so
+                // crossing into dinner with the app open swaps the section over.
+                store.syncToClock(now: now)
+            }
             .sheet(isPresented: $showDisplaySettings) { DisplaySettingsSheet() }
             .sheet(isPresented: $showDatePicker) { DatePickerSheet() }
             .sheet(isPresented: $showAuthPrompt) { AuthPromptSheet() }

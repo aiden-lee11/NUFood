@@ -27,9 +27,22 @@ final class AppStore {
     private(set) var loadError: String?
     var selectedDate: String = CentralTime.todayString()
 
+    /// The Central day `selectedDate` was last auto-advanced to. Lets a foreground
+    /// tell "still tracking today" apart from a date the user picked by hand.
+    /// Readable so screens holding their own day (Hours) can roll over off the same
+    /// signal rather than each observing the scene phase.
+    private(set) var syncedDay: String = CentralTime.todayString()
+
     /// Meal periods shown on Daily Items ("Times" tab of Display Settings).
     /// Defaults to the current meal period only; empty outside meal windows (SPEC §3.6).
     var visibleTimes: [String] = CentralTime.currentMealPeriod().map { [$0] } ?? []
+
+    /// The meal period `visibleTimes` was last auto-set to; nil outside meal windows.
+    private var syncedMeal: String? = CentralTime.currentMealPeriod()
+
+    /// True when `initialTimes` pinned the meals for screenshots, which stops the
+    /// clock from overwriting them on foreground.
+    private var hasTimesOverride = false
 
     let auth: AuthManager
     private var api: APIClient
@@ -40,6 +53,15 @@ final class AppStore {
             try await auth?.idToken()
         })
         restoreLocal()
+        // Dev affordance: `simctl launch ... -initialDate 2026-07-10` preselects a
+        // date (used for populated App Store screenshots).
+        if let d = UserDefaults.standard.string(forKey: "initialDate"), !d.isEmpty {
+            selectedDate = d
+        }
+        if let t = UserDefaults.standard.string(forKey: "initialTimes"), !t.isEmpty {
+            visibleTimes = t.split(separator: ",").map { String($0) }
+            hasTimesOverride = true
+        }
     }
 
     // MARK: - Loading
@@ -51,6 +73,52 @@ final class AppStore {
         guard loadedForSignedIn != auth.isSignedIn else { return }
         await load()
     }
+
+    /// Re-syncs clock-derived state and refetches when the app returns from the
+    /// background. Backgrounding suspends rather than terminates the process, so
+    /// `selectedDate` and the menu data would otherwise stay frozen at whatever
+    /// "today" meant when the app was first launched, however long ago that was.
+    func handleForeground(now: Date = Date()) async {
+        guard !isLoading else { return }
+        let dayRolled = syncToClock(now: now)
+        // loadIfNeeded() is gated on auth identity, so it cannot refresh data that
+        // went stale while suspended — go straight to load().
+        if dayRolled || isStale { await load() }
+    }
+
+    /// Advances the clock-derived state (shown day, shown meal) to `now`, reporting
+    /// whether the Central day rolled over. Driven both by returning to the
+    /// foreground and by the Daily Items minute timer, so the two cannot disagree.
+    @discardableResult
+    func syncToClock(now: Date = Date()) -> Bool {
+        let today = CentralTime.todayString(now: now)
+        let dayRolled = today != syncedDay
+        if dayRolled {
+            // Only advance a view that was tracking today; a hand-picked date
+            // (and the `initialDate` screenshot override) stays put.
+            if selectedDate == syncedDay { selectedDate = today }
+            syncedDay = today
+        }
+
+        // Web parity (SPEC §3.6): the shown meal follows the clock, both across a
+        // reopen and while the app sits open through 5pm. Firing only when the period
+        // actually turns over lets toggles made within a meal survive.
+        let meal = CentralTime.currentMealPeriod(now: now)
+        if meal != syncedMeal, !hasTimesOverride {
+            visibleTimes = meal.map { [$0] } ?? []
+            syncedMeal = meal
+        }
+        return dayRolled
+    }
+
+    /// Menus are rescraped through the day, so a long-suspended session refetches
+    /// even when the day has not rolled over.
+    private var isStale: Bool {
+        guard let lastLoadedAt else { return true }
+        return Date().timeIntervalSince(lastLoadedAt) > Self.refreshInterval
+    }
+
+    private static let refreshInterval: TimeInterval = 15 * 60
 
     func load() async {
         isLoading = true
@@ -81,6 +149,7 @@ final class AppStore {
                 mailing = false
             }
             loadedForSignedIn = auth.isSignedIn
+            lastLoadedAt = Date()
         } catch {
             loadError = error.localizedDescription
         }
@@ -89,6 +158,10 @@ final class AppStore {
 
     /// Auth state a successful load() last ran under; nil before the first load.
     private var loadedForSignedIn: Bool?
+
+    /// When load() last succeeded; nil before the first load. Left untouched on
+    /// failure so the next foreground retries instead of waiting out the interval.
+    private var lastLoadedAt: Date?
 
     // MARK: - Mutations (optimistic; synced to backend when signed in)
 

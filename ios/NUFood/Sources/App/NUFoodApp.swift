@@ -5,6 +5,12 @@ struct NUFoodApp: App {
     @State private var auth: AuthManager
     @State private var store: AppStore
     @AppStorage("appearance") private var appearance: AppearanceSetting = .dark
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// Whether the app has actually been backgrounded since the last foreground pass.
+    /// Reopening runs .background -> .inactive -> .active, so the phase preceding
+    /// .active is never .background and cannot be tested for directly.
+    @State private var wasBackgrounded = false
 
     init() {
         let auth = AuthManager()
@@ -33,6 +39,22 @@ struct NUFoodApp: App {
                 }
                 .onChange(of: auth.isSignedIn) {
                     Task { await store.loadIfNeeded() }
+                }
+                // Returning from the background: the process was only suspended, so
+                // the launch .task above does not re-run and the day never rolls over
+                // on its own. Requiring a real .background visit keeps a Control Center
+                // pull or an app-switcher peek (which only reach .inactive) from
+                // refetching.
+                .onChange(of: scenePhase) { _, newPhase in
+                    switch newPhase {
+                    case .background:
+                        wasBackgrounded = true
+                    case .active where wasBackgrounded:
+                        wasBackgrounded = false
+                        Task { await store.handleForeground() }
+                    default:
+                        break
+                    }
                 }
         }
     }
