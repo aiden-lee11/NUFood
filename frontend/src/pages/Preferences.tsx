@@ -130,7 +130,7 @@ const Preferences: React.FC = () => {
         title="Your Preferences - NUFood"
         description="Manage your favorite Northwestern University dining items. View and edit your personalized food preferences and favorites."
         keywords="Northwestern dining preferences, NU favorite foods, campus dining favorites, Northwestern food preferences"
-        url="https://nufood.me/preferences"
+        url="https://dining.nu/preferences"
       />
 
       <div className="max-w-3xl">

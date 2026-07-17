@@ -2,7 +2,7 @@
 
 A modern, fast alternative to Northwestern University's Dine on Campus app. View dining hall menus, operating hours, track your nutrition, and save your favorite foods to get personalized recommendations on where to dine.
 
-Live at: [nufood.me](https://nufood.me)
+Live at: [dining.nu](https://dining.nu)
 
 ## Features
 

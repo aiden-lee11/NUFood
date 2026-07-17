@@ -8,7 +8,7 @@ const Terms: React.FC = () => {
       title="Terms of Use"
       seoTitle="Terms of Use - NUFood"
       seoDescription="The terms for using NUFood, an independent app and website showing Northwestern University dining information."
-      url="https://nufood.me/terms"
+      url="https://dining.nu/terms"
       lastUpdated="July 13, 2026"
     >
       <p>

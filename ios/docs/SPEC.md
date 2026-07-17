@@ -6,7 +6,7 @@ entirely from the React source at `frontend/src`. iOS implementers should treat 
 source of truth alongside screenshots.
 
 **App identity:** brand name is **`NUFood`** (also referred to as "NU Food Finder" in toasts).
-Production domain: `https://nufood.me`. All dining data is **Northwestern University** (Evanston, IL)
+Production domain: `https://dining.nu`. All dining data is **Northwestern University** (Evanston, IL)
 — everything runs on **US Central time** conceptually, but see the important timezone note in §3.
 
 ---

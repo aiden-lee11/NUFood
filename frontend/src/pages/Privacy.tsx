@@ -8,7 +8,7 @@ const Privacy: React.FC = () => {
       title="Privacy Policy"
       seoTitle="Privacy Policy - NUFood"
       seoDescription="How NUFood handles your data: account information, favorites, nutrition goals, and the third-party services we use."
-      url="https://nufood.me/privacy"
+      url="https://dining.nu/privacy"
       lastUpdated="July 13, 2026"
     >
       <p>

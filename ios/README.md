@@ -1,6 +1,6 @@
 # NUFood iOS
 
-Native SwiftUI port of [nufood.me](https://nufood.me). Talks to the same production
+Native SwiftUI port of [dining.nu](https://dining.nu). Talks to the same production
 backend as the web app (read/write via the existing REST API — no backend changes).
 
 ## Requirements

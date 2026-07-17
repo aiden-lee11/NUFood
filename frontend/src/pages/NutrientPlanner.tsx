@@ -298,7 +298,7 @@ const NutrientPlanner: React.FC = () => {
                 title="Nutrition Planner - NUFood"
                 description="Plan your daily nutrition with Northwestern University dining options. Track calories, proteins, carbs and other nutrients from campus food choices."
                 keywords="Northwestern nutrition planner, NU calorie tracker, campus food nutrition, university meal planning"
-                url="https://nufood.me/planner"
+                url="https://dining.nu/planner"
             />
             <h1 className="text-2xl md:text-3xl lg:text-4xl mb-4 flex-shrink-0 text-foreground font-bold">
                 Nutrient Planner

@@ -181,7 +181,7 @@ const AllItems: React.FC = () => {
         title="All Menu Items - NUFood"
         description="Browse and search through all available menu items at Northwestern University dining locations. Find and favorite your preferred dishes."
         keywords="Northwestern University menu, NU all items, campus dining search, Northwestern food database"
-        url="https://nufood.me/all"
+        url="https://dining.nu/all"
       />
       <h1 className="text-2xl font-bold mb-4">Select Your Favorite Items</h1>
 

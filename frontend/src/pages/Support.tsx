@@ -8,7 +8,7 @@ const Support: React.FC = () => {
       title="Support"
       seoTitle="Support - NUFood"
       seoDescription="Get help with NUFood: how sign-in, favorites, nutrition goals, and account deletion work, plus how to contact us."
-      url="https://nufood.me/support"
+      url="https://dining.nu/support"
     >
       <p>
         NUFood is an independent, student-built app and website that shows Northwestern

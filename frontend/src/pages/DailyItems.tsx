@@ -236,7 +236,7 @@ const DailyItems: React.FC = () => {
         title="Today's Menu - NUFood"
         description="Discover today's dining options at Northwestern University. Find what's available now at your favorite campus dining locations."
         keywords="Northwestern University dining today, NU daily menu, campus food today, Northwestern dining hours"
-        url="https://nufood.me/"
+        url="https://dining.nu/"
       />
       <HeaderControls
         selectedDate={selectedDate}

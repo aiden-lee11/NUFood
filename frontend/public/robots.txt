@@ -11,7 +11,7 @@ Disallow: /admin/
 Disallow: /api/
 
 # Sitemap
-Sitemap: https://nufood.me/sitemap.xml
+Sitemap: https://dining.nu/sitemap.xml
 
 # Crawl delay (be nice to Northwestern servers)
 Crawl-delay: 1
