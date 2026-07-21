@@ -22,7 +22,9 @@ struct AccountToolbarButton: View {
 
 /// The Account sheet contents. Signed out → offers Google sign-in; signed in → shows the
 /// email, a Notifications toggle bound through `store.setMailing`, and a Sign Out action.
-/// Both states include "Send Feedback" (mailto) and "Support this project" rows.
+/// Both states include a "Send Feedback" (mailto) row. The web app's "Support this project"
+/// donation link is intentionally omitted on iOS — App Store guideline 3.1.1 requires donations
+/// for digital content/services to go through In-App Purchase.
 private struct AccountSheet: View {
     @Environment(AuthManager.self) private var auth
     @Environment(AppStore.self) private var store
@@ -36,7 +38,6 @@ private struct AccountSheet: View {
     @State private var deleteError: String?
 
     private static let feedbackURL = URL(string: "mailto:nufoodfinder@gmail.com?subject=NUFood%20Feedback")
-    private static let supportURL = URL(string: "https://buymeacoffee.com/aidenlee11")
 
     private var mailingBinding: Binding<Bool> {
         Binding(
@@ -187,12 +188,6 @@ private struct AccountSheet: View {
             if let url = Self.feedbackURL {
                 Link(destination: url) {
                     linkRow(icon: "envelope", title: "Send Feedback")
-                }
-                .listRowBackground(Theme.card)
-            }
-            if let url = Self.supportURL {
-                Link(destination: url) {
-                    linkRow(icon: "cup.and.saucer", title: "Support this project")
                 }
                 .listRowBackground(Theme.card)
             }

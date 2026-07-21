@@ -114,6 +114,8 @@ each surface contains.
   - **"Send Feedback"** button (outline, `MessageSquare` icon) → opens Feedback dialog.
   - **"Support this project"** button (outline, `Coffee` icon) → opens
     `https://buymeacoffee.com/aidenlee11` in a new tab; tooltip "Buy me a coffee!".
+    **Web only — do NOT port.** App Store guideline 3.1.1 requires donations tied to digital
+    content/services to use In-App Purchase, and this link got v1.0 rejected.
 
 **Top header bar (all sizes, 56px tall, bottom border, `bg-background`):**
 - Left (mobile only, hidden ≥lg): hamburger **Menu** icon button opening the left drawer (`Sheet`).
@@ -734,6 +736,7 @@ Favorited = `★` (U+2605), not favorited = `☆` (U+2606). Remove control on Fa
   improvement.`, `Email`, `Your Feedback`, `Send feedback`, toast `Feedback Sent` / `Thank you for
   your feedback!`.
 - Support: `Support this project`, tooltip `Buy me a coffee!` (→ buymeacoffee.com/aidenlee11).
+  **Web only — omitted on iOS per guideline 3.1.1.**
 - Toasts: `Login Successful` / `Welcome to NU Food Finder!`; `Login Failed` / `An error occurred
   during login. Please try again.`; `Signed Out Successfully` / `We hope to see you again soon!`.
 
