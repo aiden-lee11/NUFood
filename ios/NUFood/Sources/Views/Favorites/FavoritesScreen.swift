@@ -1,28 +1,33 @@
 import SwiftUI
+import UIKit
 
 /// Your Favorites (`/preferences`) — list & manage favorited item names. SPEC §2.5.
 /// Only reachable when signed in (RootView gates the tab), but renders a defensive
 /// signed-out fallback anyway.
 ///
-/// Native-iOS management UX:
-///   - swipe a row left for a single destructive "Remove"
-///   - Edit enters multi-select; "Remove Selected (n)" batches through a
-///     confirmation dialog and one `AppStore.removeFavorites` call.
+/// Management UX matches the star rows used everywhere else in the app:
+///   - tapping a row unfavorites it immediately (persisted), but the row stays in
+///     place dimmed with an outline star until the user leaves the screen —
+///     tapping again re-favorites it, so a mistap is recoverable in place
+///   - swipe a row left for an immediate destructive "Remove" shortcut
+///   - a filter field (web Preferences parity) narrows long lists.
 struct FavoritesScreen: View {
     @Environment(AppStore.self) private var store
     @Environment(AuthManager.self) private var auth
 
     @State private var showAuthPrompt = false
-    @State private var editMode: EditMode = .inactive
-    @State private var selection: Set<String> = []
-    @State private var showRemoveConfirmation = false
+    @State private var filterText = ""
+
+    /// Names unfavorited on this screen that remain visible (dimmed) until the
+    /// view disappears or the list is refreshed.
+    @State private var pendingRemoved: Set<String> = []
 
     var body: some View {
         NavigationStack {
             Group {
                 if !auth.isSignedIn {
                     signedOutContent
-                } else if sortedFavorites.isEmpty {
+                } else if displayedNames.isEmpty {
                     emptyState
                 } else {
                     favoritesList
@@ -32,23 +37,14 @@ struct FavoritesScreen: View {
             .navigationTitle("Your Favorites")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if auth.isSignedIn && !sortedFavorites.isEmpty {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(editMode.isEditing ? "Done" : "Edit") {
-                            withAnimation {
-                                editMode = editMode.isEditing ? .inactive : .active
-                                selection.removeAll()
-                            }
-                        }
-                        .fontWeight(editMode.isEditing ? .semibold : .regular)
-                    }
-                }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     ThemeToggleButton()
                     AccountToolbarButton()
                 }
             }
-            .environment(\.editMode, $editMode)
+            .onDisappear {
+                pendingRemoved.removeAll()
+            }
         }
         .sheet(isPresented: $showAuthPrompt) {
             AuthPromptSheet()
@@ -58,71 +54,72 @@ struct FavoritesScreen: View {
     // MARK: - Favorites list
 
     private var favoritesList: some View {
-        List(selection: $selection) {
+        List {
             Section {
-                ForEach(sortedFavorites, id: \.self) { name in
-                    FavoriteRow(name: name)
-                        .listRowBackground(Theme.card)
-                        .listRowSeparatorTint(Theme.border)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                remove([name])
-                            } label: {
-                                Label("Remove", systemImage: "star.slash")
-                            }
-                            .tint(Theme.destructive)
-                            .accessibilityLabel("Remove \(name) from favorites")
-                        }
-                        .tag(name)
-                }
             } header: {
-                header
-                    .textCase(nil)
-                    .padding(.bottom, 8)
+                VStack(alignment: .leading, spacing: 12) {
+                    header
+                    filterField
+                }
+                .textCase(nil)
+            }
+
+            if visibleNames.isEmpty {
+                Section {
+                    Text("No favorites match \"\(filterText.trimmingCharacters(in: .whitespaces))\"")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .listRowBackground(Theme.card)
+                }
+            } else {
+                Section {
+                    ForEach(visibleNames, id: \.self) { name in
+                        row(name)
+                    }
+                }
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .bottom) {
-            if editMode.isEditing {
-                removeSelectedBar
-            }
-        }
-        .confirmationDialog(
-            "Remove \(selection.count) favorite\(selection.count == 1 ? "" : "s")?",
-            isPresented: $showRemoveConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Remove", role: .destructive) {
-                remove(selection)
-            }
-            Button("Cancel", role: .cancel) {}
+        .scrollDismissesKeyboard(.interactively)
+        .refreshable {
+            await store.refresh()
+            withAnimation { pendingRemoved.removeAll() }
         }
     }
 
-    /// Fixed action bar shown while editing: batch-remove the current selection.
-    private var removeSelectedBar: some View {
-        Button {
-            showRemoveConfirmation = true
-        } label: {
-            Text("Remove Selected (\(selection.count))")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    Theme.destructive.opacity(selection.isEmpty ? 0.4 : 1),
-                    in: RoundedRectangle(cornerRadius: Theme.radius)
-                )
+    private func row(_ name: String) -> some View {
+        FavoriteRow(name: name, isPending: isPending(name)) {
+            toggleRow(name)
         }
-        .disabled(selection.isEmpty)
-        .accessibilityLabel("Remove \(selection.count) selected favorites")
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Theme.background)
-        .overlay(alignment: .top) {
-            Divider().overlay(Theme.border)
+        .listRowBackground(Theme.card)
+        .listRowSeparatorTint(Theme.border)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                removeNow(name)
+            } label: {
+                Label("Remove", systemImage: "star.slash")
+            }
+            .tint(Theme.destructive)
+            .accessibilityLabel("Remove \(name) from favorites")
         }
+    }
+
+    private var filterField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(Theme.textSecondary)
+            TextField("Filter favorites...", text: $filterText)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .foregroundStyle(Theme.textPrimary)
+        }
+        .padding(12)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.radius)
+                .stroke(Theme.border, lineWidth: 1)
+        )
     }
 
     // MARK: - Header / empty / signed-out
@@ -144,20 +141,28 @@ struct FavoritesScreen: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "star.slash")
-                .font(.system(size: 44))
-                .foregroundStyle(Theme.textSecondary)
-            Text("No favorites yet")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
-            Text("Star items in All Items to see them here")
-                .font(.subheadline)
-                .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.center)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                VStack(spacing: 12) {
+                    Image(systemName: "star.slash")
+                        .font(.system(size: 44))
+                        .foregroundStyle(Theme.textSecondary)
+                    Text("No favorites yet")
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Star items in All Items to see them here")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(32)
+                .frame(maxWidth: .infinity)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .refreshable { await store.refresh() }
     }
 
     private var signedOutContent: some View {
@@ -195,43 +200,85 @@ struct FavoritesScreen: View {
 
     // MARK: - Data / actions
 
-    private var sortedFavorites: [String] {
-        store.favorites.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    /// Current favorites plus pending-removed rows, so an unfavorited row holds
+    /// its place until the user leaves the screen.
+    private var displayedNames: [String] {
+        store.favorites.union(pendingRemoved)
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    /// Displayed rows filtered live by the search text.
+    private var visibleNames: [String] {
+        let query = filterText.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !query.isEmpty else { return displayedNames }
+        return displayedNames.filter { $0.lowercased().contains(query) }
     }
 
     private var countText: String {
-        let count = sortedFavorites.count
+        let count = store.favorites.count
         return count == 1 ? "1 item" : "\(count) items"
     }
 
-    private func remove(_ names: Set<String>) {
+    private func isPending(_ name: String) -> Bool {
+        !store.favorites.contains(name)
+    }
+
+    private func toggleRow(_ name: String) {
         withAnimation {
-            store.removeFavorites(names)
-            selection.subtract(names)
-            if store.favorites.isEmpty {
-                editMode = .inactive
+            if store.favorites.contains(name) {
+                pendingRemoved.insert(name)
+            } else {
+                pendingRemoved.remove(name)
             }
+            store.toggleFavorite(name)
+        }
+    }
+
+    private func removeNow(_ name: String) {
+        withAnimation {
+            if store.favorites.contains(name) {
+                store.removeFavorites([name])
+            }
+            pendingRemoved.remove(name)
         }
     }
 }
 
 // MARK: - Favorite row
 
-/// One favorite: leading filled star in the app accent, plain name — selection
-/// circles (edit mode) and the swipe action carry all management affordances.
+/// One favorite: leading star in the app accent, plain name. Tapping toggles —
+/// a pending-removed row dims, swaps to an outline star, and shows a re-add hint.
 private struct FavoriteRow: View {
     let name: String
+    let isPending: Bool
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "star.fill")
-                .font(.subheadline)
-                .foregroundStyle(Theme.primary)
-            Text(name)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.textPrimary)
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: isPending ? "star" : "star.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(isPending ? Theme.textSecondary : Theme.primary)
+                Text(name)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(isPending ? Theme.textSecondary : Theme.textPrimary)
+                Spacer(minLength: 0)
+                if isPending {
+                    Text("Tap to re-add")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 4)
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityLabel(name)
+        .accessibilityValue(isPending ? "Removed from favorites" : "Favorited")
+        .accessibilityHint(isPending ? "Tap to add back to favorites" : "Tap to remove from favorites")
     }
 }
