@@ -40,8 +40,8 @@ final class AuthManager {
     private var appleSignInCoordinator: AppleSignInCoordinator?
 
     init() {
-        // FirebaseApp.configure() runs in AppDelegate.didFinishLaunchingWithOptions,
-        // which fires before this initializer; a configured app is the signal that
+        // NUFoodApp.init() calls AppDelegate.configureFirebaseIfNeeded() before
+        // constructing this manager, so a configured app is the signal that
         // GoogleService-Info.plist was present.
         guard FirebaseApp.app() != nil else {
             hasResolvedInitialState = true

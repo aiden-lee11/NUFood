@@ -15,6 +15,10 @@ struct NUFoodApp: App {
     @State private var wasBackgrounded = false
 
     init() {
+        // Must precede AuthManager: SwiftUI runs this initializer before any
+        // UIApplicationDelegate lifecycle method, and AuthManager.init requires a
+        // configured FirebaseApp to enable sign-in.
+        AppDelegate.configureFirebaseIfNeeded()
         let auth = AuthManager()
         _auth = State(initialValue: auth)
         _store = State(initialValue: AppStore(auth: auth))
