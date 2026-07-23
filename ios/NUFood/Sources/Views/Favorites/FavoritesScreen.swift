@@ -15,8 +15,9 @@ struct FavoritesScreen: View {
     @Environment(AppStore.self) private var store
     @Environment(AuthManager.self) private var auth
 
-    @State private var showAuthPrompt = false
     @State private var filterText = ""
+    @State private var isSigningIn = false
+    @State private var signInError: String?
 
     /// Names unfavorited on this screen that remain visible (dimmed) until the
     /// view disappears or the list is refreshed.
@@ -45,9 +46,6 @@ struct FavoritesScreen: View {
             .onDisappear {
                 pendingRemoved.removeAll()
             }
-        }
-        .sheet(isPresented: $showAuthPrompt) {
-            AuthPromptSheet()
         }
     }
 
@@ -151,7 +149,7 @@ struct FavoritesScreen: View {
                     Text("No favorites yet")
                         .font(.headline)
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Star items in All Items to see them here")
+                    Text("Tap any item to save it to your favorites.")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -177,24 +175,46 @@ struct FavoritesScreen: View {
     }
 
     private var signedOutFallback: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Sign in to save your preferences, access your favorites, and more!")
-                .font(.body)
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Button {
-                showAuthPrompt = true
-            } label: {
-                Text("Sign in with Google")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.primaryForeground)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 20)
-                    .background(Theme.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+        VStack(spacing: 20) {
+            VStack(spacing: 12) {
+                Image(systemName: "star")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Theme.textSecondary)
+                Text("Sign in to start favoriting items.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
             }
-            .buttonStyle(.plain)
+
+            if let signInError {
+                Text(signInError)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.destructive)
+                    .multilineTextAlignment(.center)
+            }
+
+            GoogleSignInButton(isWorking: isSigningIn) {
+                signIn { try await auth.signInWithGoogle() }
+            }
+
+            AppleSignInButton(isWorking: isSigningIn) {
+                signIn { try await auth.signInWithApple() }
+            }
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func signIn(_ operation: @escaping () async throws -> Void) {
+        signInError = nil
+        isSigningIn = true
+        Task {
+            defer { isSigningIn = false }
+            do {
+                try await operation()
+            } catch {
+                signInError = error.localizedDescription
+            }
         }
     }
 

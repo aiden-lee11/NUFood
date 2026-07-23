@@ -65,7 +65,6 @@ enum AppTab: String {
 }
 
 struct RootView: View {
-    @Environment(AuthManager.self) private var auth
     @State private var selection: AppTab = .daily
 
     var body: some View {
@@ -82,12 +81,9 @@ struct RootView: View {
             NutrientPlannerScreen()
                 .tabItem { Label("Planner", systemImage: "chart.pie") }
                 .tag(AppTab.planner)
-            // Matches web: "Your Favorites" nav item only exists when signed in.
-            if auth.isSignedIn {
-                FavoritesScreen()
-                    .tabItem { Label("Favorites", systemImage: "heart") }
-                    .tag(AppTab.favorites)
-            }
+            FavoritesScreen()
+                .tabItem { Label("Favorites", systemImage: "heart") }
+                .tag(AppTab.favorites)
         }
         .transientErrorToast()
         .onAppear {
