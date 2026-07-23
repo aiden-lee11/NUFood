@@ -14,6 +14,14 @@ import (
 )
 
 var firebaseAuth *auth.Client
+var firebaseApp *firebase.App
+
+// App returns the initialized Firebase app so other packages (e.g. push
+// notifications) can create their own clients from the same credentials.
+// Returns nil if InitFirebase has not run successfully.
+func App() *firebase.App {
+	return firebaseApp
+}
 
 // FirebaseConfig represents the structure of the Firebase configuration JSON.
 //
@@ -114,6 +122,7 @@ func InitFirebase() error {
 	if err != nil {
 		return fmt.Errorf("error initializing Firebase app: %v", err)
 	}
+	firebaseApp = app
 
 	// Get an auth client from the Firebase app
 	firebaseAuth, err = app.Auth(context.Background())

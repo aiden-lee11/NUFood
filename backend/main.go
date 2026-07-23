@@ -6,8 +6,10 @@ import (
 	"backend/internal/cache"
 	"backend/internal/db"
 	"backend/internal/middleware"
+	"backend/internal/push"
 	"backend/internal/scheduler"
 	"backend/internal/store"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -29,6 +31,10 @@ func main() {
 
 	if err := auth.InitFirebase(); err != nil {
 		log.Fatalf("Error initializing Firebase: %v", err)
+	}
+
+	if err := push.Init(context.Background()); err != nil {
+		log.Fatalf("Error initializing push notifications: %v", err)
 	}
 
 	POSTGRES_URL := os.Getenv("POSTGRES_URL")
@@ -69,6 +75,12 @@ func main() {
 	// SECRET_KEY to be set (and a verified SendGrid sender identity).
 	// scheduler.StartDailyMailing()
 
+	// Meal-time push notifications: 30 minutes before each meal period, push
+	// opted-in users the favorites available for that meal. Fires at 6:30,
+	// 10:30, and 16:30 Central by default; override with NOTIFY_TIMES_CST or
+	// disable with ENABLE_NOTIFY_CRON=false.
+	scheduler.StartDailyNotify()
+
 	// Create a new router
 	r := mux.NewRouter()
 
@@ -90,6 +102,10 @@ func main() {
 
 	// Account deletion endpoint (required for App Store review)
 	apiRouter.HandleFunc("/user", middleware.AuthMiddleware(api.DeleteUserHandler)).Methods("DELETE", "OPTIONS")
+
+	// Device token endpoints for meal-time push notifications
+	apiRouter.HandleFunc("/deviceToken", middleware.AuthMiddleware(api.RegisterDeviceToken)).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/deviceToken", middleware.AuthMiddleware(api.DeleteDeviceToken)).Methods("DELETE", "OPTIONS")
 
 	// Scrape and Save Data endpoints
 	apiRouter.HandleFunc("/scrapeWeeklyItems", middleware.ScrapeMiddleware(api.ScrapeWeeklyItemsHandler)).Methods("POST", "OPTIONS")

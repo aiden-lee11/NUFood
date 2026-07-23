@@ -47,6 +47,17 @@ type GormLocationOperatingTimes struct {
 	Week []byte `gorm:"type:jsonb"` // JSON-encoded weekly operating times.
 }
 
+// GormDeviceToken stores an FCM registration token for a user's device so the
+// notification cron can push to it. A token is globally unique (uniqueIndex):
+// if the same token re-registers under a different user, ownership moves to the
+// newest user rather than duplicating the row.
+type GormDeviceToken struct {
+	gorm.Model
+	UserID   string `gorm:"index"`       // Firebase UID that owns this device.
+	Token    string `gorm:"uniqueIndex"` // FCM registration token.
+	Platform string // Client platform (e.g. "ios", "web").
+}
+
 // GormNutritionGoals represents user-defined nutrition goals
 type GormNutritionGoals struct {
 	gorm.Model
@@ -108,6 +119,7 @@ func Migrate(database *gorm.DB) error {
 		&GormLocationOperatingTimes{},
 		&GormWeeklyItem{},
 		&GormNutritionGoals{},
+		&GormDeviceToken{},
 	); err != nil {
 		return err
 	}
@@ -642,6 +654,107 @@ func GetAvailableFavoritesBatch(userID string) ([]models.DailyItem, error) {
 	return matchingItems, nil
 }
 
+// GetAvailableFavoritesForMeal returns the user's favorite items that appear on
+// the given date for a specific meal period (e.g. "Breakfast"). It mirrors
+// GetAvailableFavoritesBatch but scopes results to a single date and TimeOfDay,
+// which the notification cron needs to describe the upcoming meal only.
+func GetAvailableFavoritesForMeal(userID, date, timeOfDay string) ([]models.DailyItem, error) {
+	userPreferences, err := GetUserPreferences(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var search []string
+	for _, pref := range userPreferences {
+		search = append(search, pref.Name)
+	}
+	if len(search) == 0 {
+		return []models.DailyItem{}, nil
+	}
+
+	var matchingItems []models.DailyItem
+	result := DB.Table("gorm_weekly_items").
+		Where("name IN ? AND date = ? AND time_of_day = ?", search, date, timeOfDay).
+		Find(&matchingItems)
+
+	if result.Error != nil {
+		fmt.Println("Error finding favorite items for meal:", result.Error)
+		return []models.DailyItem{}, result.Error
+	}
+
+	return matchingItems, nil
+}
+
+// SaveDeviceToken upserts an FCM registration token for the user. Because a
+// token is unique per device, re-registering an existing token reassigns it to
+// the current user and refreshes UpdatedAt rather than creating a duplicate.
+func SaveDeviceToken(userID, token, platform string) error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+
+	return DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "token"}},
+		DoUpdates: clause.AssignmentColumns([]string{"user_id", "platform", "updated_at"}),
+	}).Create(&GormDeviceToken{
+		UserID:   userID,
+		Token:    token,
+		Platform: platform,
+	}).Error
+}
+
+// DeleteDeviceToken removes a single token owned by the user. Removing zero
+// rows is not an error, so the caller can treat the delete as idempotent.
+func DeleteDeviceToken(userID, token string) error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+	return DB.Unscoped().Where("user_id = ? AND token = ?", userID, token).Delete(&GormDeviceToken{}).Error
+}
+
+// DeleteDeviceTokensForUser removes every device token owned by the user. Used
+// by the account-deletion path.
+func DeleteDeviceTokensForUser(userID string) error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+	return DB.Unscoped().Where("user_id = ?", userID).Delete(&GormDeviceToken{}).Error
+}
+
+// DeleteDeviceTokensByToken removes the given tokens regardless of owner. The
+// notification sender uses this to prune tokens FCM reports as unregistered or
+// invalid. Removing zero rows is not an error.
+func DeleteDeviceTokensByToken(tokens []string) error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+	if len(tokens) == 0 {
+		return nil
+	}
+	return DB.Unscoped().Where("token IN ?", tokens).Delete(&GormDeviceToken{}).Error
+}
+
+// GetAllDeviceTokens returns every stored device token grouped by owning user.
+// The notification cron iterates users so it can build one push per user from
+// their favorites.
+func GetAllDeviceTokens() (map[string][]string, error) {
+	if DB == nil {
+		return nil, errors.New("database is not initialized")
+	}
+
+	var deviceTokens []GormDeviceToken
+	if err := DB.Find(&deviceTokens).Error; err != nil {
+		return nil, err
+	}
+
+	tokensByUser := make(map[string][]string)
+	for _, dt := range deviceTokens {
+		tokensByUser[dt.UserID] = append(tokensByUser[dt.UserID], dt.Token)
+	}
+
+	return tokensByUser, nil
+}
+
 func GetMailingList() ([]models.PreferenceReturn, error) {
 	rows, err := DB.Raw("SELECT user_id FROM gorm_user_preferences WHERE mailing = true").Rows()
 	if err != nil {
@@ -746,6 +859,9 @@ func DeleteUserData(userID string) error {
 		}
 		if err := tx.Unscoped().Where("user_id = ?", userID).Delete(&GormNutritionGoals{}).Error; err != nil {
 			return fmt.Errorf("delete user nutrition goals: %w", err)
+		}
+		if err := tx.Unscoped().Where("user_id = ?", userID).Delete(&GormDeviceToken{}).Error; err != nil {
+			return fmt.Errorf("delete user device tokens: %w", err)
 		}
 		return nil
 	})

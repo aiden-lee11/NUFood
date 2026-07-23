@@ -391,6 +391,85 @@ func SetDisplayPreferences(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// maxDeviceTokenLength bounds an accepted FCM registration token. Real tokens
+// are a few hundred characters; this leaves generous headroom while rejecting
+// obviously malformed input.
+const maxDeviceTokenLength = 4096
+
+// RegisterDeviceToken stores (upserts) an FCM registration token for the
+// authenticated user so the notification cron can push to their device.
+//
+// Expected Authorization:
+//   - Authorization header containing a valid Firebase ID token (Bearer token).
+//
+// Expected Body:
+//   - JSON object {"token": "...", "platform": "ios"}.
+func RegisterDeviceToken(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(string)
+
+	var req struct {
+		Token    string `json:"token"`
+		Platform string `json:"platform"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Error decoding JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	token := strings.TrimSpace(req.Token)
+	if token == "" {
+		http.Error(w, "token field is required", http.StatusBadRequest)
+		return
+	}
+	if len(token) > maxDeviceTokenLength {
+		http.Error(w, "token exceeds maximum length", http.StatusBadRequest)
+		return
+	}
+
+	platform := strings.TrimSpace(req.Platform)
+
+	if err := db.SaveDeviceToken(userID, token, platform); err != nil {
+		http.Error(w, "Error saving device token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteDeviceToken removes an FCM registration token owned by the
+// authenticated user. It is idempotent: deleting an absent token still returns
+// success.
+//
+// Expected Authorization:
+//   - Authorization header containing a valid Firebase ID token (Bearer token).
+//
+// Expected Body:
+//   - JSON object {"token": "..."}.
+func DeleteDeviceToken(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(string)
+
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Error decoding JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	token := strings.TrimSpace(req.Token)
+	if token == "" {
+		http.Error(w, "token field is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := db.DeleteDeviceToken(userID, token); err != nil {
+		http.Error(w, "Error deleting device token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 // GetAllDataHandler retrieves and combines all relevant dining hall data for the user.
 //
 // This handler expects an Authorization header containing a valid Firebase ID token. It combines daily items, location operating times, and user preferences into a single JSON response.

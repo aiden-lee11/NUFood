@@ -152,6 +152,93 @@ func TestAvailableFavoritesUsesActualDate(t *testing.T) {
 	assert.Equal(t, "Bacon", favorites[1].Name)
 }
 
+func mealItem(date, name, location, timeOfDay string) models.WeeklyItem {
+	return models.WeeklyItem{DailyItem: models.DailyItem{
+		Name:        name,
+		Date:        date,
+		Location:    location,
+		StationName: "Comfort",
+		TimeOfDay:   timeOfDay,
+	}}
+}
+
+func TestGetAvailableFavoritesForMealFiltersByMeal(t *testing.T) {
+	setupTestDB(t)
+	date := "2026-07-10"
+
+	require.NoError(t, db.PersistScrapedMenu(
+		[]models.WeeklyItem{
+			mealItem(date, "Bacon", "Allison", "Breakfast"),
+			mealItem(date, "Bacon", "Sargent", "Dinner"),
+			mealItem(date, "Eggs", "Allison", "Breakfast"),
+		},
+		nil,
+		[]string{date},
+		time.Now(),
+	))
+	require.NoError(t, db.SaveUserPreferences("test-user", []models.AllDataItem{{Name: "Bacon"}, {Name: "Eggs"}}))
+
+	breakfast, err := db.GetAvailableFavoritesForMeal("test-user", date, "Breakfast")
+	require.NoError(t, err)
+	require.Len(t, breakfast, 2)
+
+	dinner, err := db.GetAvailableFavoritesForMeal("test-user", date, "Dinner")
+	require.NoError(t, err)
+	require.Len(t, dinner, 1)
+	assert.Equal(t, "Bacon", dinner[0].Name)
+	assert.Equal(t, "Sargent", dinner[0].Location)
+
+	lunch, err := db.GetAvailableFavoritesForMeal("test-user", date, "Lunch")
+	require.NoError(t, err)
+	assert.Empty(t, lunch)
+}
+
+func TestDeviceTokenLifecycle(t *testing.T) {
+	setupTestDB(t)
+
+	require.NoError(t, db.SaveDeviceToken("user-a", "token-1", "ios"))
+	require.NoError(t, db.SaveDeviceToken("user-a", "token-2", "ios"))
+	require.NoError(t, db.SaveDeviceToken("user-b", "token-3", "web"))
+
+	tokens, err := db.GetAllDeviceTokens()
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"token-1", "token-2"}, tokens["user-a"])
+	assert.ElementsMatch(t, []string{"token-3"}, tokens["user-b"])
+
+	// Re-registering an existing token reassigns it to the new owner.
+	require.NoError(t, db.SaveDeviceToken("user-b", "token-1", "web"))
+	tokens, err = db.GetAllDeviceTokens()
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"token-2"}, tokens["user-a"])
+	assert.ElementsMatch(t, []string{"token-3", "token-1"}, tokens["user-b"])
+
+	// Deleting a token is idempotent.
+	require.NoError(t, db.DeleteDeviceToken("user-a", "token-2"))
+	require.NoError(t, db.DeleteDeviceToken("user-a", "token-2"))
+
+	// Pruning by token removes regardless of owner.
+	require.NoError(t, db.DeleteDeviceTokensByToken([]string{"token-3"}))
+
+	tokens, err = db.GetAllDeviceTokens()
+	require.NoError(t, err)
+	assert.Empty(t, tokens["user-a"])
+	assert.ElementsMatch(t, []string{"token-1"}, tokens["user-b"])
+}
+
+func TestDeleteUserDataRemovesDeviceTokens(t *testing.T) {
+	setupTestDB(t)
+
+	require.NoError(t, db.SaveDeviceToken("delete-me", "token-x", "ios"))
+	require.NoError(t, db.SaveDeviceToken("keep-me", "token-y", "ios"))
+
+	require.NoError(t, db.DeleteUserData("delete-me"))
+
+	tokens, err := db.GetAllDeviceTokens()
+	require.NoError(t, err)
+	assert.Empty(t, tokens["delete-me"])
+	assert.ElementsMatch(t, []string{"token-y"}, tokens["keep-me"])
+}
+
 func TestReplaceLocationOperatingTimes(t *testing.T) {
 	setupTestDB(t)
 	first := []models.LocationOperatingTimes{{Name: "Allison", Week: []models.DailyOperatingTimes{{Date: "2026-07-10"}}}}
