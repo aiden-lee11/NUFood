@@ -89,6 +89,7 @@ struct RootView: View {
                     .tag(AppTab.favorites)
             }
         }
+        .transientErrorToast()
         .onAppear {
             // Dev affordance: `simctl launch ... -initialTab hours` lands in
             // UserDefaults and preselects a tab (used for automated screenshots).

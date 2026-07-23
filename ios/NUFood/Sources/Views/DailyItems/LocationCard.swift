@@ -9,7 +9,9 @@ struct LocationCard: View {
     /// visible ones — a hall serving only Dinner while "Breakfast" is the visible
     /// meal must not claim "No items available" (web parity).
     let hasItems: Bool
-    let status: OperatingHoursLogic.LocationStatus
+    /// Live open/closed status; nil when the shown date is not today (a wall-clock
+    /// status against another day's hours would mislead).
+    let status: OperatingHoursLogic.LocationStatus?
     /// Called when a signed-out user taps an item (present the auth prompt).
     var onRequestAuth: () -> Void
 
@@ -21,9 +23,11 @@ struct LocationCard: View {
                 .font(.title2.bold())
                 .foregroundStyle(Theme.textPrimary)
 
-            Text("Status: \(status.text)")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(status.isOpen ? Theme.openGreen : Theme.closedRed)
+            if let status {
+                Text("Status: \(status.text)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(status.isOpen ? Theme.openGreen : Theme.closedRed)
+            }
 
             if isEmpty {
                 Text("No items available")

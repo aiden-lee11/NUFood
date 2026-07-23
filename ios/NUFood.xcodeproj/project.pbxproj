@@ -18,6 +18,7 @@
 		4011D6964773C67CD01B4B44 /* FavoritesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E38EF5A23664793022B5F7 /* FavoritesScreen.swift */; };
 		4799FBC3B71AA1A1257FAF84 /* PlannerComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E03B769007FE00D3F7348B /* PlannerComponents.swift */; };
 		4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E36975476A6967D8323F95 /* AuthManager.swift */; };
+		54DB137DFB0F88398AB17414 /* TransientErrorToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14746734326AE74C44BD23FE /* TransientErrorToast.swift */; };
 		66B0E677301383BFB95A55AF /* DisplaySettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2842E158375F9EA956A253CE /* DisplaySettingsSheet.swift */; };
 		6D76E8E4EE59FDCDCE3912F3 /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3BEDFF3484E417AEC1C2ABA /* DatePickerSheet.swift */; };
 		7195D9026665A71D152E2C97 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8B4706AB3C44301A2A94B6DC /* Assets.xcassets */; };
@@ -46,6 +47,7 @@
 /* Begin PBXFileReference section */
 		0C6C5DD380B80B154531CE75 /* HoursLocationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursLocationCard.swift; sourceTree = "<group>"; };
 		1399D462A8ED5DD6BA9396A6 /* AccountToolbarButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountToolbarButton.swift; sourceTree = "<group>"; };
+		14746734326AE74C44BD23FE /* TransientErrorToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransientErrorToast.swift; sourceTree = "<group>"; };
 		241066A7E5F58C2BFA01378B /* PlannerMyPlanTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerMyPlanTab.swift; sourceTree = "<group>"; };
 		2842E158375F9EA956A253CE /* DisplaySettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplaySettingsSheet.swift; sourceTree = "<group>"; };
 		2B034CE38F3391F03516C359 /* NutritionGoalsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionGoalsSheet.swift; sourceTree = "<group>"; };
@@ -245,6 +247,7 @@
 				2BABB0299B522AE7D7053E36 /* GoogleSignInButton.swift */,
 				C6219DDB37648DF94F90B986 /* ItemRowButton.swift */,
 				332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */,
+				14746734326AE74C44BD23FE /* TransientErrorToast.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -398,6 +401,7 @@
 				7F4119C63475A5E6A9667B01 /* PlannerMyPlanTab.swift in Sources */,
 				8E9538D5CD67482DF750AA1A /* Theme.swift in Sources */,
 				2A90C64A26EED0ED3EF6AD1C /* ThemeToggleButton.swift in Sources */,
+				54DB137DFB0F88398AB17414 /* TransientErrorToast.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

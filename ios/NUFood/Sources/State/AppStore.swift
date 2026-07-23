@@ -25,6 +25,9 @@ final class AppStore {
 
     private(set) var isLoading = false
     private(set) var loadError: String?
+    /// Transient, user-visible failure message (e.g. a favorites POST failed).
+    /// Rendered by `.transientErrorToast()`; cleared on tap or after a few seconds.
+    var transientError: String?
     var selectedDate: String = CentralTime.todayString()
 
     /// The Central day `selectedDate` was last auto-advanced to. Lets a foreground
@@ -120,6 +123,13 @@ final class AppStore {
 
     private static let refreshInterval: TimeInterval = 15 * 60
 
+    /// Pull-to-refresh: unconditional refetch, skipped only while a load is
+    /// already in flight so `.refreshable` cannot race the foreground path.
+    func refresh() async {
+        guard !isLoading else { return }
+        await load()
+    }
+
     func load() async {
         isLoading = true
         loadError = nil
@@ -174,11 +184,12 @@ final class AppStore {
         }
         if existing.isEmpty {
             favorites.insert(name)
+            syncFavorites(revertAdding: [], revertRemoving: [name])
         } else {
             favorites.subtract(existing)
+            syncFavorites(revertAdding: existing, revertRemoving: [])
         }
         persistLocal()
-        syncIfSignedIn { try await $0.saveFavorites($1.favorites.sorted()) }
     }
 
     /// Batch removal (Your Favorites edit mode) — one local persist + one backend
@@ -187,7 +198,19 @@ final class AppStore {
         guard !names.isEmpty else { return }
         favorites.subtract(names)
         persistLocal()
-        syncIfSignedIn { try await $0.saveFavorites($1.favorites.sorted()) }
+        syncFavorites(revertAdding: names, revertRemoving: [])
+    }
+
+    /// POSTs the whole favorites list. On failure the optimistic change is undone
+    /// (web parity: revert + destructive toast) rather than lingering locally and
+    /// silently vanishing on the next load.
+    private func syncFavorites(revertAdding: Set<String>, revertRemoving: Set<String>) {
+        syncIfSignedIn(onFailure: { store in
+            store.favorites.formUnion(revertAdding)
+            store.favorites.subtract(revertRemoving)
+            store.persistLocal()
+            store.transientError = "Couldn't save favorite — try again."
+        }) { try await $0.saveFavorites($1.favorites.sorted()) }
     }
 
     func setNutritionGoals(_ goals: NutritionGoals) {
@@ -224,14 +247,17 @@ final class AppStore {
         defaults.removeObject(forKey: Keys.displayPrefs)
     }
 
-    private func syncIfSignedIn(_ operation: @escaping (APIClient, AppStore) async throws -> Void) {
+    private func syncIfSignedIn(
+        onFailure: (@MainActor (AppStore) -> Void)? = nil,
+        _ operation: @escaping (APIClient, AppStore) async throws -> Void
+    ) {
         guard auth.isSignedIn else { return }
         Task { [api] in
             do {
                 try await operation(api, self)
             } catch {
-                // Keep the optimistic local value; surface quietly in logs.
                 print("Sync failed: \(error)")
+                onFailure?(self)
             }
         }
     }

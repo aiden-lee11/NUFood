@@ -30,14 +30,26 @@ struct DailyItemsScreen: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
-                    controlsRow
-                    searchField
-                    cards
+            Group {
+                if store.isLoading && hasNoData {
+                    ProgressView()
+                        .controlSize(.large)
+                        .tint(Theme.primary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let error = store.loadError, hasNoData {
+                    loadErrorView(error)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            header
+                            controlsRow
+                            searchField
+                            cards
+                        }
+                        .padding()
+                    }
+                    .refreshable { await store.refresh() }
                 }
-                .padding()
             }
             .background(Theme.background)
             .navigationTitle("Daily Items")
@@ -58,6 +70,14 @@ struct DailyItemsScreen: View {
             .sheet(isPresented: $showDatePicker) { DatePickerSheet() }
             .sheet(isPresented: $showAuthPrompt) { AuthPromptSheet() }
             .alert("Error Loading Data", isPresented: errorBinding) {
+                Button("Retry") {
+                    // Re-arm the alert once the reload finishes so a still-broken
+                    // menu surfaces again instead of staying dismissed for the day.
+                    Task {
+                        await store.load()
+                        errorDismissedDate = nil
+                    }
+                }
                 // Web parity: the error dialog offers a feedback path right there.
                 Button("Send Feedback") {
                     if let url = URL(string: "mailto:nufoodfinder@gmail.com?subject=NUFood%20Feedback") {
@@ -74,17 +94,12 @@ struct DailyItemsScreen: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Daily Items for \(headerDateString)")
-                .font(.title.bold())
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(openCountText)
-                .font(.title3)
-                .foregroundStyle(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        Text("Daily Items for \(headerDateString)")
+            .font(.title.bold())
+            .foregroundStyle(Theme.textPrimary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var controlsRow: some View {
@@ -120,24 +135,77 @@ struct DailyItemsScreen: View {
         )
     }
 
+    @ViewBuilder
     private var cards: some View {
-        LazyVStack(spacing: 16) {
-            ForEach(sortedVisibleLocations) { location in
-                LocationCard(
-                    location: location,
-                    meals: mealSections(for: location),
-                    hasItems: hasAnyItems(for: location),
-                    status: status(for: location),
-                    onRequestAuth: { showAuthPrompt = true }
-                )
+        if store.visibleTimes.isEmpty {
+            noMealsState
+        } else {
+            LazyVStack(spacing: 16) {
+                ForEach(sortedVisibleLocations) { location in
+                    LocationCard(
+                        location: location,
+                        meals: mealSections(for: location),
+                        hasItems: hasAnyItems(for: location),
+                        status: isToday ? status(for: location) : nil,
+                        onRequestAuth: { showAuthPrompt = true }
+                    )
+                }
             }
         }
+    }
+
+    /// Outside meal windows `visibleTimes` empties on its own (SPEC §3.6), which
+    /// used to render a wall of blank cards; explain instead. All meals unchecked
+    /// by hand during a meal window points at Display Settings.
+    private var noMealsState: some View {
+        let isNight = CentralTime.currentMealPeriod(now: now) == nil
+        return VStack(spacing: 12) {
+            Image(systemName: isNight ? "moon.zzz" : "line.3.horizontal.decrease.circle")
+                .font(.system(size: 44))
+                .foregroundStyle(Theme.textSecondary)
+            Text(isNight ? "All closed for the night" : "No meal periods selected")
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+            Text(isNight
+                ? "Check back tomorrow — or pick a meal in Display Settings to browse ahead."
+                : "Choose a meal in Display Settings → Times.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Derived data
 
     private var dayItems: [DailyItem] {
         store.weeklyItems[store.selectedDate] ?? []
+    }
+
+    /// True before any menu data has arrived; gates the full-screen loading and
+    /// error states so a pull-to-refresh never blanks an already-rendered menu.
+    private var hasNoData: Bool { store.weeklyItems.isEmpty }
+
+    /// Live open/closed status only applies to today (matches the Hours screen);
+    /// a hand-picked past or future date shows no wall-clock status.
+    private var isToday: Bool { store.selectedDate == store.syncedDay }
+
+    private func loadErrorView(_ error: String) -> some View {
+        VStack(spacing: 16) {
+            Text("Error loading data: \(error)")
+                .font(.subheadline)
+                .foregroundStyle(Theme.destructive)
+                .multilineTextAlignment(.center)
+            Button {
+                Task { await store.load() }
+            } label: {
+                Label("Retry", systemImage: "arrow.clockwise")
+            }
+            .modifier(OutlineButton())
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var searchTokens: [String] {
@@ -194,16 +262,6 @@ struct DailyItemsScreen: View {
             dateString: store.selectedDate
         )
         return OperatingHoursLogic.status(intervals: intervals, now: now)
-    }
-
-    private var openCountText: String {
-        let count = OperatingHoursLogic.openLocations(
-            in: store.locationOperatingTimes,
-            dateString: store.selectedDate,
-            now: now
-        ).count
-        guard count >= 1 else { return "(All locations closed)" }
-        return count == 1 ? "(1 location open)" : "(\(count) locations open)"
     }
 
     private var headerDateString: String {

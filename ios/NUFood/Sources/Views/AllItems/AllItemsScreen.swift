@@ -73,6 +73,7 @@ struct AllItemsScreen: View {
                 .padding(.vertical, 16)
             }
             .scrollDismissesKeyboard(.interactively)
+            .refreshable { await store.refresh() }
         }
         .onChange(of: searchText) {
             currentPage = 1

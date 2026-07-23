@@ -25,6 +25,7 @@ struct OperationHoursScreen: View {
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .refreshable { await store.refresh() }
             .background(Theme.background)
             .navigationTitle("Operation Hours")
             .navigationBarTitleDisplayMode(.inline)
