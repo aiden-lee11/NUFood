@@ -15,6 +15,8 @@ import { toLocalISODate } from '../util/date';
 import { loadDisplayPreferences, saveDisplayPreferences } from '../util/displayPreferences';
 import { useDebounce } from '../hooks/useDebounce';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const DEFAULT_LOCATIONS = ["Sargent", "Elder", "Allison", "Plex East", "Plex West"];
 
@@ -39,13 +41,17 @@ const DailyItems: React.FC = () => {
   const [showPreferences, setShowPreferences] = useState(false);
   const [availableFavorites, setAvailableFavorites] = useState<DailyItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [openLocations, setOpenLocations] = useState<string[]>([])
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const hasHydratedSignedInDisplayPrefs = useRef(false);
   const hasAutoSelectedTimes = useRef(false);
 
   // Data involved with API
   const staticData = useDataStore((state) => state.UserDataResponse);
+  const dataLoading = useDataStore((state) => state.loading);
+  const dataError = useDataStore((state) => state.error);
+  const resetFetchFlags = useDataStore((state) => state.resetFetchFlags);
+  const fetchAllData = useDataStore((state) => state.fetchAllData);
+  const fetchGeneralData = useDataStore((state) => state.fetchGeneralData);
   const weeklyItems = staticData.weeklyItems;
   const memoizedLocationHours = useMemo(
     () => getDailyLocationOperationTimes(staticData.locationOperationHours, selectedDate),
@@ -98,7 +104,7 @@ const DailyItems: React.FC = () => {
   // Initialize selected times based on current time
   useEffect(() => {
     if (memoizedLocationHours) {
-      const { timeOfDay, openLocations } = getCurrentTimeOfDayWithLocations(memoizedLocationHours);
+      const { timeOfDay } = getCurrentTimeOfDayWithLocations(memoizedLocationHours);
 
       // Auto-select the current meal only once on initial mount. Re-running on every date
       // change would clobber the user's Display Settings meal toggles.
@@ -107,10 +113,6 @@ const DailyItems: React.FC = () => {
         // Outside serving hours getCurrentTimeOfDay() returns "" — default to all three meals
         // so the home page never renders an empty meal list late at night.
         setVisibleTimes(timeOfDay ? [timeOfDay] : ["Breakfast", "Lunch", "Dinner"]);
-      }
-
-      if (openLocations) {
-        setOpenLocations(openLocations)
       }
     }
   }, [memoizedLocationHours]);
@@ -230,6 +232,36 @@ const DailyItems: React.FC = () => {
     setShowPreferences(show);
   };
 
+  const retryFetch = () => {
+    resetFetchFlags();
+    if (token) {
+      fetchAllData(token);
+    } else {
+      fetchGeneralData();
+    }
+  };
+
+  const isToday = toLocalISODate(selectedDate) === toLocalISODate(new Date());
+
+  if (dataLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[80vh]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-4 p-6 text-center">
+        <p className="text-destructive">Error loading data: {dataError}</p>
+        <Button variant="outline" onClick={retryFetch}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 min-h-screen bg-transparent">
       <SEO 
@@ -255,7 +287,6 @@ const DailyItems: React.FC = () => {
           setVisibleLocations: setVisibleLocationsAndPersist,
           setShowPreferences: handleTogglePreferences,
         }}
-        openLocations={openLocations}
       />
 
       <Input
@@ -269,7 +300,13 @@ const DailyItems: React.FC = () => {
           bg-background dark:text-white dark:border-gray-600 dark:focus:ring-gray-400"
       />
 
-      {searchQuery && filteredItems.length === 0 ? (
+      {hasAutoSelectedTimes.current && visibleTimes.length === 0 ? (
+        <div className="flex items-center justify-center py-16 text-center">
+          <p className="text-muted-foreground">
+            No meal periods selected — choose one in Display Settings.
+          </p>
+        </div>
+      ) : searchQuery && filteredItems.length === 0 ? (
         <div className="flex items-center justify-center py-16 text-center">
           <p className="text-muted-foreground">
             No items match "{searchQuery}" for this date.
@@ -285,6 +322,7 @@ const DailyItems: React.FC = () => {
             filteredItems,
             availableFavorites,
             expandFolders,
+            isToday,
           }}
           actions={{
             handleItemClick,

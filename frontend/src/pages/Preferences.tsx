@@ -1,20 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Pencil, StarOff, Trash2, X } from 'lucide-react';
+import { StarOff } from 'lucide-react';
 import { postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
-import { FavoriteItem } from '../types/ItemTypes';
 import { useDataStore } from '@/store';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import SEO from '../components/SEO';
 
 
@@ -23,106 +13,75 @@ const Preferences: React.FC = () => {
   const setUserPreferences = useDataStore((state) => state.setUserPreferences)
 
   const { token } = useAuth();
+  const { toast } = useToast();
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [filter, setFilter] = useState('');
+  // Unfavorited rows stay in place (dimmed, outline star) until the user leaves
+  // the page, so an accidental tap can be undone by tapping again.
+  const [pendingRemoved, setPendingRemoved] = useState<Set<string>>(new Set());
 
-  const sortedPreferences = useMemo(
-    () =>
-      (userPreferences ?? [])
-        .slice()
-        .sort((a, b) =>
-          a.toLowerCase().localeCompare(b.toLowerCase())
-        ),
+  const favoriteSet = useMemo(
+    () => new Set((userPreferences ?? []).map((name) => name.toLowerCase().trim())),
     [userPreferences]
   );
 
-  const count = sortedPreferences.length;
-
-  // Contacts-style alphabetical groups, filtered live by the search text.
-  // Non-letter first characters group under "#".
-  const groups = useMemo(() => {
-    const query = filter.trim().toLowerCase();
-    const visible = query
-      ? sortedPreferences.filter((name) => name.toLowerCase().includes(query))
-      : sortedPreferences;
-
-    const result: { letter: string; items: string[] }[] = [];
-    for (const name of visible) {
-      const first = name.trim().charAt(0).toUpperCase();
-      const letter = first >= 'A' && first <= 'Z' ? first : '#';
-      const last = result[result.length - 1];
-      if (last && last.letter === letter) {
-        last.items.push(name);
-      } else {
-        result.push({ letter, items: [name] });
+  const sortedNames = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const name of userPreferences ?? []) {
+      names.set(name.toLowerCase().trim(), name);
+    }
+    for (const name of pendingRemoved) {
+      const key = name.toLowerCase().trim();
+      if (!names.has(key)) {
+        names.set(key, name);
       }
     }
-    return result;
-  }, [sortedPreferences, filter]);
-
-  const persist = (next: string[]) => {
-    setUserPreferences(next);
-    // postUserPreferences rejects on failure; swallow here so an unresolved
-    // promise doesn't surface as an unhandled rejection.
-    postUserPreferences(next, token as string).catch((err) =>
-      console.error('Error posting userPreferences:', err)
+    return Array.from(names.values()).sort((a, b) =>
+      a.toLowerCase().localeCompare(b.toLowerCase())
     );
-  };
+  }, [userPreferences, pendingRemoved]);
 
-  // Single removal: reuse the existing toggle logic (item is a favorite, so
-  // this removes it).
-  const handleItemClick = (item: FavoriteItem) => {
-    if (userPreferences) {
-      let tempPreferences = userPreferences;
-      const formattedItemName = item.Name.toLowerCase().trim();
-      if (userPreferences.some(i => i.toLowerCase().trim() === formattedItemName)) {
-        tempPreferences = userPreferences.filter(i => i.toLowerCase().trim() !== formattedItemName);
-      } else {
-        tempPreferences = [...userPreferences, item.Name];
-      }
-      persist(tempPreferences);
-    }
-  };
+  const count = (userPreferences ?? []).length;
 
-  const toggleSelected = (itemName: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(itemName)) {
-        next.delete(itemName);
+  // Flat alphabetized list, filtered live by the search text.
+  const visibleNames = useMemo(() => {
+    const query = filter.trim().toLowerCase();
+    return query
+      ? sortedNames.filter((name) => name.toLowerCase().includes(query))
+      : sortedNames;
+  }, [sortedNames, filter]);
+
+  const toggleFavorite = (itemName: string) => {
+    const current = userPreferences ?? [];
+    const key = itemName.toLowerCase().trim();
+    const isFavorited = current.some((i) => i.toLowerCase().trim() === key);
+    const previousPreferences = current;
+    const previousPending = new Set(pendingRemoved);
+
+    const next = isFavorited
+      ? current.filter((i) => i.toLowerCase().trim() !== key)
+      : [...current, itemName];
+
+    setPendingRemoved((prev) => {
+      const nextSet = new Set(prev);
+      if (isFavorited) {
+        nextSet.add(itemName);
       } else {
-        next.add(itemName);
+        nextSet.delete(itemName);
       }
-      return next;
+      return nextSet;
+    });
+    setUserPreferences(next);
+    // Revert the optimistic update if the save fails.
+    postUserPreferences(next, token as string).catch(() => {
+      setUserPreferences(previousPreferences);
+      setPendingRemoved(previousPending);
+      toast({
+        variant: 'destructive',
+        title: "Couldn't save favorite — try again.",
+      });
     });
   };
-
-  const exitEditMode = () => {
-    setIsEditing(false);
-    setSelected(new Set());
-  };
-
-  const toggleEditMode = () => {
-    if (isEditing) {
-      exitEditMode();
-    } else {
-      setIsEditing(true);
-    }
-  };
-
-  // Batch removal: single state update + single network call.
-  const removeSelected = () => {
-    if (userPreferences) {
-      const next = userPreferences.filter((i) => !selected.has(i));
-      persist(next);
-    }
-    setConfirmOpen(false);
-    exitEditMode();
-  };
-
-  const selectedCount = selected.size;
 
   return (
     <div className="p-6 min-h-screen text-black bg-background dark:text-white transition-colors duration-200">
@@ -135,30 +94,16 @@ const Preferences: React.FC = () => {
 
       <div className="max-w-3xl">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Your Favorite Items</h1>
-            {count > 0 && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {count} {count === 1 ? 'item' : 'items'}
-              </p>
-            )}
-          </div>
-
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold">Your Favorite Items</h1>
           {count > 0 && (
-            <Button
-              variant="outline"
-              onClick={toggleEditMode}
-              aria-pressed={isEditing}
-              className="shrink-0"
-            >
-              {!isEditing && <Pencil aria-hidden="true" />}
-              {isEditing ? 'Done' : 'Edit'}
-            </Button>
+            <p className="text-sm text-muted-foreground mt-1">
+              {count} {count === 1 ? 'item' : 'items'}
+            </p>
           )}
         </div>
 
-        {count > 0 && (
+        {sortedNames.length > 0 && (
           <Input
             type="text"
             aria-label="Filter favorites"
@@ -169,78 +114,39 @@ const Preferences: React.FC = () => {
           />
         )}
 
-        {isEditing && (
-          <div className="mb-4">
-            <Button
-              variant="destructive"
-              disabled={selectedCount === 0}
-              onClick={() => setConfirmOpen(true)}
-            >
-              <Trash2 aria-hidden="true" />
-              Remove Selected ({selectedCount})
-            </Button>
-          </div>
-        )}
+        {sortedNames.length > 0 ? (
+          visibleNames.length > 0 ? (
+            <ul className="rounded-lg border border-border bg-card text-card-foreground divide-y divide-border overflow-hidden">
+              {visibleNames.map((itemName) => {
+                const isFavorited = favoriteSet.has(itemName.toLowerCase().trim());
 
-        {count > 0 ? (
-          groups.length > 0 ? (
-            <div className="space-y-4">
-              {groups.map(({ letter, items }) => (
-                <section key={letter} aria-label={`Favorites starting with ${letter}`}>
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-1">
-                    {letter}
-                  </h2>
-                  <ul className="rounded-lg border border-border bg-card text-card-foreground divide-y divide-border overflow-hidden">
-                    {items.map((itemName) => {
-                      const isSelected = selected.has(itemName);
-
-                      if (isEditing) {
-                        return (
-                          <li key={itemName}>
-                            <button
-                              type="button"
-                              onClick={() => toggleSelected(itemName)}
-                              aria-pressed={isSelected}
-                              aria-label={`Select ${itemName}`}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${isSelected ? 'bg-muted' : 'hover:bg-item-hover'}`}
-                            >
-                              <Checkbox
-                                checked={isSelected}
-                                className="pointer-events-none"
-                                tabIndex={-1}
-                                aria-hidden="true"
-                              />
-                              <span className="flex-1 min-w-0 truncate" title={itemName}>
-                                {itemName}
-                              </span>
-                            </button>
-                          </li>
-                        );
+                return (
+                  <li key={itemName}>
+                    <button
+                      type="button"
+                      onClick={() => toggleFavorite(itemName)}
+                      aria-pressed={isFavorited}
+                      aria-label={
+                        isFavorited
+                          ? `Remove ${itemName} from favorites`
+                          : `Add ${itemName} back to favorites`
                       }
-
-                      return (
-                        <li
-                          key={itemName}
-                          className="flex items-center gap-3 px-4 py-3"
-                        >
-                          <span className="flex-1 min-w-0 truncate" title={itemName}>
-                            {itemName}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleItemClick({ Name: itemName })}
-                            aria-label={`Remove ${itemName} from favorites`}
-                            className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            <X className="h-5 w-5" aria-hidden="true" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-item-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${isFavorited ? '' : 'opacity-50'}`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={isFavorited ? 'text-primary' : 'text-muted-foreground'}
+                      >
+                        {isFavorited ? '★' : '☆'}
+                      </span>
+                      <span className="flex-1 min-w-0 truncate" title={itemName}>
+                        {itemName}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           ) : (
             <p className="text-sm text-muted-foreground">No matches</p>
           )
@@ -254,25 +160,6 @@ const Preferences: React.FC = () => {
           </div>
         )}
       </div>
-
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Remove {selectedCount} {selectedCount === 1 ? 'favorite' : 'favorites'}?
-            </DialogTitle>
-            <DialogDescription>This cannot be undone.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={removeSelected}>
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

@@ -19,7 +19,6 @@ interface HeaderControlsProps {
     setVisibleLocations: (locations: string[]) => void
     setShowPreferences: (show: boolean) => void
   }
-  openLocations: string[]
 }
 
 export function HeaderControls({
@@ -29,15 +28,11 @@ export function HeaderControls({
   showPreferences,
   preferencesState,
   preferencesActions,
-  openLocations,
 }: HeaderControlsProps) {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
         Daily Items for {format(selectedDate, "PP")}
-        <div className="text-lg font-normal">
-          {openLocations.length > 0 ? `(${openLocations.length} location${openLocations.length === 1 ? "" : "s"} open)` : "(All locations closed)"}
-        </div>
       </h1>
 
       <div className="flex items-center gap-3">

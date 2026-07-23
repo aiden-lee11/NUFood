@@ -13,6 +13,7 @@ interface LocationState {
   filteredItems: DailyItem[];
   availableFavorites: DailyItem[];
   expandFolders: boolean;
+  isToday: boolean;
 }
 
 interface LocationActions {
@@ -32,7 +33,8 @@ const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
     visibleTimes,
     filteredItems,
     availableFavorites,
-    expandFolders
+    expandFolders,
+    isToday
   } = state;
 
   const { handleItemClick } = actions;
@@ -70,7 +72,8 @@ const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
                 }`}
               >
                 <h2 className="text-2xl font-bold mb-4 text-card-foreground">{location}</h2>
-                {locationOperationHours && (<Status operatingTimes={locationOperationHours[location]} />)}
+                {/* "Open/Closed now" is wall-clock-based, so it only means something on today's card. */}
+                {isToday && locationOperationHours && (<Status operatingTimes={locationOperationHours[location]} />)}
                 {timesOfDay
                   .filter((timeOfDay) => visibleTimes.includes(timeOfDay))
                   .map((timeOfDay) => {
