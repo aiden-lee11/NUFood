@@ -1,6 +1,6 @@
 // components/OperationHours.tsx
 import React, { useState, useEffect } from "react";
-import { getWeekday, formatTime, locationAliases, getCentralNow } from "../util/helper";
+import { getWeekday, formatTime, locationAliases, getCentralNow, isLocationOpenNow } from "../util/helper";
 import { Day, OperationHoursData, OperatingTime } from "../types/OperationTypes";
 import { useDataStore } from "@/store";
 import SEO from '../components/SEO';
@@ -9,6 +9,22 @@ import { DatePicker } from '../components/calendar';
 import { toLocalISODate } from "../util/date";
 
 type LocationGrouping = { [category: string]: string[] };
+
+// Green "Open" / red "Closed" pill for the top-right of a mobile hours card, so the
+// user sees the live state at a glance instead of matching the clock against the
+// disjoint interval list themselves (mirrors the iOS OpenStatusBadge).
+const HoursStatusBadge: React.FC<{ open: boolean }> = ({ open }) => (
+  <span
+    className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold ${
+      open
+        ? "border-green-500/35 bg-green-500/15 text-green-500"
+        : "border-red-500/35 bg-red-500/15 text-red-500"
+    }`}
+  >
+    <span className={`h-1.5 w-1.5 rounded-full ${open ? "bg-green-500" : "bg-red-500"}`} />
+    {open ? "Open" : "Closed"}
+  </span>
+);
 
 const locationGrouping: LocationGrouping = {
   "Dining Commons": ["Allison", "Sargent", "Plex East", "Plex West", "Elder"],
@@ -61,6 +77,8 @@ const OperationHours: React.FC = () => {
     return new Date(y, (m as number) - 1, d);
   };
   const selectedDateStr = toLocalISODate(selectedDate);
+  // "Open now" only means something on today's card; on any other day the badge is hidden.
+  const isToday = selectedDateStr === toLocalISODate(new Date());
   let selectedDayIndex = weekDays.findIndex((day: Day) => day.Date === selectedDateStr);
   if (selectedDayIndex < 0) {
     // Fallback to day-of-week index if date string mismatch due to TZ
@@ -478,14 +496,18 @@ const OperationHours: React.FC = () => {
                 {shortNames.map((shortName) => {
                   const loc = findByAlias(shortName);
                   const dayToShow = (loc?.Week || []).find((d: any) => d.Date === selectedDateStr);
+                  const openHours = dayToShow && dayToShow.Status !== "closed" ? dayToShow.Hours : null;
                   return (
                     <div
                       key={shortName}
                       className="p-4 border-2 border-border rounded-lg shadow-md bg-card hover:shadow-lg transition-shadow"
                     >
-                      <h3 className="text-lg font-semibold mb-3 text-primary border-b border-border pb-1">
-                        {shortName}
-                      </h3>
+                      <div className="flex items-center justify-between gap-2 mb-3 border-b border-border pb-1">
+                        <h3 className="text-lg font-semibold text-primary">
+                          {shortName}
+                        </h3>
+                        {isToday && <HoursStatusBadge open={isLocationOpenNow(openHours)} />}
+                      </div>
                       <div className="flex justify-between text-sm border-t border-border/50 pt-2 mt-2">
                         <span className="font-medium text-card-foreground">
                           {getWeekday(selectedDate.getDay())}

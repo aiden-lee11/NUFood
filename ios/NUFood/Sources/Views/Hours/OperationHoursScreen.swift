@@ -96,16 +96,22 @@ struct OperationHoursScreen: View {
     private func groupSection(_ group: HoursGroup) -> some View {
         let dateString = CentralTime.dateFormat.string(from: selectedDate)
         let weekday = weekdayName
+        // "Open now" only applies to today; on any other day the badge is hidden.
+        let isToday = dateString == store.syncedDay
         return VStack(alignment: .leading, spacing: 16) {
             Text(group.name)
                 .font(.title.weight(.bold))
                 .foregroundStyle(Theme.textPrimary)
             VStack(spacing: 16) {
                 ForEach(group.locations, id: \.self) { location in
+                    let dayIntervals = intervals(for: location, dateString: dateString)
                     HoursLocationCard(
                         name: location,
                         weekday: weekday,
-                        intervals: intervals(for: location, dateString: dateString)
+                        intervals: dayIntervals,
+                        isOpen: isToday
+                            ? OperatingHoursLogic.status(intervals: dayIntervals).isOpen
+                            : nil
                     )
                 }
             }

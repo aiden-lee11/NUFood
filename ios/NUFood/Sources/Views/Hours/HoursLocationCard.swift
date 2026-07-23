@@ -8,13 +8,22 @@ struct HoursLocationCard: View {
     let name: String
     let weekday: String
     let intervals: [HourlyTimes]?
+    /// Live open/closed state for the badge. `nil` when the selected day isn't
+    /// today — "open right now" only means something on today's card.
+    let isOpen: Bool?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(name)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(Theme.primary)
-                .padding(.bottom, 8)
+            HStack(alignment: .center, spacing: 12) {
+                Text(name)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+                Spacer(minLength: 8)
+                if let isOpen {
+                    OpenStatusBadge(isOpen: isOpen)
+                }
+            }
+            .padding(.bottom, 8)
 
             Rectangle()
                 .fill(Theme.border)
@@ -60,5 +69,30 @@ struct HoursLocationCard: View {
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Theme.destructive)
         }
+    }
+}
+
+/// Pill in a card's top-right corner: green "Open" when the location is currently
+/// open, red "Closed" otherwise — lets the user see the live state at a glance
+/// instead of matching the clock against the interval list themselves.
+private struct OpenStatusBadge: View {
+    let isOpen: Bool
+
+    private var color: Color { isOpen ? Theme.openGreen : Theme.closedRed }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(color)
+                .frame(width: 7, height: 7)
+            Text(isOpen ? "Open" : "Closed")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.15), in: Capsule())
+        .overlay(Capsule().strokeBorder(color.opacity(0.35), lineWidth: 1))
+        .fixedSize()
     }
 }
