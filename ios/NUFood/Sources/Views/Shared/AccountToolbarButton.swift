@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Toolbar button (person icon) presenting the Account sheet (SPEC §2.7).
 struct AccountToolbarButton: View {
@@ -28,6 +29,7 @@ struct AccountToolbarButton: View {
 private struct AccountSheet: View {
     @Environment(AuthManager.self) private var auth
     @Environment(AppStore.self) private var store
+    @Environment(NotificationManager.self) private var notifications
     @Environment(\.dismiss) private var dismiss
 
     @State private var isSigningIn = false
@@ -46,6 +48,15 @@ private struct AccountSheet: View {
         )
     }
 
+    private var favoritesAlertsBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.pushEnabled },
+            set: { on in
+                Task { on ? await notifications.enable() : await notifications.disable() }
+            }
+        )
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -60,6 +71,7 @@ private struct AccountSheet: View {
             .background(Theme.background)
             .navigationTitle(auth.isSignedIn ? "Account Information" : "Sign In")
             .navigationBarTitleDisplayMode(.inline)
+            .task { await notifications.refreshAuthorizationStatus() }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -103,7 +115,24 @@ private struct AccountSheet: View {
         }
 
         Section {
-            Toggle("Notifications", isOn: mailingBinding)
+            Toggle("Favorites alerts", isOn: favoritesAlertsBinding)
+                .tint(Theme.primary)
+                .foregroundStyle(Theme.textPrimary)
+                .listRowBackground(Theme.card)
+        } footer: {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Get a push 30 minutes before each meal when your favorites are on the menu.")
+                    .foregroundStyle(Theme.textSecondary)
+                if notifications.authorizationStatus == .denied {
+                    Button("Open Settings") { openSettings() }
+                        .font(.footnote)
+                        .foregroundStyle(Theme.primary)
+                }
+            }
+        }
+
+        Section {
+            Toggle("Daily email", isOn: mailingBinding)
                 .tint(Theme.primary)
                 .foregroundStyle(Theme.textPrimary)
                 .listRowBackground(Theme.card)
@@ -114,7 +143,10 @@ private struct AccountSheet: View {
 
         Section {
             Button(role: .destructive) {
-                auth.signOut()
+                Task {
+                    await notifications.handleWillSignOut()
+                    auth.signOut()
+                }
             } label: {
                 Text("Sign Out")
                     .frame(maxWidth: .infinity)
@@ -209,6 +241,12 @@ private struct AccountSheet: View {
     }
 
     // MARK: - Actions
+
+    private func openSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+    }
 
     private func signIn(_ operation: @escaping () async throws -> Void) {
         signInError = nil

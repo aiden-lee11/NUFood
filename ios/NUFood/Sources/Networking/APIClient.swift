@@ -51,6 +51,24 @@ struct APIClient {
         try await post("/api/nutritionGoals", body: goals)
     }
 
+    /// Registers this device's FCM token for favorite-menu push notifications.
+    func registerDeviceToken(_ token: String) async throws {
+        try await post("/api/deviceToken", body: ["token": token, "platform": "ios"])
+    }
+
+    /// Removes this device's FCM token from the backend (idempotent server-side).
+    func unregisterDeviceToken(_ token: String) async throws {
+        var request = URLRequest(url: Self.baseURL.appending(path: "/api/deviceToken"))
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let bearer = try await tokenProvider() {
+            request.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try JSONEncoder().encode(["token": token])
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try Self.checkStatus(response)
+    }
+
     /// Permanently deletes all server-side data for the signed-in user.
     /// Treats any 2xx (including 200/204) as success.
     func deleteAccount() async throws {

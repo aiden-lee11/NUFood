@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0490963B4F67928EE7A89E53 /* NutritionGoalsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B034CE38F3391F03516C359 /* NutritionGoalsSheet.swift */; };
 		0F3137FD5EA5F34FF140B48E /* AuthPromptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A95557C9AED507C687251FA /* AuthPromptSheet.swift */; };
+		0F73A3DE67352B4133A1D733 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 2641B7D880C6C67B80BDB7EC /* GoogleSignInSwift */; };
 		162CCF9825A47386733A58DA /* AppleSignInButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBEB7CFE7214AD60E9A756A /* AppleSignInButton.swift */; };
 		222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83BA052D048197D5370AFB8 /* AllItemsScreen.swift */; };
 		2A90C64A26EED0ED3EF6AD1C /* ThemeToggleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */; };
@@ -23,18 +24,20 @@
 		6D76E8E4EE59FDCDCE3912F3 /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3BEDFF3484E417AEC1C2ABA /* DatePickerSheet.swift */; };
 		7195D9026665A71D152E2C97 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8B4706AB3C44301A2A94B6DC /* Assets.xcassets */; };
 		75141495FBE973B8C0F78AD6 /* OperationHoursScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1BE573D840E5E584E2427ED /* OperationHoursScreen.swift */; };
-		7C6F75756F52A4C52B18F9E3 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 2641B7D880C6C67B80BDB7EC /* GoogleSignInSwift */; };
+		7C6F75756F52A4C52B18F9E3 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 6EB1C5423C74308D69FCF83E /* GoogleSignIn */; };
 		7F148E6A77CA1276A5E681C1 /* OperatingHoursLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D60B65E990686DFBDA664F /* OperatingHoursLogic.swift */; };
 		7F4119C63475A5E6A9667B01 /* PlannerMyPlanTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 241066A7E5F58C2BFA01378B /* PlannerMyPlanTab.swift */; };
 		81BA45A66E01F2B4DABB6580 /* PlannerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593942FE8FB74E5805335877 /* PlannerModel.swift */; };
 		856CADCA281A090FF14AD172 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B458505E194DD2015043E21E /* FirebaseAuth */; };
 		8E9538D5CD67482DF750AA1A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A48E804687C7E263F74DFB /* Theme.swift */; };
 		9BEF61303B286F3AE514F782 /* NutrientPlannerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */; };
-		A2D989D417F982444E89354C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 6EB1C5423C74308D69FCF83E /* GoogleSignIn */; };
+		A2D989D417F982444E89354C /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 8856EF86CD7C3555148C8993 /* FirebaseMessaging */; };
 		B5C68A64ECB4C886CCB49CF9 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB9E752386CD9DD8CC8385C6 /* AppStore.swift */; };
 		C71C051220DC5A0004C3A40D /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81CBE1FFBEF34D5DDF408607 /* APIClient.swift */; };
 		CBB3C6208061C943EDD31A7D /* ItemRowButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6219DDB37648DF94F90B986 /* ItemRowButton.swift */; };
+		CDDC7E3D8A3E055DCBACF7FA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F63EF07E69153BBBCE588FCA /* AppDelegate.swift */; };
 		CF9575604D559AAB5851CC97 /* PlannerFoodItemsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81015BD8DE9E5285ACC31EA1 /* PlannerFoodItemsTab.swift */; };
+		E7B77B0B9E5EA1AE8F1633CC /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576AB9BCA2128A636FC70DCF /* NotificationManager.swift */; };
 		E93E4D0A99DCCD21E3A773E6 /* DailyItemAccordion.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDC27FCB49914EA7B62107D0 /* DailyItemAccordion.swift */; };
 		EC725A3E67F26053B1F21199 /* NUFoodApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B6CB076F6291FD4FCB0004 /* NUFoodApp.swift */; };
 		EE5BA1923546FE624A74C775 /* GoogleSignInButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BABB0299B522AE7D7053E36 /* GoogleSignInButton.swift */; };
@@ -57,6 +60,7 @@
 		447ADF8A120946D8B086A145 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		44D1858AF72E63F5EDC37160 /* NUFood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NUFood.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EBEB7CFE7214AD60E9A756A /* AppleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInButton.swift; sourceTree = "<group>"; };
+		576AB9BCA2128A636FC70DCF /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		593942FE8FB74E5805335877 /* PlannerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerModel.swift; sourceTree = "<group>"; };
 		5C79418F09978BE310B646F8 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		67E03B769007FE00D3F7348B /* PlannerComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerComponents.swift; sourceTree = "<group>"; };
@@ -78,6 +82,7 @@
 		EDC27FCB49914EA7B62107D0 /* DailyItemAccordion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyItemAccordion.swift; sourceTree = "<group>"; };
 		F1E36975476A6967D8323F95 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		F3BEDFF3484E417AEC1C2ABA /* DatePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerSheet.swift; sourceTree = "<group>"; };
+		F63EF07E69153BBBCE588FCA /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,8 +91,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				856CADCA281A090FF14AD172 /* FirebaseAuth in Frameworks */,
-				A2D989D417F982444E89354C /* GoogleSignIn in Frameworks */,
-				7C6F75756F52A4C52B18F9E3 /* GoogleSignInSwift in Frameworks */,
+				A2D989D417F982444E89354C /* FirebaseMessaging in Frameworks */,
+				7C6F75756F52A4C52B18F9E3 /* GoogleSignIn in Frameworks */,
+				0F73A3DE67352B4133A1D733 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,6 +165,7 @@
 				672F3193182F23752A1E0A49 /* Auth */,
 				75EE99B6D88421A8D8BFDB52 /* Models */,
 				2383046524EB5DAACFC4E3A3 /* Networking */,
+				6ACD82186397DADEB907BF08 /* Notifications */,
 				88686783B63054886CB2155B /* State */,
 				113ACBA081336652845C86C3 /* Theme */,
 				1A14D2DC0EBA58A4C4AFE4F3 /* Views */,
@@ -186,6 +193,7 @@
 		665B6522E28E61E88F0F5176 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				F63EF07E69153BBBCE588FCA /* AppDelegate.swift */,
 				90B6CB076F6291FD4FCB0004 /* NUFoodApp.swift */,
 			);
 			path = App;
@@ -197,6 +205,14 @@
 				F1E36975476A6967D8323F95 /* AuthManager.swift */,
 			);
 			path = Auth;
+			sourceTree = "<group>";
+		};
+		6ACD82186397DADEB907BF08 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				576AB9BCA2128A636FC70DCF /* NotificationManager.swift */,
+			);
+			path = Notifications;
 			sourceTree = "<group>";
 		};
 		75EE99B6D88421A8D8BFDB52 /* Models */ = {
@@ -288,6 +304,7 @@
 			name = NUFood;
 			packageProductDependencies = (
 				B458505E194DD2015043E21E /* FirebaseAuth */,
+				8856EF86CD7C3555148C8993 /* FirebaseMessaging */,
 				6EB1C5423C74308D69FCF83E /* GoogleSignIn */,
 				2641B7D880C6C67B80BDB7EC /* GoogleSignInSwift */,
 			);
@@ -375,6 +392,7 @@
 				C71C051220DC5A0004C3A40D /* APIClient.swift in Sources */,
 				F620634A378568B5A38ECABB /* AccountToolbarButton.swift in Sources */,
 				222E6BB692A50C96968BC043 /* AllItemsScreen.swift in Sources */,
+				CDDC7E3D8A3E055DCBACF7FA /* AppDelegate.swift in Sources */,
 				B5C68A64ECB4C886CCB49CF9 /* AppStore.swift in Sources */,
 				162CCF9825A47386733A58DA /* AppleSignInButton.swift in Sources */,
 				4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */,
@@ -391,6 +409,7 @@
 				3E36CB9E07F8E587B2EA5121 /* LocationCard.swift in Sources */,
 				FDC30F4C64B0F9EE2101AE52 /* Models.swift in Sources */,
 				EC725A3E67F26053B1F21199 /* NUFoodApp.swift in Sources */,
+				E7B77B0B9E5EA1AE8F1633CC /* NotificationManager.swift in Sources */,
 				9BEF61303B286F3AE514F782 /* NutrientPlannerScreen.swift in Sources */,
 				0490963B4F67928EE7A89E53 /* NutritionGoalsSheet.swift in Sources */,
 				7F148E6A77CA1276A5E681C1 /* OperatingHoursLogic.swift in Sources */,
@@ -633,6 +652,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A3D396F531B422D46AC68D8 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
+		};
+		8856EF86CD7C3555148C8993 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 74C854BCCCC04E62D44890B2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 		B458505E194DD2015043E21E /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;

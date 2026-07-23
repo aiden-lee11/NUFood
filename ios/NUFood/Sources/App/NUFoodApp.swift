@@ -2,8 +2,10 @@ import SwiftUI
 
 @main
 struct NUFoodApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var auth: AuthManager
     @State private var store: AppStore
+    @State private var notifications: NotificationManager
     @AppStorage("appearance") private var appearance: AppearanceSetting = .dark
     @Environment(\.scenePhase) private var scenePhase
 
@@ -16,6 +18,7 @@ struct NUFoodApp: App {
         let auth = AuthManager()
         _auth = State(initialValue: auth)
         _store = State(initialValue: AppStore(auth: auth))
+        _notifications = State(initialValue: NotificationManager(auth: auth))
     }
 
     var body: some Scene {
@@ -23,6 +26,7 @@ struct NUFoodApp: App {
             RootView()
                 .environment(auth)
                 .environment(store)
+                .environment(notifications)
                 // Theme is applied to the UIKit windows (with a cross-dissolve on
                 // change) rather than preferredColorScheme, which cannot animate.
                 .onAppear { appearance.apply(animated: false) }
@@ -37,8 +41,11 @@ struct NUFoodApp: App {
                     await auth.waitUntilResolved()
                     await store.loadIfNeeded()
                 }
-                .onChange(of: auth.isSignedIn) {
-                    Task { await store.loadIfNeeded() }
+                .onChange(of: auth.isSignedIn) { _, signedIn in
+                    Task {
+                        await store.loadIfNeeded()
+                        if signedIn { await notifications.handleSignedIn() }
+                    }
                 }
                 // Returning from the background: the process was only suspended, so
                 // the launch .task above does not re-run and the day never rolls over
@@ -49,9 +56,12 @@ struct NUFoodApp: App {
                     switch newPhase {
                     case .background:
                         wasBackgrounded = true
-                    case .active where wasBackgrounded:
-                        wasBackgrounded = false
-                        Task { await store.handleForeground() }
+                    case .active:
+                        Task { await notifications.refreshAuthorizationStatus() }
+                        if wasBackgrounded {
+                            wasBackgrounded = false
+                            Task { await store.handleForeground() }
+                        }
                     default:
                         break
                     }

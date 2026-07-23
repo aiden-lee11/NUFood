@@ -40,11 +40,13 @@ final class AuthManager {
     private var appleSignInCoordinator: AppleSignInCoordinator?
 
     init() {
-        guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
+        // FirebaseApp.configure() runs in AppDelegate.didFinishLaunchingWithOptions,
+        // which fires before this initializer; a configured app is the signal that
+        // GoogleService-Info.plist was present.
+        guard FirebaseApp.app() != nil else {
             hasResolvedInitialState = true
             return
         }
-        FirebaseApp.configure()
         isConfigured = true
         listenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, firebaseUser in
             Task { @MainActor in
