@@ -2,7 +2,6 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import { CalendarDays, Heart, Home, ListTodo, Menu, Moon, PieChart, Sun, User } from "lucide-react"
 import * as React from "react"
 import { Link, useLocation } from "react-router-dom"
-import { useAuth } from "../context/AuthProvider"
 import AccountPopup from "./account-popup"
 import BuyMeCoffee from "./buy-me-a-coffee"
 import FeedbackButton from "./feedback-button"
@@ -38,9 +37,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [accountPopupOpen, setAccountPopupOpen] = React.useState(false)
   const { theme, setTheme } = useTheme()
   const location = useLocation()
-  const { token } = useAuth()
-
-  const loggedIn = !!token
 
   return (
     <>
@@ -67,19 +63,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   {item.title}
                 </Link>
               ))}
-              {loggedIn && (
-                <Link
-                  key={"preferences"}
-                  to={preferences.href}
-                  className={cn(
-                    "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
-                    location.pathname === preferences.href ? "bg-accent text-accent-foreground" : "transparent",
-                  )}
-                >
-                  {preferences.icon}
-                  {preferences.title}
-                </Link>
-              )}
+              <Link
+                key={"preferences"}
+                to={preferences.href}
+                className={cn(
+                  "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
+                  location.pathname === preferences.href ? "bg-accent text-accent-foreground" : "transparent",
+                )}
+              >
+                {preferences.icon}
+                {preferences.title}
+              </Link>
             </nav>
           </ScrollArea>
           <div className="border-t p-4 space-y-4">
@@ -138,20 +132,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       {item.title}
                     </Link>
                   ))}
-                  {loggedIn && (
-                    <Link
-                      key={"preferences"}
-                      to={preferences.href}
-                      className={cn(
-                        "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent",
-                        location.pathname === preferences.href ? "bg-accent" : "transparent",
-                      )}
-                      onClick={() => setOpen(false)}
-                    >
-                      {preferences.icon}
-                      {preferences.title}
-                    </Link>
-                  )}
+                  <Link
+                    key={"preferences"}
+                    to={preferences.href}
+                    className={cn(
+                      "flex items-center rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-accent",
+                      location.pathname === preferences.href ? "bg-accent" : "transparent",
+                    )}
+                    onClick={() => setOpen(false)}
+                  >
+                    {preferences.icon}
+                    {preferences.title}
+                  </Link>
                 </nav>
                 <div className="border-t p-4 mt-auto space-y-4">
                   <Button

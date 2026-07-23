@@ -4,7 +4,9 @@ import { postUserPreferences } from '../util/data';
 import { useAuth } from '../context/AuthProvider';
 import { useDataStore } from '@/store';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import AuthPopup from '../components/AuthPopup';
 import SEO from '../components/SEO';
 
 
@@ -16,6 +18,7 @@ const Preferences: React.FC = () => {
   const { toast } = useToast();
 
   const [filter, setFilter] = useState('');
+  const [showPopup, setShowPopup] = useState(false);
   // Unfavorited rows stay in place (dimmed, outline star) until the user leaves
   // the page, so an accidental tap can be undone by tapping again.
   const [pendingRemoved, setPendingRemoved] = useState<Set<string>>(new Set());
@@ -103,6 +106,21 @@ const Preferences: React.FC = () => {
           )}
         </div>
 
+        {!token ? (
+          <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground">
+            <StarOff className="h-10 w-10 mb-4" aria-hidden="true" />
+            <p className="text-lg font-medium text-foreground">
+              Sign in to start favoriting items.
+            </p>
+            <Button
+              onClick={() => setShowPopup(true)}
+              className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200"
+            >
+              Sign in
+            </Button>
+          </div>
+        ) : (
+          <>
         {sortedNames.length > 0 && (
           <Input
             type="text"
@@ -155,11 +173,17 @@ const Preferences: React.FC = () => {
             <StarOff className="h-10 w-10 mb-4" aria-hidden="true" />
             <p className="text-lg font-medium text-foreground">No favorites yet</p>
             <p className="text-sm mt-1">
-              Star items in All Items to see them here
+              Tap any item to save it to your favorites.
             </p>
           </div>
         )}
+          </>
+        )}
       </div>
+
+      {showPopup && (
+        <AuthPopup isOpen={showPopup} onClose={() => setShowPopup(false)} />
+      )}
     </div>
   );
 };
