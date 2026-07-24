@@ -187,12 +187,11 @@ struct DailyItemsScreen: View {
                 .autocorrectionDisabled()
                 .foregroundStyle(Theme.textPrimary)
         }
-        .padding(12)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.radius)
-                .stroke(Theme.border, lineWidth: 1)
-        )
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        // Inputs use the muted `secondary` capsule so they read as fields, not as
+        // another card row (rows own the bordered rounded-rect look).
+        .background(Theme.secondary, in: Capsule())
     }
 
     @ViewBuilder

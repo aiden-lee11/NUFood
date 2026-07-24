@@ -52,16 +52,23 @@ struct FavoritesScreen: View {
     // MARK: - Favorites list
 
     private var favoritesList: some View {
-        List {
-            Section {
-            } header: {
-                VStack(alignment: .leading, spacing: 12) {
-                    header
-                    filterField
-                }
-                .textCase(nil)
+        // Header + filter sit OUTSIDE the List: inset-grouped section headers add
+        // extra horizontal margins that rendered the filter capsule visibly narrower
+        // than its counterparts on Daily/All Items.
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                header
+                filterField
             }
+            .padding(.horizontal)
+            .padding(.top, 8)
 
+            list
+        }
+    }
+
+    private var list: some View {
+        List {
             if visibleNames.isEmpty {
                 Section {
                     Text("No favorites match \"\(filterText.trimmingCharacters(in: .whitespaces))\"")
@@ -80,6 +87,9 @@ struct FavoritesScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
+        // Kill the inset-grouped list's default top margin so the first row sits
+        // a normal gap below the filter capsule.
+        .contentMargins(.top, 12, for: .scrollContent)
         .refreshable {
             await store.refresh()
             withAnimation { pendingRemoved.removeAll() }
@@ -112,12 +122,11 @@ struct FavoritesScreen: View {
                 .autocorrectionDisabled()
                 .foregroundStyle(Theme.textPrimary)
         }
-        .padding(12)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.radius)
-                .stroke(Theme.border, lineWidth: 1)
-        )
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        // Inputs use the muted `secondary` capsule so they read as fields, not as
+        // another card row (rows own the bordered rounded-rect look).
+        .background(Theme.secondary, in: Capsule())
     }
 
     // MARK: - Header / empty / signed-out

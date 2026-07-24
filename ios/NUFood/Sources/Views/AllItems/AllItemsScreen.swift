@@ -75,20 +75,21 @@ struct AllItemsScreen: View {
     }
 
     private var searchField: some View {
-        TextField("", text: $searchText, prompt: Text("Search for an item...")
-            .foregroundColor(Theme.textSecondary))
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .submitLabel(.search)
-            .foregroundStyle(Theme.textPrimary)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .background(Theme.card)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.radius)
-                    .stroke(Theme.border, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(Theme.textSecondary)
+            TextField("", text: $searchText, prompt: Text("Search for an item...")
+                .foregroundColor(Theme.textSecondary))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .foregroundStyle(Theme.textPrimary)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        // Inputs use the muted `secondary` capsule so they read as fields, not as
+        // another card row (rows own the bordered rounded-rect look).
+        .background(Theme.secondary, in: Capsule())
     }
 
     private func handleTap(_ name: String) {
