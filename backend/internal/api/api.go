@@ -7,7 +7,7 @@ import (
 	"backend/internal/models"
 	"backend/internal/scraper"
 	"backend/internal/store"
-	"backend/internal/twilio"
+	"backend/internal/mailer"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -740,7 +740,7 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SendOutMailing(w http.ResponseWriter, r *http.Request) {
-	err := twilio.SendEmails()
+	err := mailer.SendEmails()
 
 	if err != nil {
 		http.Error(w, "Error sending out emails: "+err.Error(), http.StatusInternalServerError)
@@ -756,7 +756,7 @@ func HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 
 	// Validate token (constant-time comparison inside the helper).
-	valid, err := twilio.ValidateUnsubscribeToken(userID, token)
+	valid, err := mailer.ValidateUnsubscribeToken(userID, token)
 	if err != nil || !valid {
 		http.Error(w, "Invalid unsubscribe link", http.StatusBadRequest)
 		return
@@ -769,6 +769,11 @@ func HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to unsubscribe", http.StatusInternalServerError)
 		return
 	}
+
+	// Keep the in-process cache in sync so the app's mailing toggle reflects the
+	// unsubscribe immediately instead of serving a stale "subscribed" value from
+	// the lazy-loaded store until its TTL expires.
+	cache.SetUserMailing(userID, false)
 
 	// Show success page
 	w.Header().Set("Content-Type", "text/html")

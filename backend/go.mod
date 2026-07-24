@@ -10,7 +10,6 @@ require (
 	github.com/chromedp/chromedp v0.14.2
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
-	github.com/sendgrid/sendgrid-go v3.16.0+incompatible
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/api v0.170.0
 	gorm.io/driver/postgres v1.5.9
@@ -53,7 +52,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.23 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect

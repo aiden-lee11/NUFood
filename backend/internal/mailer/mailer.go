@@ -1,4 +1,4 @@
-package twilio
+package mailer
 
 import (
 	"backend/internal/auth"
@@ -15,9 +15,52 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
+
+// Sender is the provider seam for actually delivering a message. Implementations
+// wrap a concrete provider (SMTP, an HTTP email API, etc.). Send must return a
+// non-nil error when a single delivery fails so SendEmails can count it as a
+// per-user failure and continue with the rest of the list.
+type Sender interface {
+	Send(from, to, subject, plainText, html string) error
+}
+
+// SenderFunc adapts an ordinary function to the Sender interface.
+type SenderFunc func(from, to, subject, plainText, html string) error
+
+// Send calls f.
+func (f SenderFunc) Send(from, to, subject, plainText, html string) error {
+	return f(from, to, subject, plainText, html)
+}
+
+// stubSender is the default provider: no real provider has been plugged in, so
+// every send fails with a clear, actionable error instead of silently dropping
+// mail. This keeps the cron and endpoint wired and compiling while making it
+// obvious that delivery is not yet configured.
+var stubSender Sender = SenderFunc(func(from, to, subject, plainText, html string) error {
+	return fmt.Errorf("no mail provider configured")
+})
+
+// activeSender is the currently installed delivery provider. It defaults to the
+// stub above; call SetSender to plug in a real provider.
+var activeSender = stubSender
+
+// providerConfigured reports whether a real (non-stub) provider has been
+// installed via SetSender. SendEmails uses this to skip the whole run cleanly
+// instead of failing every recipient individually.
+var providerConfigured bool
+
+// SetSender installs the mail delivery provider used by SendEmails. Passing nil
+// restores the default stub, which errors on every send.
+func SetSender(s Sender) {
+	if s == nil {
+		activeSender = stubSender
+		providerConfigured = false
+		return
+	}
+	activeSender = s
+	providerConfigured = true
+}
 
 func GenerateUnsubscribeToken(userID string) (string, error) {
 	secret := os.Getenv("SECRET_KEY")
@@ -44,27 +87,30 @@ func ValidateUnsubscribeToken(userID, token string) (bool, error) {
 }
 
 func SendEmails() error {
+	// Skip the whole run cleanly if no delivery provider is plugged in yet, so we
+	// log one clear line instead of failing every recipient identically. No users
+	// are marked failed — nothing was attempted.
+	if !providerConfigured {
+		log.Println("mailing skipped: no provider configured")
+		return fmt.Errorf("no mail provider configured")
+	}
+
 	preferencesData, err := db.GetMailingList()
 
 	if err != nil {
 		return fmt.Errorf("select mailing preferences: %w", err)
 	}
 
-	apiKey := os.Getenv("SENDGRID_API_KEY")
 	baseURL := os.Getenv("BASE_URL")
-	if apiKey == "" {
-		return fmt.Errorf("SENDGRID_API_KEY is required")
-	}
 	if baseURL == "" {
 		return fmt.Errorf("BASE_URL is required")
 	}
 
-	from := mail.NewEmail("NUFood", "nufoodfinder11@gmail.com")
+	from := "NUFood <nufoodfinder11@gmail.com>"
 	subject := "Available Favorites Today"
-	client := sendgrid.NewSendClient(apiKey)
 
 	// A single bad recipient (e.g. a deleted Firebase user still in the DB, or a
-	// transient SendGrid error) must not abort the whole run — every user is
+	// transient provider error) must not abort the whole run — every user is
 	// attempted, per-user failures are logged and counted, and a summary error
 	// is returned only after everyone has been tried.
 	var sent, failed int
@@ -78,9 +124,6 @@ func SendEmails() error {
 			failed++
 			continue
 		}
-
-		name := strings.Split(email, "@")[0]
-		to := mail.NewEmail(name, email)
 
 		plainText := "Today's Favorites"
 
@@ -99,16 +142,8 @@ func SendEmails() error {
 			continue
 		}
 
-		message := mail.NewSingleEmail(from, subject, to, plainText, htmlContent)
-		response, err := client.Send(message)
-		if err != nil {
+		if err := activeSender.Send(from, email, subject, plainText, htmlContent); err != nil {
 			log.Printf("mailing: skip user %s: send: %v", userID, err)
-			failed++
-			continue
-		}
-		if response.StatusCode < 200 || response.StatusCode >= 300 {
-			log.Printf("mailing: skip user %s: sendgrid status=%d body=%s",
-				userID, response.StatusCode, response.Body)
 			failed++
 			continue
 		}

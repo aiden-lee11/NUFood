@@ -71,8 +71,10 @@ func main() {
 	// Daily "favorites available today" email. Intentionally left OFF for now —
 	// uncomment to enable once the school year starts (dining halls open again).
 	// Sends at 7am Central by default; override with MAILING_HOURS_CST or disable
-	// with ENABLE_MAILING_CRON=false. Requires SENDGRID_API_KEY, BASE_URL, and
-	// SECRET_KEY to be set (and a verified SendGrid sender identity).
+	// with ENABLE_MAILING_CRON=false. Requires BASE_URL and SECRET_KEY to be set,
+	// plus a mail provider plugged into the mailer package's Sender seam
+	// (mailer.SetSender) — until one is installed, sends are skipped with a clear
+	// "no mail provider configured" error.
 	// scheduler.StartDailyMailing()
 
 	// Meal-time push notifications: 30 minutes before each meal period, push

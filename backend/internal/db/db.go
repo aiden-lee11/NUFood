@@ -407,20 +407,32 @@ func SaveUserPreferences(userID string, favorites []models.AllDataItem) error {
 }
 
 func UpdateMailingStatus(userID string, mailing bool) error {
-	// Perform the update
+	// Look up the existing preferences row first so we can handle the
+	// "no row yet" case explicitly instead of treating it as a failure.
+	var userPreferences GormUserPreferences
+	err := DB.Where("user_id = ?", userID).First(&userPreferences).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// The user has no preferences row yet. Create one carrying the
+			// requested mailing value. For unsubscribe (mailing=false) this is
+			// trivially the desired state; for opt-in it persists the choice.
+			userPreferences = GormUserPreferences{
+				UserID:    userID,
+				Favorites: "[]",
+				Mailing:   mailing,
+			}
+			return DB.Create(&userPreferences).Error
+		}
+		return err
+	}
+
+	// The row exists — set the value. NOTE: an Update whose value matches the
+	// current column can report RowsAffected == 0 on some drivers. That is NOT
+	// an error: the desired state is already in place. Treating it as success
+	// keeps unsubscribe idempotent (a link may be clicked more than once, and a
+	// user who is already mailing=false must still get a success response).
 	result := DB.Model(&GormUserPreferences{}).Where("user_id = ?", userID).Update("mailing", mailing)
-
-	// Check for errors
-	if result.Error != nil {
-		return result.Error
-	}
-
-	// Check if any rows were affected
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("no rows updated for user_id: %s", userID)
-	}
-
-	return nil
+	return result.Error
 }
 
 func SaveDisplayPreferences(userID string, displayPreferences models.DisplayPreferences) error {

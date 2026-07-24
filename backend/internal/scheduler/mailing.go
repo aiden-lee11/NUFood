@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"backend/internal/twilio"
+	"backend/internal/mailer"
 	"log"
 	"os"
 	"strings"
@@ -20,7 +20,7 @@ var defaultMailingHours = []int{7}
 // disabled via ENABLE_MAILING_CRON=false. Send times are MAILING_HOURS_CST
 // (comma-separated hours 0-23 in America/Chicago, default "7"). It mirrors
 // StartDailyScrape: one goroutine that sleeps until the next scheduled time and
-// calls twilio.SendEmails. Failures are logged, never fatal.
+// calls mailer.SendEmails. Failures are logged, never fatal.
 func StartDailyMailing() {
 	if strings.EqualFold(strings.TrimSpace(os.Getenv("ENABLE_MAILING_CRON")), "false") {
 		log.Println("daily mailing disabled via ENABLE_MAILING_CRON=false")
@@ -55,7 +55,7 @@ func runMailingOnce() {
 	}()
 
 	log.Println("favorites mailing starting")
-	if err := twilio.SendEmails(); err != nil {
+	if err := mailer.SendEmails(); err != nil {
 		log.Printf("favorites mailing failed: %v", err)
 		return
 	}

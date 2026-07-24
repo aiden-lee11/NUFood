@@ -1,8 +1,8 @@
-package twilio_test
+package mailer_test
 
 import (
 	"backend/internal/models"
-	"backend/internal/twilio"
+	"backend/internal/mailer"
 	"strings"
 	"testing"
 
@@ -17,7 +17,7 @@ func TestFormatPreferencesForEmail(t *testing.T) {
 		{Name: "Tacos", Location: "Sargent", TimeOfDay: "Lunch"},
 	}
 
-	html, err := twilio.FormatPreferences(preferences, "https://example.test/unsubscribe")
+	html, err := mailer.FormatPreferences(preferences, "https://example.test/unsubscribe")
 	require.NoError(t, err)
 	assert.Contains(t, html, "Allison")
 	assert.Contains(t, html, "Sargent")
@@ -28,9 +28,9 @@ func TestFormatPreferencesForEmail(t *testing.T) {
 func TestGenerateUnsubscribeToken(t *testing.T) {
 	t.Setenv("SECRET_KEY", "test-secret")
 
-	first, err := twilio.GenerateUnsubscribeToken("user-123")
+	first, err := mailer.GenerateUnsubscribeToken("user-123")
 	require.NoError(t, err)
-	second, err := twilio.GenerateUnsubscribeToken("user-123")
+	second, err := mailer.GenerateUnsubscribeToken("user-123")
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, first)
@@ -40,7 +40,7 @@ func TestGenerateUnsubscribeToken(t *testing.T) {
 func TestGenerateUnsubscribeTokenRequiresSecret(t *testing.T) {
 	t.Setenv("SECRET_KEY", "")
 
-	token, err := twilio.GenerateUnsubscribeToken("user-123")
+	token, err := mailer.GenerateUnsubscribeToken("user-123")
 
 	assert.Error(t, err)
 	assert.Empty(t, token)
@@ -49,22 +49,22 @@ func TestGenerateUnsubscribeTokenRequiresSecret(t *testing.T) {
 func TestValidateUnsubscribeToken(t *testing.T) {
 	t.Setenv("SECRET_KEY", "test-secret")
 
-	valid, err := twilio.GenerateUnsubscribeToken("user-123")
+	valid, err := mailer.GenerateUnsubscribeToken("user-123")
 	require.NoError(t, err)
 
 	// Correct token for the user validates.
-	ok, err := twilio.ValidateUnsubscribeToken("user-123", valid)
+	ok, err := mailer.ValidateUnsubscribeToken("user-123", valid)
 	require.NoError(t, err)
 	assert.True(t, ok)
 
 	// Wrong token, and a valid token belonging to a different user, both reject.
-	ok, err = twilio.ValidateUnsubscribeToken("user-123", "not-the-token")
+	ok, err = mailer.ValidateUnsubscribeToken("user-123", "not-the-token")
 	require.NoError(t, err)
 	assert.False(t, ok)
 
-	otherUsersToken, err := twilio.GenerateUnsubscribeToken("user-456")
+	otherUsersToken, err := mailer.GenerateUnsubscribeToken("user-456")
 	require.NoError(t, err)
-	ok, err = twilio.ValidateUnsubscribeToken("user-123", otherUsersToken)
+	ok, err = mailer.ValidateUnsubscribeToken("user-123", otherUsersToken)
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
@@ -72,7 +72,7 @@ func TestValidateUnsubscribeToken(t *testing.T) {
 func TestValidateUnsubscribeTokenRequiresSecret(t *testing.T) {
 	t.Setenv("SECRET_KEY", "")
 
-	ok, err := twilio.ValidateUnsubscribeToken("user-123", "anything")
+	ok, err := mailer.ValidateUnsubscribeToken("user-123", "anything")
 
 	assert.Error(t, err)
 	assert.False(t, ok)
@@ -85,7 +85,7 @@ func TestFormatPreferencesEscapesUserFacingValues(t *testing.T) {
 		TimeOfDay: "Lunch",
 	}}
 
-	content, err := twilio.FormatPreferences(preferences, "https://example.test/?a=1&b=2")
+	content, err := mailer.FormatPreferences(preferences, "https://example.test/?a=1&b=2")
 	require.NoError(t, err)
 
 	assert.NotContains(t, content, "<script>")
