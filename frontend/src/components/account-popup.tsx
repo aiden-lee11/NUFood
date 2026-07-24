@@ -10,8 +10,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "../context/AuthProvider"
-import { Switch } from "@/components/ui/switch"
-import { updateMailing } from "@/util/data"
 import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth"
 import { auth } from "../firebase"
 import { FcGoogle } from "react-icons/fc"
@@ -30,16 +28,6 @@ const AccountPopup: React.FC<AccountPopupProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast()
   const [authLoading, setAuthLoading] = React.useState(false)
   const { resetFetchFlags } = useDataStore()
-
-  const handleSwitchChange = (checked: boolean) => {
-    updateMailing(checked, token as string)
-    setMailing(checked)
-    sessionStorage.setItem("mailing", checked ? "true" : "false")
-  }
-
-  const [mailing, setMailing] = React.useState<boolean>(
-    sessionStorage.getItem("mailing") == "true"
-  )
 
   const handleSignIn = async () => {
     setAuthLoading(true)
@@ -118,20 +106,18 @@ const AccountPopup: React.FC<AccountPopupProps> = ({ isOpen, onClose }) => {
               <Label className="text-sm">Email</Label>
               <p className="text-sm break-all text-right">{user?.email}</p>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <Label className="text-sm">Notifications</Label>
-                <Switch
-                  id="mailing-switch"
-                  onCheckedChange={handleSwitchChange}
-                  checked={mailing}
-                  className="data-[state=checked]:bg-primary"
-                />
-              </div>
-              <p className="text-sm text-muted-foreground text-center">
-                Get emailed a list of where your favorites will be at the start of each day!
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Want meal notifications?{" "}
+              <a
+                href="https://apps.apple.com/us/app/nufood/id6790686338"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline underline-offset-2 hover:opacity-80"
+              >
+                Get the NUFood iOS app
+              </a>{" "}
+              — push alerts 30 minutes before each meal when your favorites are on the menu.
+            </p>
           </div>
         ) : (
           <div className="py-6">

@@ -22,7 +22,7 @@ struct AccountToolbarButton: View {
 }
 
 /// The Account sheet contents. Signed out → offers Google sign-in; signed in → shows the
-/// email, a Notifications toggle bound through `store.setMailing`, and a Sign Out action.
+/// email, a "Favorites alerts" push toggle, and a Sign Out action.
 /// Both states include a "Send Feedback" (mailto) row. The web app's "Support this project"
 /// donation link is intentionally omitted on iOS — App Store guideline 3.1.1 requires donations
 /// for digital content/services to go through In-App Purchase.
@@ -40,13 +40,6 @@ private struct AccountSheet: View {
     @State private var deleteError: String?
 
     private static let feedbackURL = URL(string: "mailto:nufoodfinder@gmail.com?subject=NUFood%20Feedback")
-
-    private var mailingBinding: Binding<Bool> {
-        Binding(
-            get: { store.mailing },
-            set: { store.setMailing($0) }
-        )
-    }
 
     private var favoritesAlertsBinding: Binding<Bool> {
         Binding(
@@ -129,16 +122,6 @@ private struct AccountSheet: View {
                         .foregroundStyle(Theme.primary)
                 }
             }
-        }
-
-        Section {
-            Toggle("Daily email", isOn: mailingBinding)
-                .tint(Theme.primary)
-                .foregroundStyle(Theme.textPrimary)
-                .listRowBackground(Theme.card)
-        } footer: {
-            Text("Get emailed a list of where your favorites will be at the start of each day!")
-                .foregroundStyle(Theme.textSecondary)
         }
 
         Section {

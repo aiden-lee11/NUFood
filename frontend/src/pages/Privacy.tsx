@@ -52,7 +52,6 @@ const Privacy: React.FC = () => {
           <li>Your favorite menu items</li>
           <li>Your nutrition goals and meal-planner data</li>
           <li>Your display preferences and settings</li>
-          <li>Your mailing-list preference (if you opt in to that feature)</li>
         </ul>
         <p>
           This information is tied to your account and is used only to provide these features
