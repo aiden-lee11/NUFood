@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// A single dining-hall card on the Daily Items screen (SPEC §2.1, §5.3).
-/// Shows the hall name, a live open/closed status line, and one accordion per visible meal.
+/// Renders one accordion per visible meal. The hall name and live open/closed
+/// status live in the screen's pinned section header, not on the card itself.
 struct LocationCard: View {
     let location: DiningLocation
     let meals: [MealSection]
@@ -9,9 +10,9 @@ struct LocationCard: View {
     /// visible ones — a hall serving only Dinner while "Breakfast" is the visible
     /// meal must not claim "No items available" (web parity).
     let hasItems: Bool
-    /// Live open/closed status; nil when the shown date is not today (a wall-clock
-    /// status against another day's hours would mislead).
-    let status: OperatingHoursLogic.LocationStatus?
+    /// When true (active search) every station accordion renders expanded so a
+    /// match is never hidden behind a collapsed folder.
+    let isSearching: Bool
     /// Called when a signed-out user taps an item (present the auth prompt).
     var onRequestAuth: () -> Void
 
@@ -19,16 +20,6 @@ struct LocationCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(location.rawValue)
-                .font(.title2.bold())
-                .foregroundStyle(Theme.textPrimary)
-
-            if let status {
-                Text("Status: \(status.text)")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(status.isOpen ? Theme.openGreen : Theme.closedRed)
-            }
-
             if isEmpty {
                 Text("No items available")
                     .font(.subheadline)
@@ -42,7 +33,11 @@ struct LocationCard: View {
                             .font(.headline)
                             .foregroundStyle(Theme.textPrimary)
                         Divider().overlay(Theme.border)
-                        DailyItemAccordion(items: section.items, onRequestAuth: onRequestAuth)
+                        DailyItemAccordion(
+                            items: section.items,
+                            isSearching: isSearching,
+                            onRequestAuth: onRequestAuth
+                        )
                     }
                 }
             }

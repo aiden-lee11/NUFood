@@ -26,6 +26,14 @@ struct DailyItemsScreen: View {
     /// The date for which the "Error Loading Data" popup has already been dismissed.
     @State private var errorDismissedDate: String?
 
+    /// Memoized grouping of the selected day's items: location → meal → items,
+    /// already run through the search filter. Rebuilt only when its inputs change
+    /// (menu data or query) — crucially NOT on the minute clock tick, which mutates
+    /// `now` and re-evaluates the body but only affects open/closed status text.
+    /// Replaces the old per-(hall, meal) `filter` scans that re-ran ~50× per body
+    /// pass over the full ~750-item day (SPEC §2.1).
+    @State private var grouped = GroupedDayItems.empty
+
     private let clock = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -40,13 +48,17 @@ struct DailyItemsScreen: View {
                     loadErrorView(error)
                 } else {
                     ScrollView {
+                        // Horizontal inset is applied per-element (not to the whole
+                        // stack) so the pinned hall headers in `cards` can go full-bleed
+                        // while their text stays aligned with the padded content.
                         VStack(alignment: .leading, spacing: 16) {
-                            header
-                            controlsRow
-                            searchField
+                            header.padding(.horizontal)
+                            controlsRow.padding(.horizontal)
+                            mealChips.padding(.horizontal)
+                            searchField.padding(.horizontal)
                             cards
                         }
-                        .padding()
+                        .padding(.vertical)
                     }
                     .refreshable { await store.refresh() }
                 }
@@ -54,6 +66,10 @@ struct DailyItemsScreen: View {
             .background(Theme.background)
             .navigationTitle("Daily Items")
             .navigationBarTitleDisplayMode(.inline)
+            // Content scrolling under the bar should blend into the app's dark purple,
+            // not the system's default gray material, in both themes.
+            .toolbarBackground(Theme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     ThemeToggleButton()
@@ -66,6 +82,12 @@ struct DailyItemsScreen: View {
                 // crossing into dinner with the app open swaps the section over.
                 store.syncToClock(now: now)
             }
+            // Rebuild the grouping only when its true inputs move. `dayItems` covers
+            // both the loaded menu changing and the selected date switching; `query`
+            // covers the search filter. The clock tick touches neither.
+            .onAppear { rebuildGrouping() }
+            .onChange(of: dayItems) { rebuildGrouping() }
+            .onChange(of: query) { rebuildGrouping() }
             .sheet(isPresented: $showDisplaySettings) { DisplaySettingsSheet() }
             .sheet(isPresented: $showDatePicker) { DatePickerSheet() }
             .sheet(isPresented: $showAuthPrompt) { AuthPromptSheet() }
@@ -118,6 +140,44 @@ struct DailyItemsScreen: View {
         }
     }
 
+    /// Quick meal switching without opening the sheet: one chip per meal period,
+    /// toggling that meal's membership in `visibleTimes` with the same multi-select
+    /// semantics as the sheet's "Times" checkboxes (the two stay in sync both ways).
+    /// Hall filtering deliberately stays in the sheet to keep this row uncluttered.
+    private var mealChips: some View {
+        HStack(spacing: 8) {
+            ForEach(mealPeriodOrder, id: \.self) { meal in
+                let selected = store.visibleTimes.contains(meal)
+                Button { toggleMeal(meal) } label: {
+                    Text(meal)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(selected ? Theme.primaryForeground : Theme.textPrimary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(selected ? Theme.primary : Theme.card, in: Capsule())
+                        .overlay(
+                            Capsule().stroke(selected ? Color.clear : Theme.border, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(meal)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Toggle a meal in `visibleTimes`, preserving canonical Breakfast/Lunch/Dinner
+    /// order on insert. Mirrors `DisplaySettingsSheet.toggleMeal` so the chips and the
+    /// sheet checkboxes drive the same state.
+    private func toggleMeal(_ meal: String) {
+        if store.visibleTimes.contains(meal) {
+            store.visibleTimes.removeAll { $0 == meal }
+        } else {
+            store.visibleTimes = mealPeriodOrder.filter { store.visibleTimes.contains($0) || $0 == meal }
+        }
+    }
+
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
@@ -139,18 +199,58 @@ struct DailyItemsScreen: View {
     private var cards: some View {
         if store.visibleTimes.isEmpty {
             noMealsState
+                .padding(.horizontal)
         } else {
-            LazyVStack(spacing: 16) {
+            // Pinned section headers keep the hall name + status visible while its
+            // (often long) item list scrolls underneath. The LazyVStack itself is
+            // full-bleed so headers reach both screen edges; card CONTENT carries the
+            // horizontal inset instead.
+            LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
                 ForEach(sortedVisibleLocations) { location in
-                    LocationCard(
-                        location: location,
-                        meals: mealSections(for: location),
-                        hasItems: hasAnyItems(for: location),
-                        status: isToday ? status(for: location) : nil,
-                        onRequestAuth: { showAuthPrompt = true }
-                    )
+                    Section {
+                        LocationCard(
+                            location: location,
+                            meals: mealSections(for: location),
+                            hasItems: hasAnyItems(for: location),
+                            isSearching: isSearching,
+                            onRequestAuth: { showAuthPrompt = true }
+                        )
+                        .padding(.horizontal)
+                    } header: {
+                        locationHeader(for: location)
+                    }
                 }
             }
+        }
+    }
+
+    /// The compact pinned bar for a location section: hall name plus, on today, a
+    /// live open/closed status. Its opaque surface (+ hairline) stops the item list
+    /// from bleeding through as it scrolls under the pinned header.
+    ///
+    /// The background + hairline are full-bleed (edge to edge, no rounding) so the
+    /// header reads as a seamless bar rather than a floating card: the horizontal
+    /// inset lives on the inner HStack, keeping the text aligned with card content
+    /// while the fill spans the whole screen width.
+    private func locationHeader(for location: DiningLocation) -> some View {
+        let status = isToday ? status(for: location) : nil
+        return HStack(alignment: .firstTextBaseline) {
+            Text(location.rawValue)
+                .font(.title3.bold())
+                .foregroundStyle(Theme.textPrimary)
+            Spacer(minLength: 8)
+            if let status {
+                MealStatusBadge(isOpen: status.isOpen, detail: statusDetail(for: status))
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .bottom) {
+            Theme.background
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(Theme.border).frame(height: 1)
+                }
         }
     }
 
@@ -167,8 +267,8 @@ struct DailyItemsScreen: View {
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
             Text(isNight
-                ? "Check back tomorrow — or pick a meal in Display Settings to browse ahead."
-                : "Choose a meal in Display Settings → Times.")
+                ? "Check back tomorrow — or tap a meal chip above to browse ahead."
+                : "Tap a meal chip above to choose one.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -214,20 +314,24 @@ struct DailyItemsScreen: View {
             .map(String.init)
     }
 
-    private func matchesSearch(_ item: DailyItem) -> Bool {
-        let tokens = searchTokens
-        guard !tokens.isEmpty else { return true }
-        let name = item.name.lowercased()
-        return tokens.allSatisfy { name.contains($0) }
-    }
+    /// True while the user has an active search; drives the accordion to force every
+    /// station open so a match can't hide behind a collapsed folder.
+    private var isSearching: Bool { !searchTokens.isEmpty }
 
-    /// Items for one hall + meal on the selected date, after the search filter.
-    private func items(for location: DiningLocation, meal: String) -> [DailyItem] {
-        dayItems.filter {
-            $0.location == location.rawValue &&
-            $0.timeOfDay == meal &&
-            matchesSearch($0)
+    /// Rebuilds `grouped` in a single pass over the day's items: for each item that
+    /// passes the search filter, bucket it under location → meal. Replaces the old
+    /// ~50 repeated full-array `filter` scans per body pass.
+    private func rebuildGrouping() {
+        let tokens = searchTokens
+        var byLocation: [String: [String: [DailyItem]]] = [:]
+        for item in dayItems {
+            if !tokens.isEmpty {
+                let name = item.name.lowercased()
+                guard tokens.allSatisfy({ name.contains($0) }) else { continue }
+            }
+            byLocation[item.location, default: [:]][item.timeOfDay, default: []].append(item)
         }
+        grouped = GroupedDayItems(byLocation: byLocation)
     }
 
     /// The (meal, items) pairs to render on a card: visible meals with ≥1 item, in canonical order.
@@ -235,7 +339,7 @@ struct DailyItemsScreen: View {
         mealPeriodOrder
             .filter { store.visibleTimes.contains($0) }
             .compactMap { meal in
-                let items = items(for: location, meal: meal)
+                let items = grouped.items(for: location, meal: meal)
                 return items.isEmpty ? nil : MealSection(meal: meal, items: items)
             }
     }
@@ -243,7 +347,7 @@ struct DailyItemsScreen: View {
     /// Any items today at ANY meal (post-search). The web's has-items check ignores
     /// `visibleTimes`, so dimming/sorting must too — only section rendering filters.
     private func hasAnyItems(for location: DiningLocation) -> Bool {
-        mealPeriodOrder.contains { !items(for: location, meal: $0).isEmpty }
+        grouped.hasAnyItems(for: location)
     }
 
     /// Visible locations in canonical order, stably sorted so those with items come first.
@@ -262,6 +366,25 @@ struct DailyItemsScreen: View {
             dateString: store.selectedDate
         )
         return OperatingHoursLogic.status(intervals: intervals, now: now)
+    }
+
+    /// The badge's second, uppercase segment. Open → the current meal ("DINNER");
+    /// closed → a compact reopen hint ("OPENS 5:00 PM" / "OPENS IN 20 MIN") derived
+    /// from the already-computed status text. nil when there's nothing useful to add.
+    private func statusDetail(for status: OperatingHoursLogic.LocationStatus) -> String? {
+        if status.isOpen {
+            return CentralTime.currentMealPeriod(now: now)?.uppercased()
+        }
+        let text = status.text
+        if let range = text.range(of: "until ") {
+            return "OPENS " + text[range.upperBound...].uppercased()
+        }
+        if text.lowercased().hasPrefix("opens in") {
+            return text.uppercased()
+                .replacingOccurrences(of: "MINUTES", with: "MIN")
+                .replacingOccurrences(of: "MINUTE", with: "MIN")
+        }
+        return nil
     }
 
     private var headerDateString: String {
@@ -342,6 +465,59 @@ struct MealSection: Identifiable {
     let meal: String
     let items: [DailyItem]
     var id: String { meal }
+}
+
+/// A search-filtered grouping of one day's items, keyed location → meal → items.
+/// Built once per input change (see `DailyItemsScreen.rebuildGrouping`) so the
+/// screen's per-hall/per-meal lookups are O(1) dictionary reads instead of full
+/// array scans.
+struct GroupedDayItems {
+    /// location rawValue → meal period → items.
+    let byLocation: [String: [String: [DailyItem]]]
+
+    static let empty = GroupedDayItems(byLocation: [:])
+
+    func items(for location: DiningLocation, meal: String) -> [DailyItem] {
+        byLocation[location.rawValue]?[meal] ?? []
+    }
+
+    func hasAnyItems(for location: DiningLocation) -> Bool {
+        byLocation[location.rawValue]?.values.contains { !$0.isEmpty } ?? false
+    }
+}
+
+/// The pinned hall header's live status, in the compact "OPEN · DINNER" /
+/// "CLOSED · OPENS 5:00 PM" treatment: a small color dot plus uppercase, tracked,
+/// bold text — green when open, red when closed. Mirrors the Hours screen's
+/// `OpenStatusBadge` color logic in a denser, header-friendly form.
+private struct MealStatusBadge: View {
+    let isOpen: Bool
+    /// Optional uppercase second segment (meal period, or reopen hint).
+    let detail: String?
+
+    private var color: Color { isOpen ? Theme.openGreen : Theme.closedRed }
+
+    private var text: String {
+        let lead = isOpen ? "OPEN" : "CLOSED"
+        if let detail, !detail.isEmpty { return "\(lead) · \(detail)" }
+        return lead
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(text)
+                .font(.caption2.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(color)
+                .lineLimit(1)
+        }
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(text.capitalized)
+    }
 }
 
 /// Outlined pill button used for the Display Settings / date controls.

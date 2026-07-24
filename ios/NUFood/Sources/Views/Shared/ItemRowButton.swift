@@ -24,14 +24,35 @@ struct ItemRowButton: View {
     private let name: String
     private let isFavorite: Bool
     private let style: ItemRowStyle
+    private let subtitle: String?
+    private let onInfo: (() -> Void)?
     private let action: () -> Void
 
-    init(name: String, isFavorite: Bool, style: ItemRowStyle = .standard, action: @escaping () -> Void) {
+    /// - `subtitle`: optional one-line caption under the name (Option C inline macros).
+    ///   When nil the row renders exactly as before.
+    /// - `onInfo`: optional handler for a quiet ⓘ button that sits left of the star
+    ///   (Option A). When nil no ⓘ is drawn and the row renders exactly as before.
+    ///   The ⓘ is an independent overlay button so tapping it can't mis-favorite.
+    init(
+        name: String,
+        isFavorite: Bool,
+        style: ItemRowStyle = .standard,
+        subtitle: String? = nil,
+        onInfo: (() -> Void)? = nil,
+        action: @escaping () -> Void
+    ) {
         self.name = name
         self.isFavorite = isFavorite
         self.style = style
+        self.subtitle = subtitle
+        self.onInfo = onInfo
         self.action = action
     }
+
+    /// Hit target for the ⓘ button; also the space reserved for its glyph in the row.
+    private static let infoHitSize: CGFloat = 44
+    /// Fixed star column so the ⓘ overlay lines up deterministically to its left.
+    private static let starWidth: CGFloat = 16
 
     var body: some View {
         Button {
@@ -39,13 +60,35 @@ struct ItemRowButton: View {
             action()
         } label: {
             HStack(spacing: 6) {
-                Text(name)
-                    .font(.subheadline.weight(.medium))
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(isFavorite ? "★" : "☆")
-                    .font(.subheadline)
-                Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(.subheadline.weight(.medium))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let subtitle {
+                        // Keep the macro caption on a single line so a row's height
+                        // stays stable: shrink to fit first (typical strings fit with
+                        // no visible scaling), truncating only as a last resort.
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(subtitleColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                    }
+                }
+                if onInfo == nil {
+                    Text(isFavorite ? "★" : "☆")
+                        .font(.subheadline)
+                    Spacer(minLength: 0)
+                } else {
+                    Spacer(minLength: 8)
+                    // Reserve the ⓘ column; the real button lives in `infoOverlay`
+                    // so its tap stays independent of the row's favorite toggle.
+                    Color.clear.frame(width: Self.infoHitSize, height: 1)
+                    Text(isFavorite ? "★" : "☆")
+                        .font(.subheadline)
+                        .frame(width: Self.starWidth)
+                }
             }
             .foregroundStyle(textColor)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -54,6 +97,32 @@ struct ItemRowButton: View {
             .overlay(shape.strokeBorder(borderColor, lineWidth: 2))
         }
         .buttonStyle(PressScaleButtonStyle())
+        .overlay { infoOverlay }
+    }
+
+    /// The quiet ⓘ button, laid out to land exactly over the reserved column in the
+    /// row's label (same trailing widths + padding), just to the left of the star.
+    @ViewBuilder
+    private var infoOverlay: some View {
+        if let onInfo {
+            HStack(spacing: 6) {
+                Spacer(minLength: 0)
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onInfo()
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: Self.infoHitSize, height: Self.infoHitSize)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Nutrition info for \(name)")
+                Color.clear.frame(width: Self.starWidth)
+            }
+            .padding(.horizontal, 16)
+        }
     }
 
     private var shape: RoundedRectangle {
@@ -66,6 +135,12 @@ struct ItemRowButton: View {
 
     private var textColor: Color {
         isFavorite ? Theme.itemSelectedText : Theme.textPrimary
+    }
+
+    /// Inline-macro caption color: muted secondary, or the selected text hue at
+    /// reduced opacity on favorited rows so it stays legible on the purple fill.
+    private var subtitleColor: Color {
+        isFavorite ? Theme.itemSelectedText.opacity(0.75) : Theme.textSecondary
     }
 
     private var borderColor: Color {

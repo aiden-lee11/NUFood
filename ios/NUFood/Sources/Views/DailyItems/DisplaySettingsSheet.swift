@@ -1,39 +1,29 @@
 import SwiftUI
 
-/// Display Settings dialog (SPEC §2.1.5): three tabs controlling which halls, meals, and
-/// folder-expansion behavior appear on the Daily Items screen. Also the first-run onboarding sheet.
+/// Display Settings dialog (SPEC §2.1.5): a single scroll controlling which halls appear
+/// and the two visual toggles (folder expansion, inline nutrition) for the Daily Items
+/// screen. Also the first-run onboarding sheet.
+///
+/// Meal (time) visibility deliberately lives *only* on the main screen's meal chips now —
+/// the old "Times" tab here was redundant with them. `store.visibleTimes` is still the
+/// backing state; the chips read and write it directly.
 struct DisplaySettingsSheet: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @AppStorage("expandFolders") private var expandFolders = false
-
-    @State private var tab: Tab = .locations
-
-    private enum Tab: String, CaseIterable, Identifiable {
-        case locations = "Locations"
-        case times = "Times"
-        case visual = "Visual"
-        var id: String { rawValue }
-    }
+    /// Option C: show a macro caption under each Daily Items row. Local-only, like
+    /// `expandFolders` (display prefs sync only `visibleLocations` to the backend).
+    @AppStorage("showNutrition") private var showNutrition = false
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                Picker("Section", selection: $tab) {
-                    ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    locationsSection
+                    visualSection
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-
-                ScrollView {
-                    switch tab {
-                    case .locations: locationsTab
-                    case .times: timesTab
-                    case .visual: visualTab
-                    }
-                }
+                .padding()
             }
-            .padding(.top)
             .background(Theme.background)
             .navigationTitle("Display Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -50,8 +40,10 @@ struct DisplaySettingsSheet: View {
 
     // MARK: - Locations
 
-    private var locationsTab: some View {
-        VStack(spacing: 12) {
+    private var locationsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("Dining Halls")
+
             quickButton("North Campus", icon: "mappin.and.ellipse") {
                 store.setVisibleLocations(["Sargent", "Elder"])
             }
@@ -72,9 +64,8 @@ struct DisplaySettingsSheet: View {
                     }
                 }
             }
-            .padding(.top, 8)
+            .padding(.top, 4)
         }
-        .padding()
     }
 
     private func toggleLocation(_ location: DiningLocation) {
@@ -95,48 +86,48 @@ struct DisplaySettingsSheet: View {
                 if let icon { Image(systemName: icon) }
                 Text(title)
             }
-            .font(.body.weight(.medium))
+            .font(.subheadline.weight(.medium))
             .foregroundStyle(Theme.textPrimary)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 10)
             .background(Theme.secondary, in: RoundedRectangle(cornerRadius: Theme.radius))
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Times
-
-    private var timesTab: some View {
-        VStack(spacing: 4) {
-            ForEach(mealPeriodOrder, id: \.self) { meal in
-                CheckboxRow(title: meal, isOn: store.visibleTimes.contains(meal)) {
-                    toggleMeal(meal)
-                }
-            }
-        }
-        .padding()
-    }
-
-    private func toggleMeal(_ meal: String) {
-        if store.visibleTimes.contains(meal) {
-            store.visibleTimes.removeAll { $0 == meal }
-        } else {
-            // Keep canonical Breakfast/Lunch/Dinner order.
-            store.visibleTimes = mealPeriodOrder.filter { store.visibleTimes.contains($0) || $0 == meal }
-        }
-    }
-
     // MARK: - Visual
 
-    private var visualTab: some View {
-        VStack {
+    private var visualSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionLabel("Display")
+
             Toggle(isOn: $expandFolders) {
-                Text("Expand All Folders by Default")
+                Text("Expand All Folders")
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Theme.textPrimary)
             }
             .tint(Theme.primary)
+
+            Toggle(isOn: $showNutrition) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Show nutrition")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Calories & macros under each item")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .tint(Theme.primary)
         }
-        .padding()
+    }
+
+    /// A small uppercase section heading, matching the sheet's compact styling.
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(.caption.weight(.semibold))
+            .tracking(0.6)
+            .foregroundStyle(Theme.textSecondary)
     }
 }
 
@@ -148,17 +139,17 @@ private struct CheckboxRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: isOn ? "checkmark.square.fill" : "square")
-                    .font(.title2)
+                    .font(.body)
                     .foregroundStyle(isOn ? Theme.primary : Theme.textSecondary)
                 Text(title)
-                    .font(.title3.weight(.medium))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Theme.textPrimary)
                 Spacer()
             }
             .contentShape(Rectangle())
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
         }
         .buttonStyle(.plain)
     }
