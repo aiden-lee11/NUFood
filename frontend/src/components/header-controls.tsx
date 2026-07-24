@@ -13,6 +13,7 @@ interface HeaderControlsProps {
     timesOfDay: string[]
     visibleTimes: string[]
     expandFolders: boolean
+    showNutrition: boolean
   }
   preferencesActions: {
     togglePreferencesItem: (type: string, item: any) => void

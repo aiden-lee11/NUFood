@@ -13,6 +13,7 @@ interface LocationState {
   filteredItems: DailyItem[];
   availableFavorites: DailyItem[];
   expandFolders: boolean;
+  showNutrition: boolean;
   isToday: boolean;
 }
 
@@ -34,6 +35,7 @@ const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
     filteredItems,
     availableFavorites,
     expandFolders,
+    showNutrition,
     isToday
   } = state;
 
@@ -71,9 +73,11 @@ const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
                   hasItems ? '' : 'opacity-75'
                 }`}
               >
-                <h2 className="text-2xl font-bold mb-4 text-card-foreground">{location}</h2>
-                {/* "Open/Closed now" is wall-clock-based, so it only means something on today's card. */}
-                {isToday && locationOperationHours && (<Status operatingTimes={locationOperationHours[location]} />)}
+                <div className="flex items-baseline justify-between gap-2 mb-4">
+                  <h2 className="text-2xl font-bold text-card-foreground">{location}</h2>
+                  {/* "Open/Closed now" is wall-clock-based, so it only means something on today's card. */}
+                  {isToday && locationOperationHours && (<Status operatingTimes={locationOperationHours[location]} />)}
+                </div>
                 {timesOfDay
                   .filter((timeOfDay) => visibleTimes.includes(timeOfDay))
                   .map((timeOfDay) => {
@@ -104,6 +108,7 @@ const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
                             availableFavorites={filteredAvailableFavorites} // Pass filtered favorites
                             handleItemClick={handleItemClick} // Pass click handler
                             expandFolders={expandFolders}
+                            showNutrition={showNutrition}
                           />
                         </div>
                       )

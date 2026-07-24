@@ -35,6 +35,23 @@ const DailyItems: React.FC = () => {
   const [visibleLocations, setVisibleLocations] = useState<string[]>(initialDisplayPrefs.visibleLocations);
   const [visibleTimes, setVisibleTimes] = useState<string[]>([]);
   const [expandFolders, setExpandFolders] = useState(false);
+  // Local-only "show nutrition" preference — a one-line macro caption under each item.
+  // Persisted in localStorage (mirrors iOS @AppStorage("showNutrition")); expandFolders
+  // is session-only on web, so nutrition captions use localStorage to survive reloads.
+  const [showNutrition, setShowNutrition] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('showNutrition') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('showNutrition', String(showNutrition));
+    } catch {
+      // Ignore storage failures (private mode / quota) — the toggle still works in-session.
+    }
+  }, [showNutrition]);
   const timesOfDay = ["Breakfast", "Lunch", "Dinner"];
   // The Display Settings dialog opens only when the user clicks the Display Settings button
   // (no first-visit auto-open — the slow first load it once masked has since been optimized).
@@ -225,8 +242,20 @@ const DailyItems: React.FC = () => {
       );
     } else if (preferenceType === 'expandFolders') {
       setExpandFolders(preference as boolean);
+    } else if (preferenceType === 'showNutrition') {
+      setShowNutrition(preference as boolean);
     }
   }
+
+  // Toggle a meal in visibleTimes, preserving canonical Breakfast/Lunch/Dinner order.
+  // Mirrors the Display Settings checkboxes so the chips and the sheet drive the same state.
+  const toggleMeal = (meal: string) => {
+    setVisibleTimes(prev =>
+      prev.includes(meal)
+        ? prev.filter(t => t !== meal)
+        : timesOfDay.filter(t => prev.includes(t) || t === meal)
+    );
+  };
 
   const handleTogglePreferences = (show: boolean) => {
     setShowPreferences(show);
@@ -281,6 +310,7 @@ const DailyItems: React.FC = () => {
           timesOfDay,
           visibleTimes,
           expandFolders,
+          showNutrition,
         }}
         preferencesActions={{
           togglePreferencesItem,
@@ -288,6 +318,30 @@ const DailyItems: React.FC = () => {
           setShowPreferences: handleTogglePreferences,
         }}
       />
+
+      {/* Meal chips: quick meal switching without opening Display Settings. Selected =
+          filled primary, unselected = outlined card; multi-select, same visibleTimes
+          semantics as the (now removed) Times checkboxes. Mirrors iOS meal chips. */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {timesOfDay.map((meal) => {
+          const selected = visibleTimes.includes(meal);
+          return (
+            <button
+              key={meal}
+              type="button"
+              onClick={() => toggleMeal(meal)}
+              aria-pressed={selected}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                selected
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-card text-card-foreground hover:bg-item-hover"
+              }`}
+            >
+              {meal}
+            </button>
+          );
+        })}
+      </div>
 
       <Input
         type="text"
@@ -303,7 +357,7 @@ const DailyItems: React.FC = () => {
       {hasAutoSelectedTimes.current && visibleTimes.length === 0 ? (
         <div className="flex items-center justify-center py-16 text-center">
           <p className="text-muted-foreground">
-            No meal periods selected — choose one in Display Settings.
+            No meal periods selected — tap a meal above to choose one.
           </p>
         </div>
       ) : searchQuery && filteredItems.length === 0 ? (
@@ -322,6 +376,7 @@ const DailyItems: React.FC = () => {
             filteredItems,
             availableFavorites,
             expandFolders,
+            showNutrition,
             isToday,
           }}
           actions={{

@@ -1,6 +1,50 @@
 import React, { useState, useEffect } from "react";
 import { LocationOperatingTimes } from "../types/OperationTypes";
-import { getCentralNow } from "../util/helper";
+import { getCentralNow, getCurrentTimeOfDay } from "../util/helper";
+
+/**
+ * Compact "OPEN · DINNER" / "CLOSED · OPENS 5:00 PM" badge — the web mirror of iOS
+ * `MealStatusBadge`: a small color dot plus uppercase, tracked, bold text (green open,
+ * red closed). `detail` is the optional uppercase second segment (meal or reopen hint).
+ */
+const StatusBadge: React.FC<{ isOpen: boolean; detail: string | null }> = ({ isOpen, detail }) => {
+  const color = isOpen ? "text-green-500" : "text-red-500";
+  const dot = isOpen ? "bg-green-500" : "bg-red-500";
+  const lead = isOpen ? "OPEN" : "CLOSED";
+  const text = detail ? `${lead} · ${detail}` : lead;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${color}`}
+      aria-label={`Status: ${text.toLowerCase()}`}
+    >
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+      {text}
+    </span>
+  );
+};
+
+/**
+ * The badge's uppercase second segment. Open → the current meal ("DINNER"); closed →
+ * a compact reopen hint derived from the already-computed status text ("OPENS 5:00 PM" /
+ * "OPENS IN 20 MIN"). null when there's nothing useful to add. Mirrors iOS `statusDetail`.
+ */
+const statusDetail = (isOpen: boolean, statusText: string): string | null => {
+  if (isOpen) {
+    const meal = getCurrentTimeOfDay();
+    return meal ? meal.toUpperCase() : null;
+  }
+  const untilPrefix = "Closed until ";
+  if (statusText.startsWith(untilPrefix)) {
+    return "OPENS " + statusText.slice(untilPrefix.length).toUpperCase();
+  }
+  if (statusText.toLowerCase().startsWith("opens in")) {
+    return statusText
+      .toUpperCase()
+      .replace("MINUTES", "MIN")
+      .replace("MINUTE", "MIN");
+  }
+  return null;
+};
 
 // Format a minutes-since-midnight value (may exceed 1440 for times past midnight) to "h:mm AM/PM".
 const formatMinutesToAmPm = (totalMinutes: number): string => {
@@ -91,17 +135,17 @@ const Status: React.FC<LocationOperatingTimes> = ({ operatingTimes }) => {
 
   // Conditional rendering based on operatingTimes.
   if (!operatingTimes || (typeof operatingTimes === "string" && operatingTimes === "closed")) {
-    return <div className="text-red-500">Status: Closed</div>;
+    return <StatusBadge isOpen={false} detail={null} />;
   }
   if (typeof operatingTimes === "string") {
-    return <div className="text-yellow-500">Status: Invalid Data</div>;
+    return (
+      <span className="text-xs font-bold uppercase tracking-wider text-yellow-500">
+        Invalid Data
+      </span>
+    );
   }
 
-  return (
-    <div className={isOpen ? "text-green-500" : "text-red-500"}>
-      Status: {statusText}
-    </div>
-  );
+  return <StatusBadge isOpen={isOpen} detail={statusDetail(isOpen, statusText)} />;
 };
 
 export default Status;

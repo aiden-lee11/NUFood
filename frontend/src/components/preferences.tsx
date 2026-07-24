@@ -1,9 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Settings } from "lucide-react"
 import { LocationPreferences } from "./location-preferences"
-import { TimePreferences } from "./time-preferences"
 import { VisualPreferences } from "./visual-preferences"
 
 interface PreferencesProps {
@@ -14,6 +12,7 @@ interface PreferencesProps {
     timesOfDay: string[]
     visibleTimes: string[]
     expandFolders: boolean
+    showNutrition: boolean
   }
   actions: {
     setShowPreferences: (show: boolean) => void
@@ -22,6 +21,9 @@ interface PreferencesProps {
   }
 }
 
+// Meal (time) visibility now lives only on the page's meal chips, so this dialog is a
+// single panel: the dining-hall visibility grid plus the two visual toggles (expand
+// folders, show nutrition). Mirrors iOS `DisplaySettingsSheet`.
 const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state, actions }) => {
   return (
     <>
@@ -33,10 +35,10 @@ const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state,
       <Dialog open={showPreferences} onOpenChange={actions.setShowPreferences}>
         <DialogContent
           className="
-          sm:max-w-[600px] 
-          focus:outline-none 
-          focus-visible:outline-none 
-          focus-visible:ring-0 
+          sm:max-w-[600px]
+          focus:outline-none
+          focus-visible:outline-none
+          focus-visible:ring-0
           focus-visible:ring-offset-0
           "
         >
@@ -44,46 +46,31 @@ const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state,
             <DialogTitle>Display Settings</DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="locations" className="w-full" >
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="locations">Locations</TabsTrigger>
-              <TabsTrigger value="times">Times</TabsTrigger>
-              <TabsTrigger value="visual">Visual</TabsTrigger>
-            </TabsList>
-
-            <TabsContent
-              value="locations"
-              className="
-              mt-4
-              focus:outline-none 
-              focus-visible:outline-none
-              focus-visible:ring-0 
-              focus-visible:ring-offset-0
-              "
-            >
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Dining Halls
+              </h3>
               <LocationPreferences
                 locations={state.locations}
                 visibleLocations={state.visibleLocations}
                 toggleLocation={(location) => actions.togglePreferencesItem("location", location)}
                 setVisibleLocations={actions.setVisibleLocations}
               />
-            </TabsContent>
+            </section>
 
-            <TabsContent value="times" className="mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-              <TimePreferences
-                timesOfDay={state.timesOfDay}
-                visibleTimes={state.visibleTimes}
-                toggleTime={(time) => actions.togglePreferencesItem("time", time)}
-              />
-            </TabsContent>
-
-            <TabsContent value="visual" className="mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Display
+              </h3>
               <VisualPreferences
                 expandFolders={state.expandFolders}
                 toggleExpandFolders={() => actions.togglePreferencesItem("expandFolders", !state.expandFolders)}
+                showNutrition={state.showNutrition}
+                toggleShowNutrition={() => actions.togglePreferencesItem("showNutrition", !state.showNutrition)}
               />
-            </TabsContent>
-          </Tabs>
+            </section>
+          </div>
         </DialogContent>
       </Dialog>
     </>
