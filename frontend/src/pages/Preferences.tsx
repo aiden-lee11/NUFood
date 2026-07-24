@@ -95,7 +95,7 @@ const Preferences: React.FC = () => {
         url="https://dining.nu/preferences"
       />
 
-      <div className="max-w-3xl">
+      <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-4">
           <h1 className="text-2xl font-bold">Your Favorite Items</h1>
