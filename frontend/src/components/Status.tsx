@@ -12,13 +12,15 @@ const StatusBadge: React.FC<{ isOpen: boolean; detail: string | null }> = ({ isO
   const dot = isOpen ? "bg-green-500" : "bg-red-500";
   const lead = isOpen ? "OPEN" : "CLOSED";
   const text = detail ? `${lead} · ${detail}` : lead;
+  // Each segment stays on one line, but the badge may break between them when space is tight.
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${color}`}
+      className={`inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-bold uppercase tracking-wider ${color}`}
       aria-label={`Status: ${text.toLowerCase()}`}
     >
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
-      {text}
+      <span className="whitespace-nowrap">{detail ? `${lead} ·` : lead}</span>
+      {detail && <span className="whitespace-nowrap">{detail}</span>}
     </span>
   );
 };

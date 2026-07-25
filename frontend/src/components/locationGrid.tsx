@@ -73,7 +73,7 @@ const LocationItemGrid: React.FC<LocationProps> = ({ state, actions }) => {
                   hasItems ? '' : 'opacity-75'
                 }`}
               >
-                <div className="flex items-baseline justify-between gap-2 mb-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 mb-4">
                   <h2 className="text-2xl font-bold text-card-foreground">{location}</h2>
                   {/* "Open/Closed now" is wall-clock-based, so it only means something on today's card. */}
                   {isToday && locationOperationHours && (<Status operatingTimes={locationOperationHours[location]} />)}
