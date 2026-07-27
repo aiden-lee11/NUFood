@@ -25,11 +25,16 @@ struct ItemRowButton: View {
     private let isFavorite: Bool
     private let style: ItemRowStyle
     private let subtitle: String?
+    private let dietTag: String?
+    private let warning: String?
     private let onInfo: (() -> Void)?
     private let action: () -> Void
 
     /// - `subtitle`: optional one-line caption under the name (Option C inline macros).
     ///   When nil the row renders exactly as before.
+    /// - `dietTag`: optional green mini-tag ("Vegan") from the item's diet filters.
+    /// - `warning`: optional amber mini-badge ("contains sesame") shown in the dietary
+    ///   profile's "warn" mode; takes the diet tag's place so a row never carries two.
     /// - `onInfo`: optional handler for a quiet ⓘ button that sits left of the star
     ///   (Option A). When nil no ⓘ is drawn and the row renders exactly as before.
     ///   The ⓘ is an independent overlay button so tapping it can't mis-favorite.
@@ -38,6 +43,8 @@ struct ItemRowButton: View {
         isFavorite: Bool,
         style: ItemRowStyle = .standard,
         subtitle: String? = nil,
+        dietTag: String? = nil,
+        warning: String? = nil,
         onInfo: (() -> Void)? = nil,
         action: @escaping () -> Void
     ) {
@@ -45,6 +52,8 @@ struct ItemRowButton: View {
         self.isFavorite = isFavorite
         self.style = style
         self.subtitle = subtitle
+        self.dietTag = dietTag
+        self.warning = warning
         self.onInfo = onInfo
         self.action = action
     }
@@ -77,11 +86,15 @@ struct ItemRowButton: View {
                     }
                 }
                 if onInfo == nil {
+                    badge
                     Text(isFavorite ? "★" : "☆")
                         .font(.subheadline)
                     Spacer(minLength: 0)
                 } else {
                     Spacer(minLength: 8)
+                    // Sits just left of the trailing ⓘ/star so it right-aligns down
+                    // the list instead of drifting with each item's name length.
+                    badge
                     // Reserve the ⓘ column; the real button lives in `infoOverlay`
                     // so its tap stays independent of the row's favorite toggle.
                     Color.clear.frame(width: Self.infoHitSize, height: 1)
@@ -98,6 +111,31 @@ struct ItemRowButton: View {
         }
         .buttonStyle(PressScaleButtonStyle())
         .overlay { infoOverlay }
+    }
+
+    /// The row's single mini-tag: an amber allergen warning when the dietary profile
+    /// flagged this item, otherwise the green diet label. Never both — rows stay
+    /// scannable, and a flagged item's diet is still shown in its detail sheet.
+    @ViewBuilder
+    private var badge: some View {
+        if let warning {
+            miniTag(warning, tint: Theme.warningYellow)
+        } else if let dietTag {
+            miniTag(dietTag, tint: Theme.openGreen)
+        }
+    }
+
+    /// Tiny rounded label on a low-opacity wash of its own tint — quiet enough to sit
+    /// on both the card and the purple favorited surface without competing with the name.
+    private func miniTag(_ text: String, tint: Color) -> some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
     }
 
     /// The quiet ⓘ button, laid out to land exactly over the reserved column in the

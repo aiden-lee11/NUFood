@@ -59,6 +59,8 @@ func parseItems(jsonResponse models.DiningHallResponse, location, timeOfDay stri
 				StationName: category.Name,
 				TimeOfDay:   timeOfDay,
 				PortionSize: item.Portion,
+				Ingredients: strings.TrimSpace(item.Ingredients),
+				Filters:     flattenFilterNames(item.Filters),
 			}
 
 			for _, nutrient := range item.Nutrients {
@@ -80,6 +82,32 @@ func parseItems(jsonResponse models.DiningHallResponse, location, timeOfDay stri
 	}
 
 	return dailyItems, allDataItems, nil
+}
+
+// flattenFilterNames reduces upstream filter objects to their names. Names are
+// trimmed, empties dropped, and duplicates removed while preserving first-seen
+// order. Every remaining name is kept verbatim -- allergens ("Milk"), "may
+// contain" variants ("Sesame*"), diets ("Vegan", "Avoiding Gluten") and
+// marketing callouts ("Good Source of Protein") alike -- because clients own
+// the categorization. The result is always non-nil so the API emits [] rather
+// than null for items without tags.
+func flattenFilterNames(filters []models.Filter) []string {
+	names := make([]string, 0, len(filters))
+	seen := make(map[string]struct{}, len(filters))
+
+	for _, filter := range filters {
+		name := strings.TrimSpace(filter.Name)
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+
+	return names
 }
 
 func parseLocationOperatingTimes(locations []models.LocationOperatingInfo) ([]models.LocationOperatingTimes, error) {

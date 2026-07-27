@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Settings } from "lucide-react"
+import { AllergenPreferences, DietPreferences } from "./diet-preferences"
 import { LocationPreferences } from "./location-preferences"
 import { VisualPreferences } from "./visual-preferences"
 
@@ -22,7 +23,8 @@ interface PreferencesProps {
 }
 
 // Meal (time) visibility now lives only on the page's meal chips, so this dialog is a
-// single panel: the dining-hall visibility grid plus the two visual toggles (expand
+// single scrolling panel: the dining-hall visibility grid, the dietary profile (diets +
+// allergens, persisted locally and never synced), then the two visual toggles (expand
 // folders, show nutrition). Mirrors iOS `DisplaySettingsSheet`.
 const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state, actions }) => {
   return (
@@ -36,6 +38,8 @@ const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state,
         <DialogContent
           className="
           sm:max-w-[600px]
+          max-h-[85vh]
+          overflow-y-auto
           focus:outline-none
           focus-visible:outline-none
           focus-visible:ring-0
@@ -57,6 +61,20 @@ const PreferencesDialog: React.FC<PreferencesProps> = ({ showPreferences, state,
                 toggleLocation={(location) => actions.togglePreferencesItem("location", location)}
                 setVisibleLocations={actions.setVisibleLocations}
               />
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Diet
+              </h3>
+              <DietPreferences />
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                My allergens
+              </h3>
+              <AllergenPreferences />
             </section>
 
             <section className="space-y-3">

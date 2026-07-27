@@ -12,6 +12,15 @@ export interface DailyItem {
   protein?: string;
   carbs?: string;
   fat?: string;
+  /** Raw ingredient statement from the hall; often "" or absent. */
+  ingredients?: string;
+  /**
+   * Raw dining-hall tag names — diets ("Vegan", "Avoiding Gluten"), marketing tags
+   * ("Good Source of Protein") and allergens ("Milk", "Sesame*" = may contain).
+   * Not served in production yet, so treat missing/empty as "no tag data".
+   * See `util/dietaryTags.ts` for the semantics.
+   */
+  filters?: string[];
 }
 
 export interface Item {

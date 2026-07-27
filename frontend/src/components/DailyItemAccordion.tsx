@@ -7,6 +7,8 @@ import { Info } from "lucide-react";
 import clsx from "clsx";
 import { DailyItem } from "../types/ItemTypes";
 import { inlineCaption } from "../util/nutritionFormat";
+import { useDietaryProfile } from "../hooks/useDietaryProfile";
+import { DietaryProfile, conflictLabel, evaluateItem } from "../util/dietaryProfile";
 import NutritionDialog from "./NutritionDialog";
 
 
@@ -22,16 +24,24 @@ interface Props {
  * A single item row: a bordered card whose name/star area toggles the favorite, with a
  * muted ⓘ button (its own click target, stopPropagation) sitting LEFT of the star that
  * opens the nutrition detail dialog. Mirrors iOS `ItemRowButton` (SPEC §5.3).
+ *
+ * Rows also carry at most one green diet mini-tag (Vegan > Vegetarian > Gluten-free) and,
+ * in the profile's "warn" mode, an amber allergen badge. Both are silent on items without
+ * tag data, which is every item until the backend ships `filters`.
  */
 const ItemRow: React.FC<{
   item: DailyItem;
   isFavorite: boolean;
   favoriteBorderClass: string;
   showNutrition: boolean;
+  profile: DietaryProfile;
   onToggle: (item: DailyItem) => void;
   onInfo: (item: DailyItem) => void;
-}> = ({ item, isFavorite, favoriteBorderClass, showNutrition, onToggle, onInfo }) => {
+}> = ({ item, isFavorite, favoriteBorderClass, showNutrition, profile, onToggle, onInfo }) => {
   const caption = showNutrition ? inlineCaption(item) : null;
+  const { conflict, dietTag } = evaluateItem(item, profile);
+  // "hide" mode already removed conflicting items upstream — only "warn" badges them.
+  const warning = profile.conflictMode === "warn" && conflict ? conflictLabel(conflict) : null;
 
   return (
     <div
@@ -50,6 +60,20 @@ const ItemRow: React.FC<{
         className="min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
       >
         <div className="truncate">{item.Name}</div>
+        {(dietTag || warning) && (
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            {dietTag && (
+              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                {dietTag.label}
+              </span>
+            )}
+            {warning && (
+              <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                {warning}
+              </span>
+            )}
+          </div>
+        )}
         {caption && (
           <div
             className={clsx(
@@ -116,6 +140,10 @@ const DailyItemAccordion: React.FC<Props> = ({
   // The item whose nutrition detail dialog is open, if any.
   const [detailItem, setDetailItem] = React.useState<DailyItem | null>(null);
 
+  // Read straight from the profile store — the list itself is already filtered by the
+  // page; rows only need it for the diet mini-tag and the "warn" mode allergen badge.
+  const dietaryProfile = useDietaryProfile((state) => state.profile);
+
   const isFavorite = (item: DailyItem) =>
     availableFavorites.some((fav) => fav.Name === item.Name);
 
@@ -161,6 +189,7 @@ const DailyItemAccordion: React.FC<Props> = ({
                     isFavorite={true}
                     favoriteBorderClass="border-chart-5"
                     showNutrition={showNutrition}
+                    profile={dietaryProfile}
                     onToggle={handleItemClick}
                     onInfo={setDetailItem}
                   />
@@ -192,6 +221,7 @@ const DailyItemAccordion: React.FC<Props> = ({
                       isFavorite={isFavorite(item)}
                       favoriteBorderClass="border-primary"
                       showNutrition={showNutrition}
+                      profile={dietaryProfile}
                       onToggle={handleItemClick}
                       onInfo={setDetailItem}
                     />
@@ -227,6 +257,7 @@ const DailyItemAccordion: React.FC<Props> = ({
                       isFavorite={isFavorite(item)}
                       favoriteBorderClass="border-primary"
                       showNutrition={showNutrition}
+                      profile={dietaryProfile}
                       onToggle={handleItemClick}
                       onInfo={setDetailItem}
                     />

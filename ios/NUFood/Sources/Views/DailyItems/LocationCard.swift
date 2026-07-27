@@ -13,6 +13,8 @@ struct LocationCard: View {
     /// When true (active search) every station accordion renders expanded so a
     /// match is never hidden behind a collapsed folder.
     let isSearching: Bool
+    /// Item id → dietary-profile allergen conflict, populated only in "warn" mode.
+    var warnings: [String: DietaryProfile.AllergenHit] = [:]
     /// Called when a signed-out user taps an item (present the auth prompt).
     var onRequestAuth: () -> Void
 
@@ -36,6 +38,7 @@ struct LocationCard: View {
                         DailyItemAccordion(
                             items: section.items,
                             isSearching: isSearching,
+                            warnings: warnings,
                             onRequestAuth: onRequestAuth
                         )
                     }

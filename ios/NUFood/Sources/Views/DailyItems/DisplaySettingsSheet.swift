@@ -15,15 +15,37 @@ struct DisplaySettingsSheet: View {
     /// `expandFolders` (display prefs sync only `visibleLocations` to the backend).
     @AppStorage("showNutrition") private var showNutrition = false
 
+    // The dietary profile — device-local too; see `DietaryProfile`.
+    @AppStorage(DietaryProfile.Key.diets) private var dietsRaw = ""
+    @AppStorage(DietaryProfile.Key.allergens) private var allergensRaw = ""
+    @AppStorage(DietaryProfile.Key.mayContainUnsafe) private var mayContainUnsafe = true
+    @AppStorage(DietaryProfile.Key.conflictMode) private var conflictModeRaw = DietaryProfile.ConflictMode.hide.rawValue
+
+    /// The fixed allergen list unioned with tags found in the loaded menu, computed
+    /// once on appear rather than re-scanning thousands of items on every chip tap.
+    @State private var allergenOptions: [String] = DietaryTag.commonAllergens
+
+    private var profile: DietaryProfile {
+        DietaryProfile(
+            dietsRaw: dietsRaw,
+            allergensRaw: allergensRaw,
+            mayContainUnsafe: mayContainUnsafe,
+            conflictModeRaw: conflictModeRaw
+        )
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     locationsSection
+                    dietSection
+                    allergenSection
                     visualSection
                 }
                 .padding()
             }
+            .onAppear { allergenOptions = DietaryTag.ordered(menuAllergens()) }
             .background(Theme.background)
             .navigationTitle("Display Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -93,6 +115,124 @@ struct DisplaySettingsSheet: View {
             .background(Theme.secondary, in: RoundedRectangle(cornerRadius: Theme.radius))
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Dietary profile
+
+    /// Diets are a *requirement*, not a preference: selecting Vegan hides anything
+    /// the hall didn't tag Vegan. Three chips only — the halls tag nothing else.
+    private var dietSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("Diet")
+
+            HStack(spacing: 8) {
+                ForEach(DietaryTag.diets, id: \.self) { diet in
+                    let selected = profile.selectedDiets.contains { DietaryTag.matches($0, diet) }
+                    Button { toggleDiet(diet) } label: {
+                        TagChip(
+                            text: DietaryTag.label(for: diet),
+                            style: selected ? .filled : .outline
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(DietaryTag.label(for: diet))
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+                Spacer(minLength: 0)
+            }
+
+            caption("Persists until you turn it off.")
+        }
+    }
+
+    private var allergenSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("My Allergens")
+            caption("Applies every day. Tag data comes from the dining hall — absence of a tag doesn't guarantee allergen-free.")
+
+            FlowLayout(spacing: 8, lineSpacing: 8) {
+                ForEach(allergenOptions, id: \.self) { allergen in
+                    let selected = profile.avoids(allergen)
+                    Button { toggleAllergen(allergen) } label: {
+                        TagChip(
+                            text: allergen,
+                            style: selected ? .filled : .outline,
+                            font: .footnote.weight(.medium)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(allergen)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+
+            Toggle(isOn: $mayContainUnsafe) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Treat “may contain” as unsafe")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Items traced with * count as containing it")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .tint(Theme.primary)
+            .padding(.top, 4)
+
+            VStack(alignment: .leading, spacing: 8) {
+                sectionLabel("When an item has my allergen")
+                Picker("", selection: $conflictModeRaw) {
+                    Text("Hide it").tag(DietaryProfile.ConflictMode.hide.rawValue)
+                    Text("Show a warning").tag(DietaryProfile.ConflictMode.warn.rawValue)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    private func toggleDiet(_ diet: String) {
+        var diets = profile.selectedDiets
+        if let existing = diets.first(where: { DietaryTag.matches($0, diet) }) {
+            diets.remove(existing)
+        } else {
+            diets.insert(diet)
+        }
+        dietsRaw = DietaryProfile.encode(diets)
+    }
+
+    private func toggleAllergen(_ allergen: String) {
+        var allergens = profile.avoidedAllergens
+        if let existing = allergens.first(where: { DietaryTag.matches($0, allergen) }) {
+            allergens.remove(existing)
+        } else {
+            allergens.insert(allergen)
+        }
+        allergensRaw = DietaryProfile.encode(allergens)
+    }
+
+    /// Allergen tags actually present in the loaded week, unioned with the fixed list
+    /// so a newly introduced upstream tag ("Coconut") becomes selectable on its own.
+    private func menuAllergens() -> Set<String> {
+        var names = Set(DietaryTag.commonAllergens)
+        var seen = Set(DietaryTag.commonAllergens.map { $0.lowercased() })
+        for items in store.weeklyItems.values {
+            for item in items {
+                for tag in item.filters where DietaryTag.isAllergen(tag) {
+                    let name = DietaryTag.name(tag)
+                    if seen.insert(name.lowercased()).inserted { names.insert(name) }
+                }
+            }
+        }
+        return names
+    }
+
+    private func caption(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Visual

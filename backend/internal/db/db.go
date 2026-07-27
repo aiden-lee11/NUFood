@@ -495,7 +495,13 @@ func GetAllWeeklyItems() (map[string][]models.DailyItem, error) {
 
 	weeklyItemsMap := make(map[string][]models.DailyItem)
 	for _, wItem := range weeklyItems {
-		weeklyItemsMap[wItem.Date] = append(weeklyItemsMap[wItem.Date], wItem.DailyItem)
+		dailyItem := wItem.DailyItem
+		// Rows written before the filters column existed scan back as nil,
+		// which would serialize as null. Clients expect an array, so normalize.
+		if dailyItem.Filters == nil {
+			dailyItem.Filters = []string{}
+		}
+		weeklyItemsMap[wItem.Date] = append(weeklyItemsMap[wItem.Date], dailyItem)
 	}
 
 	return weeklyItemsMap, nil

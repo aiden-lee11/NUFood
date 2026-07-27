@@ -14,6 +14,9 @@ import SEO from '../components/SEO';
 import { toLocalISODate } from '../util/date';
 import { loadDisplayPreferences, saveDisplayPreferences } from '../util/displayPreferences';
 import { useDebounce } from '../hooks/useDebounce';
+import { useDietaryProfile } from '../hooks/useDietaryProfile';
+import { applyDietaryProfile, isProfileActive, profileCountLabel, profileSummary } from '../util/dietaryProfile';
+import { hasTagData } from '../util/dietaryTags';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -169,6 +172,24 @@ const DailyItems: React.FC = () => {
       setFilteredItems(dailyItems);
     }
   }, [debouncedQuery, dailyItems, fuse]);
+
+  // --- Dietary profile ---------------------------------------------------------------
+  // Local-only (localStorage) diets + allergens. The menu feed does not carry tag data in
+  // production yet, so the profile stays inert until at least one of the day's items has
+  // tags — otherwise a saved "Vegan" would empty the page, since nothing can prove it is
+  // vegan. Once tags ship, `applyDietaryProfile` filters (hide mode) or counts (warn mode).
+  const dietaryProfile = useDietaryProfile((state) => state.profile);
+  const tagDataAvailable = useMemo(() => hasTagData(dailyItems), [dailyItems]);
+  const profileResult = useMemo(
+    () => applyDietaryProfile(filteredItems, dietaryProfile, tagDataAvailable),
+    [filteredItems, dietaryProfile, tagDataAvailable]
+  );
+  const visibleFavorites = useMemo(
+    () => applyDietaryProfile(availableFavorites, dietaryProfile, tagDataAvailable).items,
+    [availableFavorites, dietaryProfile, tagDataAvailable]
+  );
+  const profileShown = tagDataAvailable && isProfileActive(dietaryProfile);
+  const profileCount = profileCountLabel(profileResult, dietaryProfile.conflictMode);
 
   const handleItemClick = (item: Item) => {
     if (!token) {
@@ -354,6 +375,25 @@ const DailyItems: React.FC = () => {
           bg-background dark:text-white dark:border-gray-600 dark:focus:ring-gray-400"
       />
 
+      {/* Status pill: what the dietary profile is doing to this list right now, plus a
+          shortcut back into Display Settings to change it. Hidden when the profile is
+          empty or the menu carries no tag data. */}
+      {profileShown && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted px-4 py-2">
+          <p className="text-sm text-muted-foreground">
+            {profileSummary(dietaryProfile)}
+            {profileCount && ` — ${profileCount}`}
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowPreferences(true)}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+          >
+            Edit
+          </button>
+        </div>
+      )}
+
       {hasAutoSelectedTimes.current && visibleTimes.length === 0 ? (
         <div className="flex items-center justify-center py-16 text-center">
           <p className="text-muted-foreground">
@@ -366,6 +406,12 @@ const DailyItems: React.FC = () => {
             No items match "{searchQuery}" for this date.
           </p>
         </div>
+      ) : profileShown && profileResult.items.length === 0 && filteredItems.length > 0 ? (
+        <div className="flex items-center justify-center py-16 text-center">
+          <p className="text-muted-foreground">
+            No items match your dietary profile for this date.
+          </p>
+        </div>
       ) : (
         <LocationItemGrid
           state={{
@@ -373,8 +419,8 @@ const DailyItems: React.FC = () => {
             visibleLocations,
             timesOfDay,
             visibleTimes,
-            filteredItems,
-            availableFavorites,
+            filteredItems: profileResult.items,
+            availableFavorites: visibleFavorites,
             expandFolders,
             showNutrition,
             isToday,

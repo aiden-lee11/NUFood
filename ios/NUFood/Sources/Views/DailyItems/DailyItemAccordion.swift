@@ -20,6 +20,8 @@ struct DailyItemAccordion: View {
     /// While searching, every station renders expanded so a match can't hide behind
     /// a collapsed folder; prior per-section expansion returns once search is cleared.
     var isSearching: Bool = false
+    /// Item id → dietary-profile allergen conflict, populated only in "warn" mode.
+    var warnings: [String: DietaryProfile.AllergenHit] = [:]
     var onRequestAuth: () -> Void
 
     @Environment(AppStore.self) private var store
@@ -50,6 +52,7 @@ struct DailyItemAccordion: View {
                     isExpanded: binding(for: section),
                     isFavorite: { store.favorites.contains($0.name) },
                     showNutrition: showNutrition,
+                    warnings: warnings,
                     onTap: handleTap
                 )
             }
@@ -137,6 +140,8 @@ private struct AccordionSection: View {
     let isFavorite: (DailyItem) -> Bool
     /// Option C: whether to render the inline macro caption under each row.
     let showNutrition: Bool
+    /// Item id → dietary-profile allergen conflict, populated only in "warn" mode.
+    let warnings: [String: DietaryProfile.AllergenHit]
     let onTap: (DailyItem) -> Void
 
     /// The item whose nutrition detail sheet (Option A) is presented, if any.
@@ -169,6 +174,8 @@ private struct AccordionSection: View {
                             isFavorite: isFavorite(item),
                             style: section.style,
                             subtitle: showNutrition ? NutritionFormat.inlineCaption(for: item) : nil,
+                            dietTag: item.primaryDietLabel,
+                            warning: warnings[item.id]?.label,
                             onInfo: { detailItem = item }
                         ) {
                             onTap(item)
@@ -229,6 +236,16 @@ private struct ItemPreviewCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            // Truncated here (the sheet shows it in full) so the peek stays compact;
+            // absent for most items, which send "".
+            if !item.description.isEmpty {
+                Text(item.description)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             HStack(spacing: 8) {
                 macroCell("Cal", value: NutritionFormat.cell(item.caloriesValue))
                 macroCell("Protein", value: NutritionFormat.cell(item.proteinValue, unit: "g"))
@@ -265,8 +282,12 @@ private struct ItemPreviewCard: View {
 }
 
 /// Option A primary detail surface: a compact bottom sheet reached by the row's ⓘ.
-/// Shows the item name, a "Hall · Station · Meal" context line, a four-cell macro
-/// grid, an optional portion, and a full-width favorite toggle (SPEC §3.7).
+/// Shows the item name, a "Hall · Station · Meal" context line, its diet/marketing
+/// tags, a four-cell macro grid, allergen chip rows, ingredients, an optional portion,
+/// and a full-width favorite toggle (SPEC §3.7).
+///
+/// Everything tag-derived is data-dependent and simply absent when the menu carries
+/// no `filters`/`ingredients` — which is still the case on deployed backends.
 private struct NutritionDetailSheet: View {
     let item: DailyItem
     /// Toggles the favorite through the same path the row uses (auth-aware).
@@ -274,35 +295,73 @@ private struct NutritionDetailSheet: View {
 
     @Environment(AppStore.self) private var store
 
+    // Read (and, for diets, written) here so tapping a diet tag configures the
+    // profile in place — see `DietaryProfile`.
+    @AppStorage(DietaryProfile.Key.diets) private var dietsRaw = ""
+    @AppStorage(DietaryProfile.Key.allergens) private var allergensRaw = ""
+    @AppStorage(DietaryProfile.Key.mayContainUnsafe) private var mayContainUnsafe = true
+    @AppStorage(DietaryProfile.Key.conflictMode) private var conflictModeRaw = DietaryProfile.ConflictMode.hide.rawValue
+
+    /// The diet whose "Show only … items?" confirmation is up, if any.
+    @State private var pendingDiet: String?
+
     private var isFavorite: Bool { store.favorites.contains(item.name) }
 
+    private var profile: DietaryProfile {
+        DietaryProfile(
+            dietsRaw: dietsRaw,
+            allergensRaw: allergensRaw,
+            mayContainUnsafe: mayContainUnsafe,
+            conflictModeRaw: conflictModeRaw
+        )
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.name)
-                    .font(.title3.bold())
-                    .foregroundStyle(Theme.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("\(item.location) · \(item.stationName) · \(item.timeOfDay)")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.name)
+                            .font(.title3.bold())
+                            .foregroundStyle(Theme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("\(item.location) · \(item.stationName) · \(item.timeOfDay)")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
-            HStack(spacing: 8) {
-                macroCell("Cal", value: NutritionFormat.cell(item.caloriesValue))
-                macroCell("Protein", value: NutritionFormat.cell(item.proteinValue, unit: "g"))
-                macroCell("Carbs", value: NutritionFormat.cell(item.carbsValue, unit: "g"))
-                macroCell("Fat", value: NutritionFormat.cell(item.fatValue, unit: "g"))
-            }
+                    // Only ~a quarter of items carry a description, and the backend sends ""
+                    // for the rest — never render an empty block.
+                    if !item.description.isEmpty {
+                        Text(item.description)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
-            if !item.portionSize.isEmpty {
-                Text("Portion: \(item.portionSize)")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-            }
+                    tagRow
 
-            Spacer(minLength: 0)
+                    HStack(spacing: 8) {
+                        macroCell("Cal", value: NutritionFormat.cell(item.caloriesValue))
+                        macroCell("Protein", value: NutritionFormat.cell(item.proteinValue, unit: "g"))
+                        macroCell("Carbs", value: NutritionFormat.cell(item.carbsValue, unit: "g"))
+                        macroCell("Fat", value: NutritionFormat.cell(item.fatValue, unit: "g"))
+                    }
+
+                    allergenSection("Contains", allergens: item.containsAllergens, tint: Theme.destructive)
+                    allergenSection("May contain", allergens: item.mayContainAllergens, tint: Theme.warningYellow)
+                    ingredientsSection
+
+                    if !item.portionSize.isEmpty {
+                        Text("Portion: \(item.portionSize)")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20)
+            }
 
             Button(action: onToggleFavorite) {
                 Text(isFavorite ? "Remove from Favorites" : "Add to Favorites")
@@ -313,12 +372,109 @@ private struct NutritionDetailSheet: View {
                     .background(Theme.primary, in: RoundedRectangle(cornerRadius: Theme.radius))
             }
             .buttonStyle(.plain)
+            .padding([.horizontal, .bottom], 20)
         }
-        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.background)
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        .confirmationDialog(
+            pendingDiet.map { "Show only \(DietaryTag.label(for: $0)) items?" } ?? "",
+            isPresented: pendingDietBinding,
+            titleVisibility: .visible
+        ) {
+            if let diet = pendingDiet {
+                Button("Show only \(DietaryTag.label(for: diet)) items") { addDiet(diet) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Adds it to your diet filter in Display Settings. It stays on until you turn it off.")
+        }
+    }
+
+    // MARK: - Tags
+
+    /// Diet + marketing tags. Diet chips are tappable: they're the one tag a user can
+    /// act on, and "I want more of this" is the obvious next thought after reading one.
+    @ViewBuilder
+    private var tagRow: some View {
+        let diets = item.dietTags
+        let marketing = item.marketingTags
+        if !diets.isEmpty || !marketing.isEmpty {
+            FlowLayout(spacing: 8, lineSpacing: 8) {
+                ForEach(diets, id: \.self) { diet in
+                    Button { pendingDiet = diet } label: {
+                        TagChip(
+                            text: DietaryTag.label(for: diet),
+                            tint: Theme.openGreen,
+                            style: .soft,
+                            font: .footnote.weight(.semibold)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Show only \(DietaryTag.label(for: diet)) items")
+                }
+                ForEach(marketing, id: \.self) { tag in
+                    TagChip(text: tag, tint: Theme.openGreen, style: .soft, font: .footnote.weight(.semibold))
+                }
+            }
+        }
+    }
+
+    /// "CONTAINS" / "MAY CONTAIN" chip rows. Allergens already in the user's profile
+    /// are called out inline so the reason an item was flagged is never a guess.
+    @ViewBuilder
+    private func allergenSection(_ title: String, allergens: [String], tint: Color) -> some View {
+        if !allergens.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                sectionLabel(title)
+                FlowLayout(spacing: 8, lineSpacing: 8) {
+                    ForEach(allergens, id: \.self) { allergen in
+                        TagChip(
+                            text: profile.avoids(allergen) ? "\(allergen) — in your profile" : allergen,
+                            tint: tint,
+                            style: .soft,
+                            font: .footnote.weight(profile.avoids(allergen) ? .bold : .medium)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ingredientsSection: some View {
+        let ingredients = item.displayIngredients
+        if !ingredients.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                sectionLabel("Ingredients")
+                Text(ingredients)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(.caption.weight(.semibold))
+            .tracking(0.6)
+            .foregroundStyle(Theme.textSecondary)
+    }
+
+    private var pendingDietBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDiet != nil },
+            set: { if !$0 { pendingDiet = nil } }
+        )
+    }
+
+    private func addDiet(_ diet: String) {
+        var diets = profile.selectedDiets
+        diets.insert(diet)
+        dietsRaw = DietaryProfile.encode(diets)
+        pendingDiet = nil
     }
 
     /// One macro tile: bold value over a muted label, on a bordered card cell.

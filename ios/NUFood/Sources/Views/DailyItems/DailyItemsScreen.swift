@@ -34,6 +34,28 @@ struct DailyItemsScreen: View {
     /// pass over the full ~750-item day (SPEC §2.1).
     @State private var grouped = GroupedDayItems.empty
 
+    // Dietary profile (device-local @AppStorage, see `DietaryProfile`). Read here to
+    // filter the grouping; edited in Display Settings.
+    @AppStorage(DietaryProfile.Key.diets) private var dietsRaw = ""
+    @AppStorage(DietaryProfile.Key.allergens) private var allergensRaw = ""
+    @AppStorage(DietaryProfile.Key.mayContainUnsafe) private var mayContainUnsafe = true
+    @AppStorage(DietaryProfile.Key.conflictMode) private var conflictModeRaw = DietaryProfile.ConflictMode.hide.rawValue
+
+    private var dietaryProfile: DietaryProfile {
+        DietaryProfile(
+            dietsRaw: dietsRaw,
+            allergensRaw: allergensRaw,
+            mayContainUnsafe: mayContainUnsafe,
+            conflictModeRaw: conflictModeRaw
+        )
+    }
+
+    /// One `onChange`-able value covering every profile input, so editing the profile
+    /// in the sheet re-runs the grouping the moment the sheet writes it.
+    private var profileSignature: String {
+        "\(dietsRaw)#\(allergensRaw)#\(mayContainUnsafe)#\(conflictModeRaw)"
+    }
+
     private let clock = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -55,6 +77,10 @@ struct DailyItemsScreen: View {
                             header.padding(.horizontal)
                             controlsRow.padding(.horizontal)
                             mealChips.padding(.horizontal)
+                            // Inset inside the `if` (see `profilePill`): a modifier
+                            // applied out here would survive the empty case and leave
+                            // the stack a 16pt gap when no profile is set.
+                            profilePill
                             searchField.padding(.horizontal)
                             cards
                         }
@@ -88,6 +114,7 @@ struct DailyItemsScreen: View {
             .onAppear { rebuildGrouping() }
             .onChange(of: dayItems) { rebuildGrouping() }
             .onChange(of: query) { rebuildGrouping() }
+            .onChange(of: profileSignature) { rebuildGrouping() }
             .sheet(isPresented: $showDisplaySettings) { DisplaySettingsSheet() }
             .sheet(isPresented: $showDatePicker) { DatePickerSheet() }
             .sheet(isPresented: $showAuthPrompt) { AuthPromptSheet() }
@@ -178,6 +205,42 @@ struct DailyItemsScreen: View {
         }
     }
 
+    /// A quiet standing reminder that the menu below is filtered, with the count of
+    /// what that cost and a shortcut back to the controls. Only shown once the profile
+    /// has actually run — a profile set against untagged menu data changes nothing,
+    /// and claiming otherwise would be a lie about food safety.
+    @ViewBuilder
+    private var profilePill: some View {
+        if grouped.profileApplied {
+            HStack(spacing: 8) {
+                Text(profilePillText)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button("Edit") { showDisplaySettings = true }
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.primary)
+                    .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Theme.secondary, in: RoundedRectangle(cornerRadius: Theme.radius))
+            .padding(.horizontal)
+        }
+    }
+
+    /// "Vegan · sesame, peanut — 14 items hidden". The count clause is dropped when
+    /// nothing was affected (a diet-only profile in "warn" mode flags nothing).
+    private var profilePillText: String {
+        let profile = dietaryProfile
+        let count = grouped.profileAffectedCount
+        guard count > 0 else { return profile.summary }
+        let noun = count == 1 ? "item" : "items"
+        let verb = profile.conflictMode == .hide ? "hidden" : "flagged"
+        return "\(profile.summary) — \(count) \(noun) \(verb)"
+    }
+
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
@@ -212,6 +275,7 @@ struct DailyItemsScreen: View {
                             meals: mealSections(for: location),
                             hasItems: hasAnyItems(for: location),
                             isSearching: isSearching,
+                            warnings: grouped.warnings,
                             onRequestAuth: { showAuthPrompt = true }
                         )
                         .padding(.horizontal)
@@ -318,19 +382,48 @@ struct DailyItemsScreen: View {
     private var isSearching: Bool { !searchTokens.isEmpty }
 
     /// Rebuilds `grouped` in a single pass over the day's items: for each item that
-    /// passes the search filter, bucket it under location → meal. Replaces the old
-    /// ~50 repeated full-array `filter` scans per body pass.
+    /// passes the search filter and the dietary profile, bucket it under
+    /// location → meal. Replaces the old ~50 repeated full-array `filter` scans per
+    /// body pass — and, crucially, keeps the profile evaluation out of the row body,
+    /// where it would re-run per item on every clock tick.
     private func rebuildGrouping() {
         let tokens = searchTokens
+        let profile = dietaryProfile
+        // A profile can only be trusted against a menu that actually carries tags.
+        // Deployed backends still omit `filters`, and applying diets to untagged
+        // items would hide the entire day.
+        let applyProfile = profile.isActive && dayItems.contains { !$0.filters.isEmpty }
         var byLocation: [String: [String: [DailyItem]]] = [:]
+        var warnings: [String: DietaryProfile.AllergenHit] = [:]
+        var affected = 0
+
         for item in dayItems {
             if !tokens.isEmpty {
                 let name = item.name.lowercased()
                 guard tokens.allSatisfy({ name.contains($0) }) else { continue }
             }
+            if applyProfile {
+                // A diet is a requirement in both modes: "warn" softens allergens,
+                // not "this isn't the food you asked for".
+                guard profile.matchesDiets(item) else {
+                    if profile.conflictMode == .hide { affected += 1 }
+                    continue
+                }
+                if let hit = profile.allergenHit(for: item) {
+                    affected += 1
+                    if profile.conflictMode == .hide { continue }
+                    warnings[item.id] = hit
+                }
+            }
             byLocation[item.location, default: [:]][item.timeOfDay, default: []].append(item)
         }
-        grouped = GroupedDayItems(byLocation: byLocation)
+
+        grouped = GroupedDayItems(
+            byLocation: byLocation,
+            warnings: warnings,
+            profileAffectedCount: affected,
+            profileApplied: applyProfile
+        )
     }
 
     /// The (meal, items) pairs to render on a card: visible meals with ≥1 item, in canonical order.
@@ -473,6 +566,25 @@ struct MealSection: Identifiable {
 struct GroupedDayItems {
     /// location rawValue → meal period → items.
     let byLocation: [String: [String: [DailyItem]]]
+    /// item id → the profile allergen conflict to badge, in "warn" mode only.
+    let warnings: [String: DietaryProfile.AllergenHit]
+    /// How many items the dietary profile removed ("hide") or marked ("warn").
+    let profileAffectedCount: Int
+    /// True only when an active profile actually ran, which requires the loaded menu
+    /// to carry `filters` data at all — see `DailyItemsScreen.rebuildGrouping`.
+    let profileApplied: Bool
+
+    init(
+        byLocation: [String: [String: [DailyItem]]],
+        warnings: [String: DietaryProfile.AllergenHit] = [:],
+        profileAffectedCount: Int = 0,
+        profileApplied: Bool = false
+    ) {
+        self.byLocation = byLocation
+        self.warnings = warnings
+        self.profileAffectedCount = profileAffectedCount
+        self.profileApplied = profileApplied
+    }
 
     static let empty = GroupedDayItems(byLocation: [:])
 

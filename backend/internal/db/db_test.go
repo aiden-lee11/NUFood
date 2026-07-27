@@ -152,6 +152,70 @@ func TestAvailableFavoritesUsesActualDate(t *testing.T) {
 	assert.Equal(t, "Bacon", favorites[1].Name)
 }
 
+// TestIngredientsAndFiltersSurviveRoundTrip guards the columns the clients read
+// for allergen/diet badges. Filters is stored through the gorm json serializer,
+// so it must survive both the GormWeeklyItem path and the raw-table scan into
+// []models.DailyItem used by the favorites/notification queries.
+func TestIngredientsAndFiltersSurviveRoundTrip(t *testing.T) {
+	testDB := setupTestDB(t)
+	date := "2026-07-27"
+
+	tagged := models.WeeklyItem{DailyItem: models.DailyItem{
+		Name:        "Barbeque Chicken",
+		Date:        date,
+		Location:    "Allison",
+		StationName: "Comfort",
+		TimeOfDay:   "Lunch",
+		Ingredients: "Chicken, Barbecue Sauce^, Canola Oil",
+		Filters:     []string{"Poultry", "Sesame*", "Good Source of Protein"},
+	}}
+	untagged := models.WeeklyItem{DailyItem: models.DailyItem{
+		Name:        "Plain Rice",
+		Date:        date,
+		Location:    "Allison",
+		StationName: "Comfort",
+		TimeOfDay:   "Lunch",
+		Ingredients: "Rice, Water",
+		Filters:     []string{},
+	}}
+
+	require.NoError(t, db.PersistScrapedMenu(
+		[]models.WeeklyItem{tagged, untagged},
+		[]models.AllDataItem{{Name: "Barbeque Chicken"}},
+		[]string{date},
+		time.Now(),
+	))
+
+	items, err := db.GetAllWeeklyItems()
+	require.NoError(t, err)
+	require.Len(t, items[date], 2)
+
+	byName := make(map[string]models.DailyItem, len(items[date]))
+	for _, item := range items[date] {
+		byName[item.Name] = item
+	}
+	assert.Equal(t, tagged.DailyItem.Ingredients, byName["Barbeque Chicken"].Ingredients)
+	assert.Equal(t, tagged.DailyItem.Filters, byName["Barbeque Chicken"].Filters)
+	require.NotNil(t, byName["Plain Rice"].Filters)
+	assert.Empty(t, byName["Plain Rice"].Filters)
+
+	require.NoError(t, db.SaveUserPreferences("test-user", []models.AllDataItem{{Name: "Barbeque Chicken"}}))
+	favorites, err := db.GetAvailableFavoritesForMeal("test-user", date, "Lunch")
+	require.NoError(t, err)
+	require.Len(t, favorites, 1)
+	assert.Equal(t, tagged.DailyItem.Filters, favorites[0].Filters)
+	assert.Equal(t, tagged.DailyItem.Ingredients, favorites[0].Ingredients)
+
+	// Rows written before these columns existed come back NULL; the API must
+	// still hand clients an array.
+	require.NoError(t, testDB.Exec("UPDATE gorm_weekly_items SET filters = NULL WHERE name = ?", "Plain Rice").Error)
+	items, err = db.GetAllWeeklyItems()
+	require.NoError(t, err)
+	for _, item := range items[date] {
+		require.NotNil(t, item.Filters, "%s should never expose nil filters", item.Name)
+	}
+}
+
 func mealItem(date, name, location, timeOfDay string) models.WeeklyItem {
 	return models.WeeklyItem{DailyItem: models.DailyItem{
 		Name:        name,

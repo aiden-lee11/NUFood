@@ -16,6 +16,12 @@ struct DailyItem: Codable, Hashable, Identifiable {
     let protein: String
     let carbs: String
     let fat: String
+    /// Raw ingredient list as scraped ("WATER, SUGAR^, SOY LECITHIN*"); often "".
+    let ingredients: String
+    /// Raw dining-hall tag names: diets ("Vegan", "Avoiding Gluten"), allergens
+    /// ("Milk", "Sesame*" — trailing `*` means *may* contain), and marketing
+    /// callouts ("Good Source of Protein"). See `DietaryTag` for the semantics.
+    let filters: [String]
 
     enum CodingKeys: String, CodingKey {
         case name = "Name"
@@ -29,6 +35,28 @@ struct DailyItem: Codable, Hashable, Identifiable {
         case protein = "protein"
         case carbs = "carbs"
         case fat = "fat"
+        case ingredients = "ingredients"
+        case filters = "filters"
+    }
+
+    /// Hand-written because `ingredients`/`filters` must decode as *optional*:
+    /// deployed backends predate them, and the synthesized decoder would throw on
+    /// the missing keys. Everything else is required, as before.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        description = try container.decode(String.self, forKey: .description)
+        date = try container.decode(String.self, forKey: .date)
+        location = try container.decode(String.self, forKey: .location)
+        stationName = try container.decode(String.self, forKey: .stationName)
+        timeOfDay = try container.decode(String.self, forKey: .timeOfDay)
+        portionSize = try container.decode(String.self, forKey: .portionSize)
+        calories = try container.decode(String.self, forKey: .calories)
+        protein = try container.decode(String.self, forKey: .protein)
+        carbs = try container.decode(String.self, forKey: .carbs)
+        fat = try container.decode(String.self, forKey: .fat)
+        ingredients = try container.decodeIfPresent(String.self, forKey: .ingredients) ?? ""
+        filters = try container.decodeIfPresent([String].self, forKey: .filters) ?? []
     }
 
     var id: String { "\(date)|\(location)|\(timeOfDay)|\(stationName)|\(name)" }

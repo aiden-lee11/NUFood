@@ -17,6 +17,7 @@
 		3575888AECCCC5BC83DC7BDD /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5C79418F09978BE310B646F8 /* GoogleService-Info.plist */; };
 		3E36CB9E07F8E587B2EA5121 /* LocationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC8ADC79C4C3486CF6D5EE4 /* LocationCard.swift */; };
 		4011D6964773C67CD01B4B44 /* FavoritesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E38EF5A23664793022B5F7 /* FavoritesScreen.swift */; };
+		41BB0BB0884D2AF32DF4B674 /* ChipViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 060F430AA8845B2CBAF9B130 /* ChipViews.swift */; };
 		4799FBC3B71AA1A1257FAF84 /* PlannerComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E03B769007FE00D3F7348B /* PlannerComponents.swift */; };
 		4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E36975476A6967D8323F95 /* AuthManager.swift */; };
 		54DB137DFB0F88398AB17414 /* TransientErrorToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14746734326AE74C44BD23FE /* TransientErrorToast.swift */; };
@@ -31,6 +32,7 @@
 		856CADCA281A090FF14AD172 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B458505E194DD2015043E21E /* FirebaseAuth */; };
 		8E9538D5CD67482DF750AA1A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A48E804687C7E263F74DFB /* Theme.swift */; };
 		9BEF61303B286F3AE514F782 /* NutrientPlannerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD095D339E7DBD49B52912EC /* NutrientPlannerScreen.swift */; };
+		9E05248C616F53BC1C744587 /* DietaryProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4813B057699F4E804CA92DEA /* DietaryProfile.swift */; };
 		A2D989D417F982444E89354C /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 8856EF86CD7C3555148C8993 /* FirebaseMessaging */; };
 		B5C68A64ECB4C886CCB49CF9 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB9E752386CD9DD8CC8385C6 /* AppStore.swift */; };
 		C71C051220DC5A0004C3A40D /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81CBE1FFBEF34D5DDF408607 /* APIClient.swift */; };
@@ -48,6 +50,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		060F430AA8845B2CBAF9B130 /* ChipViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipViews.swift; sourceTree = "<group>"; };
 		0C6C5DD380B80B154531CE75 /* HoursLocationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoursLocationCard.swift; sourceTree = "<group>"; };
 		1399D462A8ED5DD6BA9396A6 /* AccountToolbarButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountToolbarButton.swift; sourceTree = "<group>"; };
 		14746734326AE74C44BD23FE /* TransientErrorToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransientErrorToast.swift; sourceTree = "<group>"; };
@@ -59,6 +62,7 @@
 		332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeToggleButton.swift; sourceTree = "<group>"; };
 		447ADF8A120946D8B086A145 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		44D1858AF72E63F5EDC37160 /* NUFood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NUFood.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4813B057699F4E804CA92DEA /* DietaryProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietaryProfile.swift; sourceTree = "<group>"; };
 		4EBEB7CFE7214AD60E9A756A /* AppleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInButton.swift; sourceTree = "<group>"; };
 		576AB9BCA2128A636FC70DCF /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		593942FE8FB74E5805335877 /* PlannerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerModel.swift; sourceTree = "<group>"; };
@@ -235,6 +239,7 @@
 			isa = PBXGroup;
 			children = (
 				DB9E752386CD9DD8CC8385C6 /* AppStore.swift */,
+				4813B057699F4E804CA92DEA /* DietaryProfile.swift */,
 				E9D60B65E990686DFBDA664F /* OperatingHoursLogic.swift */,
 			);
 			path = State;
@@ -260,6 +265,7 @@
 				4EBEB7CFE7214AD60E9A756A /* AppleSignInButton.swift */,
 				8A95557C9AED507C687251FA /* AuthPromptSheet.swift */,
 				E1FDC5D87903CB34A18BE5F2 /* CalendarSheet.swift */,
+				060F430AA8845B2CBAF9B130 /* ChipViews.swift */,
 				2BABB0299B522AE7D7053E36 /* GoogleSignInButton.swift */,
 				C6219DDB37648DF94F90B986 /* ItemRowButton.swift */,
 				332D30D12B2D4F1656BAD31D /* ThemeToggleButton.swift */,
@@ -398,9 +404,11 @@
 				4FBE04F67F7CD5BB319F346D /* AuthManager.swift in Sources */,
 				0F3137FD5EA5F34FF140B48E /* AuthPromptSheet.swift in Sources */,
 				FBC0BBCB84767E549CB4DF49 /* CalendarSheet.swift in Sources */,
+				41BB0BB0884D2AF32DF4B674 /* ChipViews.swift in Sources */,
 				E93E4D0A99DCCD21E3A773E6 /* DailyItemAccordion.swift in Sources */,
 				F75779977D60CE6B2E952589 /* DailyItemsScreen.swift in Sources */,
 				6D76E8E4EE59FDCDCE3912F3 /* DatePickerSheet.swift in Sources */,
+				9E05248C616F53BC1C744587 /* DietaryProfile.swift in Sources */,
 				66B0E677301383BFB95A55AF /* DisplaySettingsSheet.swift in Sources */,
 				4011D6964773C67CD01B4B44 /* FavoritesScreen.swift in Sources */,
 				EE5BA1923546FE624A74C775 /* GoogleSignInButton.swift in Sources */,

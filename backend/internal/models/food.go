@@ -53,9 +53,12 @@ type Item struct {
 	// sort_order int `json:"sort_order"`
 	Portion string `json:"portion"`
 	// qty string `json:"qty"`
-	// ingredients string `json:"ingredients"`
-	Nutrients []Nutrient `json:"nutrients"`
-	// filters []Filter `json:"filters"`
+	// Ingredients is the upstream ingredient statement, a single comma separated
+	// string (e.g. "Chicken, Barbecue Sauce^, Canola Oil").
+	Ingredients string     `json:"ingredients"`
+	Nutrients   []Nutrient `json:"nutrients"`
+	// Filters carries allergen/diet/marketing tags. Only the name is consumed.
+	Filters []Filter `json:"filters"`
 }
 
 type Nutrient struct {
@@ -66,14 +69,12 @@ type Nutrient struct {
 	// value_numeric string `json:"value_numeric"`
 }
 
+// Filter is one upstream allergen/diet/marketing tag on a menu item. The
+// upstream object carries id/icon/remoteFileName/sectorIconId/customIcons as
+// well, but only the name is meaningful to clients. A trailing "*" on the name
+// means "may contain" (e.g. "Sesame*").
 type Filter struct {
-	// id string `json:"id"`
-	// name string `json:"name"`
-	// type string `json:"type"`
-	// icon boolean `json:"icon"`
-	// remote_file_name string `json:"remote_file_name"`
-	// sector_icon_id string `json:"sector_icon_id"`
-	// custom_icon string `json:"custom_icon"`
+	Name string `json:"name"`
 }
 
 // Item Struct for only data that I want to save
@@ -89,6 +90,12 @@ type DailyItem struct {
 	Protein     string `json:"protein"`
 	Carbs       string `json:"carbs"`
 	Fat         string `json:"fat"`
+	// Ingredients is the upstream ingredient statement for the item.
+	Ingredients string `json:"ingredients"`
+	// Filters holds the upstream tag names (allergens, diets and marketing
+	// callouts) verbatim, including "may contain" variants such as "Sesame*".
+	// Clients decide how to categorize them. Stored as a JSON text column.
+	Filters []string `json:"filters" gorm:"serializer:json"`
 }
 
 type WeeklyItem struct {
