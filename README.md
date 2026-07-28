@@ -9,7 +9,7 @@ save your favorites, hit your macros.
 
 [<img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="48">](https://apps.apple.com/us/app/nufood/id6790686338)
 &nbsp;&nbsp;
-**[nufood.me](https://nufood.me)**
+**[dining.nu](https://dining.nu)**
 
 <br>
 

@@ -40,15 +40,11 @@ func SendJSONError(w http.ResponseWriter, message string, status int) {
 }
 
 // allowedOrigins is the set of browser origins permitted to call the API.
-// dining.nu is the canonical domain; the nufood.me entries are kept so the old
-// domain keeps working during the redirect cutover and can be removed once the
-// migration is complete.
+// dining.nu is the canonical domain.
 var allowedOrigins = map[string]bool{
 	"http://localhost:5173": true,
 	"https://dining.nu":     true,
 	"https://www.dining.nu": true,
-	"https://nufood.me":     true,
-	"https://www.nufood.me": true,
 }
 
 // CorsMiddleware handles CORS headers and preflight requests
