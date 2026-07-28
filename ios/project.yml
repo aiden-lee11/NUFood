@@ -34,7 +34,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.nufood.app
         MARKETING_VERSION: "1.0.2"
-        CURRENT_PROJECT_VERSION: "4"
+        CURRENT_PROJECT_VERSION: "5"
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "5.10"
         CODE_SIGN_STYLE: Automatic
