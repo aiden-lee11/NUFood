@@ -187,6 +187,39 @@ func TestPickServiceForMeal(t *testing.T) {
 	}
 }
 
+// Only an explicit statement from upstream counts as a closure, because a
+// closure is the one thing that lets a refresh delete a stored menu.
+func TestMenuReportsClosed(t *testing.T) {
+	cases := []struct {
+		name string
+		menu models.DiningHallResponse
+		want bool
+	}{
+		{"closed for the whole date", models.DiningHallResponse{ClosedOnDate: true}, true},
+		{"status says closed", models.DiningHallResponse{Status: models.MenuStatus{Label: "Closed"}}, true},
+		{"status says closed with detail", models.DiningHallResponse{Status: models.MenuStatus{Label: "closed_today"}}, true},
+		{
+			"an open hall whose message mentions closing",
+			models.DiningHallResponse{Status: models.MenuStatus{Label: "open", Message: "Open. Closes at 1:30pm."}},
+			false,
+		},
+		{
+			"a message alone never counts",
+			models.DiningHallResponse{Status: models.MenuStatus{Message: "Closed. Opens at 5:00pm."}},
+			false,
+		},
+		{"an empty menu says nothing either way", models.DiningHallResponse{Date: "2026-07-27"}, false},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := menuReportsClosed(c.menu); got != c.want {
+				t.Fatalf("menuReportsClosed = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
 // A run that stays under the navigation cap must never pay for a second browser
 // launch; one that exceeds it must recycle exactly as often as needed.
 func TestBrowserSessionRecycling(t *testing.T) {

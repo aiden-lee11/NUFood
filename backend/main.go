@@ -78,10 +78,11 @@ func main() {
 	// "no mail provider configured" error.
 	// scheduler.StartDailyMailing()
 
-	// Meal-time push notifications: 30 minutes before each meal period, push
-	// opted-in users the favorites available for that meal. Fires at 6:30,
-	// 10:30, and 16:30 Central by default; override with NOTIFY_TIMES_CST or
-	// disable with ENABLE_NOTIFY_CRON=false.
+	// Meal-time push notifications: 30 minutes before each meal period, refresh
+	// that meal's menu and then push opted-in users the favorites available for
+	// it. Fires at 6:30, 10:30, and 16:30 Central by default; override with
+	// NOTIFY_TIMES_CST or disable with ENABLE_NOTIFY_CRON=false. StartDailyScrape
+	// reads the same two settings, so its refresh plan stays clear of these sends.
 	scheduler.StartDailyNotify()
 
 	// Create a new router

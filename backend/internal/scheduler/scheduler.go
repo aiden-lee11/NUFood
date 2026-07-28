@@ -10,6 +10,10 @@
 // refresh costs at most ten, and menus change during the day only for the meal
 // currently on the line. Failures are logged, never fatal, so a bad scrape
 // cannot take the web server down.
+//
+// A third refresh runs off this file's schedule entirely: notify.go chains one
+// onto each push send, and the plan here is kept clear of the hour before every
+// send so no other refresh can be mid-write when the send reads the menu.
 package scheduler
 
 import (
@@ -18,6 +22,7 @@ import (
 	"backend/internal/scrapejob"
 	"backend/internal/scraper"
 	"backend/internal/store"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -58,6 +63,14 @@ const (
 	// refreshCoalesceMinutes merges near-simultaneous ticks contributed by
 	// different halls into a single run, since one run refreshes every hall.
 	refreshCoalesceMinutes = 15
+	// preNotifyBlackoutMinutes is how long before a push send an independently
+	// scheduled refresh of that same meal is suppressed. A refresh is the one
+	// thing that can empty a menu slice, and a slice emptied minutes before the
+	// send silences the push for every user whose favorite lived in it. The
+	// notify cron runs its own refresh immediately before sending (see
+	// notify.go), so the window costs no freshness — it only moves the risk to
+	// a moment where a failure can no longer beat the read.
+	preNotifyBlackoutMinutes = 60
 )
 
 // fallbackRefreshTicks is the fixed plan used when no operating hours are
@@ -110,6 +123,9 @@ type menuScheduler struct {
 	// overrideTicks, when non-empty, replaces the derived plan entirely
 	// (REFRESH_TICKS_CST).
 	overrideTicks []refreshTick
+	// notifyTimes are the push-send slots whose run-up must stay free of
+	// refreshes. Empty when the notify cron is off, which removes the blackout.
+	notifyTimes []clockTime
 
 	ticks    []refreshTick
 	ticksDay string
@@ -155,6 +171,11 @@ func StartDailyScrape() {
 	}
 	if refreshEnabled {
 		s.overrideTicks = parseRefreshTicks("REFRESH_TICKS_CST")
+		s.notifyTimes = notifyBlackoutTimes()
+		if len(s.notifyTimes) > 0 {
+			log.Printf("menu refreshes suppressed for %d minutes before each push send at %s",
+				preNotifyBlackoutMinutes, describeClockTimes(s.notifyTimes))
+		}
 	}
 
 	go s.loop()
@@ -235,7 +256,7 @@ func (s *menuScheduler) ensureTicks(now time.Time) {
 	s.ticksDay = day
 
 	if len(s.overrideTicks) > 0 {
-		s.ticks = capRefreshTicks(s.overrideTicks, maxRefreshRunsPerDay)
+		s.ticks = capRefreshTicks(excludePreNotifyTicks(s.overrideTicks, s.notifyTimes), maxRefreshRunsPerDay)
 		log.Printf("menu refresh plan for %s (REFRESH_TICKS_CST): %s", day, describeTicks(s.ticks))
 		return
 	}
@@ -246,7 +267,7 @@ func (s *menuScheduler) ensureTicks(now time.Time) {
 		log.Printf("no stored operating hours for %s; falling back to fixed refresh ticks", day)
 	}
 
-	s.ticks = capRefreshTicks(ticks, maxRefreshRunsPerDay)
+	s.ticks = capRefreshTicks(excludePreNotifyTicks(ticks, s.notifyTimes), maxRefreshRunsPerDay)
 	log.Printf("menu refresh plan for %s: %s", day, describeTicks(s.ticks))
 }
 
@@ -271,6 +292,15 @@ func (s *menuScheduler) runRefresh(tick refreshTick) {
 
 	meal := tick.mealOrClock(now)
 
+	// The plan already steers clear of the run-up to each push, but a tick can
+	// fire late — a long full scrape delays the whole loop — so the window is
+	// checked again against the moment this run would actually write.
+	if send, ok := preNotifyConflict(refreshTick{at: minutesToClock(now.Hour()*60 + now.Minute()), meal: meal}, s.notifyTimes); ok {
+		log.Printf("menu refresh (%s at %s) skipped: it would land inside the %d minutes before the %s push at %s",
+			meal, tick.at, preNotifyBlackoutMinutes, meal, send)
+		return
+	}
+
 	// Never queue behind another scrape: by the time it finished, this tick's
 	// moment has passed and the next tick will cover the same ground.
 	if !scrapejob.TryLock() {
@@ -281,7 +311,7 @@ func (s *menuScheduler) runRefresh(tick refreshTick) {
 
 	s.runCount++
 	log.Printf("menu refresh starting date=%s meal=%s (run %d/%d today)", day, meal, s.runCount, maxRefreshRunsPerDay)
-	if err := scrapejob.RunPeriodRefresh(scrapejob.PeriodRefreshOptions{
+	if _, err := scrapejob.RunPeriodRefresh(context.Background(), scrapejob.PeriodRefreshOptions{
 		Date:    day,
 		Meal:    meal,
 		Retries: 3,
@@ -407,6 +437,61 @@ func coalesceTicks(ticks []refreshTick) []refreshTick {
 	return out
 }
 
+// excludePreNotifyTicks drops the ticks that would refresh a meal during the
+// run-up to that meal's push send. Those are the only refreshes whose failure
+// mode is unrecoverable: an emptied slice minutes before the send silences the
+// notification, and the next tick lands too late to repair it. Everything the
+// dropped tick would have done is done instead by the refresh the notify cron
+// chains ahead of its send, so the plan loses no coverage and buys no extra
+// upstream runs. Ticks after the send are untouched.
+func excludePreNotifyTicks(ticks []refreshTick, notifyTimes []clockTime) []refreshTick {
+	if len(ticks) == 0 || len(notifyTimes) == 0 {
+		return ticks
+	}
+
+	kept := make([]refreshTick, 0, len(ticks))
+	for _, tick := range ticks {
+		if send, ok := preNotifyConflict(tick, notifyTimes); ok {
+			log.Printf("dropping the %s %s refresh: it lands inside the %d minutes before that meal's push at %s",
+				tick.at, tick.mealAt(tick.at.minutes()), preNotifyBlackoutMinutes, send)
+			continue
+		}
+		kept = append(kept, tick)
+	}
+
+	return kept
+}
+
+// preNotifyConflict reports whether a tick refreshes the same meal a push is
+// about to announce, close enough ahead of the send to matter, and which send
+// it collides with.
+func preNotifyConflict(tick refreshTick, notifyTimes []clockTime) (clockTime, bool) {
+	at := tick.at.minutes()
+	meal := tick.mealAt(at)
+
+	for _, notifyAt := range notifyTimes {
+		send := notifyAt.minutes()
+		if at < send-preNotifyBlackoutMinutes || at >= send {
+			continue
+		}
+		if strings.EqualFold(meal, mealForFireMinutes(send)) {
+			return notifyAt, true
+		}
+	}
+
+	return clockTime{}, false
+}
+
+// notifyBlackoutTimes returns the push-send slots the refresh plan must steer
+// clear of, reading the same configuration the notify cron does so the two
+// cannot drift apart. No notify cron means no blackout.
+func notifyBlackoutTimes() []clockTime {
+	if disabledByEnv("ENABLE_NOTIFY_CRON") {
+		return nil
+	}
+	return parseNotifyTimes("NOTIFY_TIMES_CST", defaultNotifyTimes)
+}
+
 // capRefreshTicks thins a plan down to the daily budget, keeping the first and
 // last ticks and spreading the rest evenly, so trimming costs resolution rather
 // than coverage of the evening meal.
@@ -499,13 +584,19 @@ func mealRank(meal string) int {
 	}
 }
 
-// mealOrClock returns the tick's meal, deriving it from when it fires if the
-// tick did not name one.
-func (t refreshTick) mealOrClock(fireTime time.Time) string {
+// mealAt returns the tick's meal, deriving it from the given minute-of-day if
+// the tick did not name one.
+func (t refreshTick) mealAt(minutes int) string {
 	if meal := strings.TrimSpace(t.meal); meal != "" {
 		return meal
 	}
-	return mealForMinutes(fireTime.Hour()*60 + fireTime.Minute())
+	return mealForMinutes(minutes)
+}
+
+// mealOrClock returns the tick's meal, deriving it from when it fires if the
+// tick did not name one.
+func (t refreshTick) mealOrClock(fireTime time.Time) string {
+	return t.mealAt(fireTime.Hour()*60 + fireTime.Minute())
 }
 
 // fullScrapeTimes returns the full scrape's daily run times: SCRAPE_HOURS_CST

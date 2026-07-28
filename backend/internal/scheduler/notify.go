@@ -3,6 +3,7 @@ package scheduler
 import (
 	"backend/internal/db"
 	"backend/internal/push"
+	"backend/internal/scrapejob"
 	"context"
 	"log"
 	"os"
@@ -19,6 +20,18 @@ import (
 // each configured time maps to the meal beginning this many minutes later.
 const mealLeadMinutes = 30
 
+const (
+	// preNotifyRefreshTimeout bounds the refresh chained ahead of a send. The
+	// push is only useful while it is still ahead of the meal, so a refresh that
+	// cannot finish inside this is abandoned and the stored menu is used
+	// instead. Five halls at two navigations each finish in well under a minute
+	// on a healthy day; this leaves room for retries against a slow upstream.
+	preNotifyRefreshTimeout = 6 * time.Minute
+	// preNotifyRefreshRetries is deliberately lower than the scheduled
+	// refresh's, because here every retry delays the send.
+	preNotifyRefreshRetries = 2
+)
+
 // clockTime is an hour:minute wall-clock slot interpreted in campusZone.
 type clockTime struct {
 	hour   int
@@ -33,10 +46,10 @@ var defaultNotifyTimes = []clockTime{{6, 30}, {10, 30}, {16, 30}}
 // disabled via ENABLE_NOTIFY_CRON=false. Send times are NOTIFY_TIMES_CST
 // (comma-separated "H:MM" 24h values in America/Chicago, default
 // "6:30,10:30,16:30"). It mirrors StartDailyScrape: one goroutine that sleeps
-// until the next scheduled time and pushes each user their upcoming favorites.
-// Failures are logged, never fatal.
+// until the next scheduled time, re-reads the meal it is about to announce and
+// pushes each user their upcoming favorites. Failures are logged, never fatal.
 func StartDailyNotify() {
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("ENABLE_NOTIFY_CRON")), "false") {
+	if disabledByEnv("ENABLE_NOTIFY_CRON") {
 		log.Println("meal notifications disabled via ENABLE_NOTIFY_CRON=false")
 		return
 	}
@@ -68,7 +81,13 @@ func runNotifyOnce(loc *time.Location) {
 		}
 	}()
 
-	now := time.Now().In(loc)
+	notifyForTime(time.Now().In(loc))
+}
+
+// notifyForTime refreshes and then announces the meal that the given fire time
+// maps to. The fire time is a parameter rather than read from the clock so the
+// pass can be driven from a fixed moment.
+func notifyForTime(now time.Time) {
 	meal := mealForFireTime(now)
 	if meal == "" {
 		log.Printf("meal notifications: no meal window maps to fire time %s; skipping", now.Format("15:04"))
@@ -77,6 +96,10 @@ func runNotifyOnce(loc *time.Location) {
 
 	date := now.Format("2006-01-02")
 	log.Printf("meal notifications starting for %s on %s", meal, date)
+
+	// Re-read the menu this send is about to announce instead of trusting a
+	// refresh that ran earlier and may still have been mid-write.
+	refreshBeforeNotify(date, meal)
 
 	tokensByUser, err := db.GetAllDeviceTokens()
 	if err != nil {
@@ -123,13 +146,55 @@ func runNotifyOnce(loc *time.Location) {
 		meal, notified, skipped, len(invalidTokens))
 }
 
+// refreshBeforeNotify re-scrapes the meal a send is about to announce so the
+// push reflects what the halls are serving right now rather than whatever the
+// last scheduled refresh left behind. It is a variable so tests can observe the
+// ordering without touching the network.
+//
+// Every failure mode ends the same way: log it and let the send proceed against
+// the stored menu. A stale notification is worth far more than a silent one,
+// and the refresh itself can no longer empty a slice it did not verify as
+// closed (see scrapejob.planPeriodRefresh).
+var refreshBeforeNotify = func(date, meal string) {
+	// Never queue behind another scrape — waiting for it would push the send
+	// past the meal it is announcing. Whatever is running is refreshing the same
+	// data anyway.
+	if !scrapejob.TryLock() {
+		log.Printf("pre-notify refresh for %s skipped: another scrape job is running", meal)
+		return
+	}
+	defer scrapejob.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), preNotifyRefreshTimeout)
+	defer cancel()
+
+	summary, err := scrapejob.RunPeriodRefresh(ctx, scrapejob.PeriodRefreshOptions{
+		Date:    date,
+		Meal:    meal,
+		Retries: preNotifyRefreshRetries,
+	})
+	if err != nil {
+		log.Printf("pre-notify refresh for %s failed (using stored data): %v", meal, err)
+		return
+	}
+
+	log.Printf("pre-notify refresh for %s: ok slices=%d items=%d unchanged=%d failed=%d preserved=%d",
+		meal, summary.Slices, summary.Items, summary.Unchanged, summary.Failed, summary.Preserved)
+}
+
 // mealForFireTime derives the meal a notification announces from the wall-clock
 // time it fired: the meal is whichever period contains fireTime + lead minutes.
 // Windows are Breakfast 7–10, Lunch 11–16, Dinner 17–22. Returns "" when the
 // lead time falls in no window.
 func mealForFireTime(fireTime time.Time) string {
-	mealStart := fireTime.Add(mealLeadMinutes * time.Minute)
-	switch h := mealStart.Hour(); {
+	return mealForFireMinutes(fireTime.Hour()*60 + fireTime.Minute())
+}
+
+// mealForFireMinutes is mealForFireTime over a minute-of-day, so a scheduled
+// slot can be mapped to its meal without inventing a date. Times that would
+// carry past midnight wrap, matching time.Add.
+func mealForFireMinutes(minutes int) string {
+	switch h := ((minutes + mealLeadMinutes) / 60) % 24; {
 	case h >= 7 && h <= 10:
 		return "Breakfast"
 	case h >= 11 && h <= 16:

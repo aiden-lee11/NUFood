@@ -222,9 +222,16 @@ type PeriodScrapeResult struct {
 	// menu were retrieved without error.
 	Fetched bool
 	// Matched is true when the location advertised a period for the requested
-	// meal. A Fetched result with Matched false means "this hall serves no such
-	// meal today", which legitimately clears stored rows for that slot.
+	// meal. A Fetched result with Matched false means the period list carried no
+	// such meal — which is NOT proof of a closure, because upstream routinely
+	// publishes the evening's period late.
 	Matched bool
+	// ClosedVerified is true only when the menu payload itself says the hall is
+	// not serving: closedOnDate, or a status label of "closed". It is the only
+	// signal that may clear stored rows, because every other way of arriving at
+	// zero items ("period not listed yet", "categories not published yet") is
+	// indistinguishable from a menu that simply has not gone up.
+	ClosedVerified bool
 	// Unchanged is true when MenuUnchanged reported the upstream menu was
 	// already persisted; DailyItems and AllItems are then not populated and the
 	// caller must leave stored rows alone.
@@ -243,8 +250,10 @@ type PeriodScrapeResult struct {
 // refreshing.
 //
 // The returned error is non-nil only when no browser could be started at all.
-func (s *BrowserAPIScraper) ScrapePeriod(date, meal string) ([]PeriodScrapeResult, error) {
-	session, err := s.newSession(context.Background())
+// ctx bounds the whole run: cancelling it aborts the navigation in flight and
+// stops the scraper before it moves on to the next hall.
+func (s *BrowserAPIScraper) ScrapePeriod(ctx context.Context, date, meal string) ([]PeriodScrapeResult, error) {
+	session, err := s.newSession(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +261,7 @@ func (s *BrowserAPIScraper) ScrapePeriod(date, meal string) ([]PeriodScrapeResul
 
 	results := make([]PeriodScrapeResult, 0, len(s.Locations))
 	for _, location := range s.Locations {
-		results = append(results, s.scrapeLocationPeriod(session, location, date, meal))
+		results = append(results, s.scrapeLocationPeriod(ctx, session, location, date, meal))
 	}
 
 	log.Printf(
@@ -262,8 +271,13 @@ func (s *BrowserAPIScraper) ScrapePeriod(date, meal string) ([]PeriodScrapeResul
 	return results, nil
 }
 
-func (s *BrowserAPIScraper) scrapeLocationPeriod(session *browserSession, location models.Location, date, meal string) PeriodScrapeResult {
+func (s *BrowserAPIScraper) scrapeLocationPeriod(ctx context.Context, session *browserSession, location models.Location, date, meal string) PeriodScrapeResult {
 	result := PeriodScrapeResult{Location: location.Name}
+
+	if err := ctx.Err(); err != nil {
+		result.Err = fmt.Errorf("%s: %w", location.Name, err)
+		return result
+	}
 
 	services, err := s.fetchPeriods(session, location, date)
 	if err != nil {
@@ -274,11 +288,12 @@ func (s *BrowserAPIScraper) scrapeLocationPeriod(session *browserSession, locati
 
 	service, ok := pickServiceForMeal(services, meal)
 	if !ok {
-		// The hall published a period list that has no such meal: it is closed
-		// for this slot today. This is a successful fetch, so the caller may
-		// clear whatever it had stored for the slot.
+		// The period list carries no such meal. That reads like "closed for this
+		// slot", but it is also exactly what an unpublished evening menu looks
+		// like, so the fetch is reported as successful with nothing matched and
+		// no verified closure — the caller keeps whatever it had stored.
 		result.Fetched = true
-		log.Printf("browser-api period refresh: %s serves no %s on %s", location.Name, meal, date)
+		log.Printf("browser-api period refresh: %s lists no %s period on %s", location.Name, meal, date)
 		return result
 	}
 
@@ -293,6 +308,11 @@ func (s *BrowserAPIScraper) scrapeLocationPeriod(session *browserSession, locati
 	}
 	result.Fetched = true
 	result.UpdatedAt = menu.UpdatedAt
+	result.ClosedVerified = menuReportsClosed(menu)
+	if result.ClosedVerified {
+		log.Printf("browser-api period refresh: %s reports closed for %s on %s (closedOnDate=%t status=%q)",
+			location.Name, result.MatchedPeriod, date, menu.ClosedOnDate, menu.Status.Label)
+	}
 
 	key := MenuKey{Location: location.Name, Date: date, Period: result.MatchedPeriod}
 	if s.MenuUnchanged != nil && s.MenuUnchanged(key, menu.UpdatedAt) {
@@ -312,6 +332,25 @@ func (s *BrowserAPIScraper) scrapeLocationPeriod(session *browserSession, locati
 	result.DailyItems = dItems
 	result.AllItems = aItems
 	return result
+}
+
+// menuReportsClosed reports whether a menu payload explicitly states the hall
+// is not serving, which is the only evidence strong enough to delete stored
+// rows. Two fields carry it:
+//
+//   - closedOnDate: the hall is shut for the entire date;
+//   - status.label: the hall's current service state, "closed" when shut.
+//
+// Only the label is inspected, never status.message: an open hall's message
+// reads "Open. Closes at 1:30pm." and substring-matching that would read as a
+// closure. Anything else — an absent period, an empty category list, a menu
+// that simply has not been published yet — is silence, not a closure, and must
+// leave stored rows alone.
+func menuReportsClosed(menu models.DiningHallResponse) bool {
+	if menu.ClosedOnDate {
+		return true
+	}
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(menu.Status.Label)), "closed")
 }
 
 // pickServiceForMeal finds the period serving the requested meal. Matching is

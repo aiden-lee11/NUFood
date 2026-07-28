@@ -1,7 +1,10 @@
 package scrapejob
 
 import (
+	"backend/internal/db"
+	"backend/internal/models"
 	"backend/internal/scraper"
+	"errors"
 	"testing"
 )
 
@@ -86,6 +89,108 @@ func TestNormalizeMeal(t *testing.T) {
 	for input, want := range cases {
 		if got := normalizeMeal(input); got != want {
 			t.Fatalf("normalizeMeal(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+const (
+	planDate = "2026-07-27"
+	planMeal = "Dinner"
+)
+
+func dinnerItem(location, name string) models.DailyItem {
+	return models.DailyItem{Name: name, Date: planDate, Location: location, TimeOfDay: planMeal}
+}
+
+func periodStrings(periods []db.MenuPeriod) []string {
+	out := make([]string, 0, len(periods))
+	for _, period := range periods {
+		out = append(out, period.Location+" "+period.TimeOfDay)
+	}
+	return out
+}
+
+func assertPeriods(t *testing.T, got []db.MenuPeriod, want []string) {
+	t.Helper()
+	gotStrings := periodStrings(got)
+	if len(gotStrings) != len(want) {
+		t.Fatalf("got %v, want %v", gotStrings, want)
+	}
+	for i := range want {
+		if gotStrings[i] != want[i] {
+			t.Fatalf("got %v, want %v", gotStrings, want)
+		}
+	}
+}
+
+// The destructive case: a hall that answers but hands back nothing. Upstream
+// publishes the evening menu late, so an empty answer is far more often "not up
+// yet" than "not serving" — clearing the slice on it empties the menu the push
+// is about to read.
+func TestPlanPeriodRefreshPreservesUnverifiedEmptyResults(t *testing.T) {
+	results := []scraper.PeriodScrapeResult{
+		// Fetched the period list, which had no Dinner in it yet.
+		{Location: "Allison", Fetched: true},
+		// Fetched the menu itself, but it had no categories yet.
+		{Location: "Sargent", Fetched: true, Matched: true, MatchedPeriod: "Dinner"},
+		{Location: "Elder", Fetched: true, Matched: true, MatchedPeriod: "Dinner",
+			DailyItems: []models.DailyItem{dinnerItem("Elder", "Roast Chicken")}},
+	}
+
+	plan := planPeriodRefresh(planDate, planMeal, results)
+
+	assertPeriods(t, plan.periods, []string{"Elder Dinner"})
+	if len(plan.weeklyItems) != 1 {
+		t.Fatalf("only the hall with a real menu may be rewritten, got %d items", len(plan.weeklyItems))
+	}
+	if len(plan.preserved) != 2 || plan.preserved[0] != "Allison" || plan.preserved[1] != "Sargent" {
+		t.Fatalf("expected Allison and Sargent to be left alone, got %v", plan.preserved)
+	}
+	if len(plan.failed) != 0 {
+		t.Fatalf("an empty answer is not a failure, got %v", plan.failed)
+	}
+}
+
+// A closure upstream actually states is real information, and clearing the
+// slice is the only way to stop announcing a meal that is not being served.
+func TestPlanPeriodRefreshClearsVerifiedClosures(t *testing.T) {
+	results := []scraper.PeriodScrapeResult{
+		{Location: "Allison", Fetched: true, Matched: true, MatchedPeriod: "Dinner", ClosedVerified: true},
+	}
+
+	plan := planPeriodRefresh(planDate, planMeal, results)
+
+	assertPeriods(t, plan.periods, []string{"Allison Dinner"})
+	if len(plan.weeklyItems) != 0 {
+		t.Fatalf("a verified closure must write no rows, got %d", len(plan.weeklyItems))
+	}
+	if len(plan.preserved) != 0 {
+		t.Fatalf("a verified closure must not be preserved, got %v", plan.preserved)
+	}
+}
+
+// A failed fetch and an unedited menu are both untouchable, and a hall serving
+// the meal under an alias must have both names cleared or the rows double up.
+func TestPlanPeriodRefreshSkipsFailedAndUnchangedHalls(t *testing.T) {
+	results := []scraper.PeriodScrapeResult{
+		{Location: "Allison", Err: errors.New("browser gone")},
+		{Location: "Sargent", Fetched: true, Matched: true, MatchedPeriod: "Dinner", Unchanged: true},
+		{Location: "Elder", Fetched: true, Matched: true, MatchedPeriod: "Brunch",
+			DailyItems: []models.DailyItem{dinnerItem("Elder", "Waffles")}},
+	}
+
+	plan := planPeriodRefresh(planDate, "Lunch", results)
+
+	assertPeriods(t, plan.periods, []string{"Elder Lunch", "Elder Brunch"})
+	if plan.unchanged != 1 {
+		t.Fatalf("unchanged = %d, want 1", plan.unchanged)
+	}
+	if len(plan.failed) != 1 || plan.failed[0] != "Allison" {
+		t.Fatalf("expected Allison to be reported as failed, got %v", plan.failed)
+	}
+	for _, period := range plan.periods {
+		if period.Date != planDate {
+			t.Fatalf("period %s carries the wrong date", period)
 		}
 	}
 }

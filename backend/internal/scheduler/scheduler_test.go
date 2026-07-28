@@ -339,6 +339,109 @@ func TestIsScrapedHall(t *testing.T) {
 	}
 }
 
+// The window before a push send is the one place a refresh can do damage it
+// cannot undo, so ticks for that meal are dropped from the plan there — and
+// nowhere else.
+func TestExcludePreNotifyTicks(t *testing.T) {
+	dinnerTicks := []refreshTick{
+		{at: clockTime{14, 45}, meal: "Lunch"},  // before the window
+		{at: clockTime{15, 30}, meal: "Dinner"}, // window opens
+		{at: clockTime{15, 45}, meal: "Dinner"}, // derived plans put one here
+		{at: clockTime{16, 15}, meal: "Dinner"}, // the fallback plan's
+		{at: clockTime{16, 29}, meal: "Dinner"}, // last blocked minute
+		{at: clockTime{16, 30}, meal: "Dinner"}, // the send itself is not blocked
+		{at: clockTime{16, 45}, meal: "Dinner"}, // post-send ticks stay
+		{at: clockTime{17, 45}, meal: "Dinner"},
+		{at: clockTime{18, 45}, meal: "Dinner"},
+	}
+
+	assertTicks(t, excludePreNotifyTicks(dinnerTicks, defaultNotifyTimes), []string{
+		"14:45 Lunch", "16:30 Dinner", "16:45 Dinner", "17:45 Dinner", "18:45 Dinner",
+	})
+
+	// A tick inside the window for a different meal is harmless: the send never
+	// reads the slice it rewrites.
+	other := []refreshTick{{at: clockTime{16, 0}, meal: "Lunch"}}
+	assertTicks(t, excludePreNotifyTicks(other, defaultNotifyTimes), []string{"16:00 Lunch"})
+
+	// Breakfast and lunch sends get the same protection.
+	morning := []refreshTick{
+		{at: clockTime{6, 0}, meal: "Breakfast"},
+		{at: clockTime{6, 45}, meal: "Breakfast"},
+		{at: clockTime{9, 45}, meal: "Lunch"},
+		{at: clockTime{10, 45}, meal: "Lunch"},
+	}
+	assertTicks(t, excludePreNotifyTicks(morning, defaultNotifyTimes), []string{
+		"06:45 Breakfast", "10:45 Lunch",
+	})
+
+	// A tick that names no meal is judged by the meal its own clock time implies.
+	unnamed := []refreshTick{{at: clockTime{16, 15}}, {at: clockTime{16, 45}}}
+	if got := excludePreNotifyTicks(unnamed, defaultNotifyTimes); len(got) != 1 || got[0].at != (clockTime{16, 45}) {
+		t.Fatalf("an unnamed tick must be judged by the clock, got %v", tickStrings(got))
+	}
+
+	// With the notify cron off there is nothing to protect.
+	assertTicks(t, excludePreNotifyTicks(dinnerTicks, nil), tickStrings(dinnerTicks))
+}
+
+// The two plans that actually reach production must come out of the blackout
+// without a dinner refresh sitting in front of the 16:30 push.
+func TestPlansCarryNoPreNotifyDinnerRefresh(t *testing.T) {
+	assertTicks(t, excludePreNotifyTicks(fixedRefreshTicks(), defaultNotifyTimes), []string{
+		"07:15 Breakfast", "08:15 Breakfast", "09:15 Breakfast",
+		"10:45 Lunch", "11:45 Lunch", "12:45 Lunch",
+		"17:15 Dinner", "18:15 Dinner",
+	})
+
+	date := "2026-04-15"
+	continuous := []models.LocationOperatingTimes{
+		hallHours("Elder Dining Commons", date, block(7, 0, 20, 0)),
+	}
+	assertTicks(t, excludePreNotifyTicks(deriveRefreshTicks(continuous, date), defaultNotifyTimes), []string{
+		"06:45 Breakfast", "07:45 Breakfast", "08:45 Breakfast", "09:45 Breakfast",
+		"10:45 Lunch", "11:45 Lunch", "12:45 Lunch", "13:45 Lunch", "14:45 Lunch",
+		"16:45 Dinner", "17:45 Dinner", "18:45 Dinner", "19:45 Dinner",
+	})
+}
+
+// ensureTicks is where the blackout is actually applied, so it must hold for a
+// hand-configured plan too.
+func TestEnsureTicksAppliesTheBlackout(t *testing.T) {
+	loc := mustChicago(t)
+	s := &menuScheduler{
+		loc:            loc,
+		refreshEnabled: true,
+		notifyTimes:    defaultNotifyTimes,
+		overrideTicks: []refreshTick{
+			{at: clockTime{12, 45}, meal: "Lunch"},
+			{at: clockTime{16, 15}, meal: "Dinner"},
+			{at: clockTime{17, 45}, meal: "Dinner"},
+		},
+	}
+
+	s.ensureTicks(time.Date(2026, 7, 27, 5, 0, 0, 0, loc))
+	assertTicks(t, s.ticks, []string{"12:45 Lunch", "17:45 Dinner"})
+}
+
+func TestNotifyBlackoutTimes(t *testing.T) {
+	t.Setenv("ENABLE_NOTIFY_CRON", "")
+	t.Setenv("NOTIFY_TIMES_CST", "")
+	if got := notifyBlackoutTimes(); len(got) != len(defaultNotifyTimes) {
+		t.Fatalf("got %v, want the notify defaults %v", got, defaultNotifyTimes)
+	}
+
+	t.Setenv("NOTIFY_TIMES_CST", "17:00")
+	if got := notifyBlackoutTimes(); len(got) != 1 || got[0] != (clockTime{17, 0}) {
+		t.Fatalf("the blackout must follow NOTIFY_TIMES_CST, got %v", got)
+	}
+
+	t.Setenv("ENABLE_NOTIFY_CRON", "false")
+	if got := notifyBlackoutTimes(); got != nil {
+		t.Fatalf("no notify cron means no blackout, got %v", got)
+	}
+}
+
 // The scheduler must pick the soonest job of the day and identify which it is.
 func TestNextEvent(t *testing.T) {
 	loc := mustChicago(t)
@@ -378,5 +481,57 @@ func TestNextEvent(t *testing.T) {
 	s.refreshEnabled = false
 	if _, tick, ok = s.nextEvent(at(6, 0)); ok && tick != nil {
 		t.Fatal("disabled refreshes must not be scheduled")
+	}
+}
+
+func TestMealForFireTime(t *testing.T) {
+	loc := mustChicago(t)
+	cases := []struct {
+		at   clockTime
+		want string
+	}{
+		{clockTime{6, 30}, "Breakfast"},
+		{clockTime{10, 30}, "Lunch"},
+		{clockTime{16, 30}, "Dinner"},
+		{clockTime{2, 0}, ""},
+		{clockTime{23, 30}, ""},
+	}
+
+	for _, c := range cases {
+		if got := mealForFireMinutes(c.at.minutes()); got != c.want {
+			t.Fatalf("mealForFireMinutes(%s) = %q, want %q", c.at, got, c.want)
+		}
+		fireTime := time.Date(2026, 7, 27, c.at.hour, c.at.minute, 0, 0, loc)
+		if got := mealForFireTime(fireTime); got != c.want {
+			t.Fatalf("mealForFireTime(%s) = %q, want %q", c.at, got, c.want)
+		}
+	}
+}
+
+// The whole point of the chained refresh is ordering: the menu must be re-read
+// before anything reads it to decide what to push.
+func TestNotifyRefreshesBeforeReadingTheMenu(t *testing.T) {
+	loc := mustChicago(t)
+
+	var calls []string
+	original := refreshBeforeNotify
+	t.Cleanup(func() { refreshBeforeNotify = original })
+	refreshBeforeNotify = func(date, meal string) {
+		calls = append(calls, date+" "+meal)
+	}
+
+	// The device-token load right after the refresh fails (no database in a unit
+	// test) and ends the pass there, which is exactly the ordering under test.
+	notifyForTime(time.Date(2026, 7, 27, 16, 30, 0, 0, loc))
+
+	if len(calls) != 1 || calls[0] != "2026-07-27 Dinner" {
+		t.Fatalf("expected one refresh of the meal being announced, got %v", calls)
+	}
+
+	// A fire time in no meal window sends nothing, so it must not spend a scrape.
+	calls = nil
+	notifyForTime(time.Date(2026, 7, 27, 2, 0, 0, 0, loc))
+	if len(calls) != 0 {
+		t.Fatalf("a pass with no meal must not refresh, got %v", calls)
 	}
 }

@@ -241,8 +241,9 @@ func (p MenuPeriod) key() string {
 // Callers must pass only slices whose upstream fetch SUCCEEDED. A failed fetch
 // must be omitted entirely — omitting it preserves the existing rows, whereas
 // including it with no items would delete a good menu because the network
-// blipped. A successful fetch that legitimately produced nothing (hall closed
-// for that meal) is included with no items, which clears the slice.
+// blipped. Only a fetch whose payload VERIFIED the hall is closed may be
+// included with no items, which clears the slice; a merely empty result is not
+// proof of a closure and must be omitted too (see scrapejob.planPeriodRefresh).
 //
 // Passing no slices is a no-op, so a refresh in which every location failed
 // leaves the database untouched.

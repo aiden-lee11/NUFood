@@ -12,6 +12,7 @@ import (
 	"backend/internal/models"
 	"backend/internal/scraper"
 	"backend/internal/store"
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -232,28 +233,95 @@ type PeriodRefreshOptions struct {
 	Retries int    // attempts per upstream fetch
 }
 
+// PeriodRefreshResult summarizes what a period refresh did, so a caller can log
+// the outcome without re-deriving it from the results.
+type PeriodRefreshResult struct {
+	Slices    int // menu slices replaced
+	Items     int // rows written into those slices
+	Unchanged int // halls upstream had not edited
+	Failed    int // halls whose fetch failed
+	Preserved int // halls that fetched empty without verifying a closure
+}
+
+// periodRefreshPlan is the decision made from one period scrape's per-hall
+// results: which slices may be replaced, what goes in them, and which halls
+// were deliberately left alone.
+type periodRefreshPlan struct {
+	periods     []db.MenuPeriod
+	weeklyItems []models.WeeklyItem
+	allItems    []models.AllDataItem
+	failed      []string
+	preserved   []string
+	unchanged   int
+}
+
+// planPeriodRefresh turns per-hall scrape results into the set of slices that
+// may be rewritten. It is the whole data-safety policy, kept separate from the
+// scrape and the write so it can be exercised directly.
+//
+// Rules, in order of importance:
+//   - A hall whose fetch failed is omitted entirely, so its stored menu
+//     survives untouched. A blip can never delete a good menu.
+//   - A hall that fetched but produced no items is omitted too, UNLESS upstream
+//     verified the closure. Zero items is the shape of an unpublished menu as
+//     much as a closed hall, and wrongly clearing the slice empties the menu
+//     minutes before the push that reads it.
+//   - A hall upstream has not edited since it was last persisted is skipped
+//     without parsing or writing.
+func planPeriodRefresh(date, meal string, results []scraper.PeriodScrapeResult) periodRefreshPlan {
+	var plan periodRefreshPlan
+
+	for _, result := range results {
+		if !result.Fetched {
+			plan.failed = append(plan.failed, result.Location)
+			continue
+		}
+		if result.Unchanged {
+			plan.unchanged++
+			continue
+		}
+		if len(result.DailyItems) == 0 && !result.ClosedVerified {
+			plan.preserved = append(plan.preserved, result.Location)
+			continue
+		}
+
+		// Clear the slice under the requested meal name and, when the hall
+		// serves it under an alias ("Brunch" for lunch), that name too — they
+		// are the same meal slot and only one of them may hold rows.
+		plan.periods = append(plan.periods, db.MenuPeriod{Date: date, Location: result.Location, TimeOfDay: meal})
+		if result.MatchedPeriod != "" && !strings.EqualFold(result.MatchedPeriod, meal) {
+			plan.periods = append(plan.periods, db.MenuPeriod{Date: date, Location: result.Location, TimeOfDay: result.MatchedPeriod})
+		}
+
+		for _, item := range result.DailyItems {
+			plan.weeklyItems = append(plan.weeklyItems, models.WeeklyItem{DailyItem: item})
+		}
+		plan.allItems = append(plan.allItems, result.AllItems...)
+	}
+
+	return plan
+}
+
 // RunPeriodRefresh re-scrapes one meal period on one date across every dining
 // hall and replaces just those menu slices. It costs two navigations per open
 // hall (period list + that period's menu) and one per hall that is not serving
-// the meal, versus the ~18 the full-day scrape needs.
+// the meal, versus the ~18 the full-day scrape needs. See planPeriodRefresh for
+// the rules governing which slices may be rewritten.
 //
-// Data safety rules, in order of importance:
-//   - A hall whose fetch failed is omitted entirely, so its stored menu
-//     survives untouched. A blip can never delete a good menu.
-//   - A hall that fetched successfully but serves no such meal has its slice
-//     cleared, because "closed" is real information.
-//   - A hall whose menu upstream has not edited since it was last persisted is
-//     skipped without parsing or writing.
+// ctx bounds the upstream work; cancelling it stops the scrape and the caller
+// keeps whatever was already stored.
 //
 // It returns an error only when nothing at all could be refreshed; partial
 // failures are logged and the healthy halls are still written.
-func RunPeriodRefresh(opts PeriodRefreshOptions) error {
+func RunPeriodRefresh(ctx context.Context, opts PeriodRefreshOptions) (PeriodRefreshResult, error) {
+	var summary PeriodRefreshResult
+
 	if _, err := time.Parse("2006-01-02", opts.Date); err != nil {
-		return fmt.Errorf("invalid refresh date %q: %w", opts.Date, err)
+		return summary, fmt.Errorf("invalid refresh date %q: %w", opts.Date, err)
 	}
 	meal := normalizeMeal(opts.Meal)
 	if meal == "" {
-		return fmt.Errorf("refresh requires a meal period")
+		return summary, fmt.Errorf("refresh requires a meal period")
 	}
 
 	retries := opts.Retries
@@ -265,56 +333,40 @@ func RunPeriodRefresh(opts PeriodRefreshOptions) error {
 	s.MaxRetries = retries
 	s.MenuUnchanged = menuUnchanged
 
-	results, err := s.ScrapePeriod(opts.Date, meal)
+	results, err := s.ScrapePeriod(ctx, opts.Date, meal)
 	if err != nil {
-		return fmt.Errorf("period refresh date=%s meal=%s could not start: %w", opts.Date, meal, err)
+		return summary, fmt.Errorf("period refresh date=%s meal=%s could not start: %w", opts.Date, meal, err)
 	}
 
-	var periods []db.MenuPeriod
-	var weeklyItems []models.WeeklyItem
-	var allItems []models.AllDataItem
-	var failed []string
-	unchanged := 0
-
-	for _, result := range results {
-		if !result.Fetched {
-			failed = append(failed, result.Location)
-			continue
-		}
-		if result.Unchanged {
-			unchanged++
-			continue
-		}
-
-		// Clear the slice under the requested meal name and, when the hall
-		// serves it under an alias ("Brunch" for lunch), that name too — they
-		// are the same meal slot and only one of them may hold rows.
-		periods = append(periods, db.MenuPeriod{Date: opts.Date, Location: result.Location, TimeOfDay: meal})
-		if result.MatchedPeriod != "" && !strings.EqualFold(result.MatchedPeriod, meal) {
-			periods = append(periods, db.MenuPeriod{Date: opts.Date, Location: result.Location, TimeOfDay: result.MatchedPeriod})
-		}
-
-		for _, item := range result.DailyItems {
-			weeklyItems = append(weeklyItems, models.WeeklyItem{DailyItem: item})
-		}
-		allItems = append(allItems, result.AllItems...)
+	plan := planPeriodRefresh(opts.Date, meal, results)
+	summary = PeriodRefreshResult{
+		Slices:    len(plan.periods),
+		Items:     len(plan.weeklyItems),
+		Unchanged: plan.unchanged,
+		Failed:    len(plan.failed),
+		Preserved: len(plan.preserved),
 	}
 
-	if len(failed) > 0 {
+	if len(plan.failed) > 0 {
 		log.Printf("period refresh date=%s meal=%s could not fetch %s; their stored menus are left unchanged",
-			opts.Date, meal, strings.Join(failed, ", "))
+			opts.Date, meal, strings.Join(plan.failed, ", "))
+	}
+	if len(plan.preserved) > 0 {
+		log.Printf("warning: period refresh date=%s meal=%s got no items and no verified closure for %s; their stored menus are left unchanged",
+			opts.Date, meal, strings.Join(plan.preserved, ", "))
 	}
 
-	if len(periods) == 0 {
-		if len(failed) == len(results) && len(results) > 0 {
-			return fmt.Errorf("period refresh date=%s meal=%s failed for every location", opts.Date, meal)
+	if len(plan.periods) == 0 {
+		if len(plan.failed) == len(results) && len(results) > 0 {
+			return summary, fmt.Errorf("period refresh date=%s meal=%s failed for every location", opts.Date, meal)
 		}
-		log.Printf("period refresh date=%s meal=%s: nothing to write (unchanged=%d)", opts.Date, meal, unchanged)
-		return nil
+		log.Printf("period refresh date=%s meal=%s: nothing to write (unchanged=%d preserved=%d)",
+			opts.Date, meal, plan.unchanged, len(plan.preserved))
+		return summary, nil
 	}
 
-	if err := db.ReplaceMenuPeriods(periods, weeklyItems, allItems); err != nil {
-		return fmt.Errorf("failed to persist period refresh date=%s meal=%s: %w", opts.Date, meal, err)
+	if err := db.ReplaceMenuPeriods(plan.periods, plan.weeklyItems, plan.allItems); err != nil {
+		return summary, fmt.Errorf("failed to persist period refresh date=%s meal=%s: %w", opts.Date, meal, err)
 	}
 
 	// Any write must be mirrored into the in-memory store or reads keep serving
@@ -322,9 +374,9 @@ func RunPeriodRefresh(opts PeriodRefreshOptions) error {
 	refreshMenuStore()
 	rememberMenus(s.LastSeenUpdatedAt)
 
-	log.Printf("period refresh complete date=%s meal=%s slices=%d items=%d unchanged=%d failed=%d",
-		opts.Date, meal, len(periods), len(weeklyItems), unchanged, len(failed))
-	return nil
+	log.Printf("period refresh complete date=%s meal=%s slices=%d items=%d unchanged=%d failed=%d preserved=%d",
+		opts.Date, meal, summary.Slices, summary.Items, summary.Unchanged, summary.Failed, summary.Preserved)
+	return summary, nil
 }
 
 // normalizeMeal trims a meal name and gives it the upstream's capitalization so

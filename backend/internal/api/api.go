@@ -408,6 +408,10 @@ const maxDeviceTokenLength = 4096
 //
 // Expected Body:
 //   - JSON object {"token": "...", "platform": "ios"}.
+//
+// Every outcome is logged. This endpoint is the only thing standing between an
+// install and its notifications, and while it was silent a five-day outage in
+// registrations left no trace at all.
 func RegisterDeviceToken(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(string)
 
@@ -416,27 +420,33 @@ func RegisterDeviceToken(w http.ResponseWriter, r *http.Request) {
 		Platform string `json:"platform"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("device token registration failed for user %s: malformed body: %v", userID, err)
 		http.Error(w, "Error decoding JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	token := strings.TrimSpace(req.Token)
+	platform := strings.TrimSpace(req.Platform)
+
 	if token == "" {
+		log.Printf("device token registration rejected for user %s (platform=%q): empty token", userID, platform)
 		http.Error(w, "token field is required", http.StatusBadRequest)
 		return
 	}
 	if len(token) > maxDeviceTokenLength {
+		log.Printf("device token registration rejected for user %s (platform=%q): token is %d chars, max %d",
+			userID, platform, len(token), maxDeviceTokenLength)
 		http.Error(w, "token exceeds maximum length", http.StatusBadRequest)
 		return
 	}
 
-	platform := strings.TrimSpace(req.Platform)
-
 	if err := db.SaveDeviceToken(userID, token, platform); err != nil {
+		log.Printf("device token registration failed for user %s (platform=%q): %v", userID, platform, err)
 		http.Error(w, "Error saving device token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("device token registered for user %s (platform=%q)", userID, platform)
 	w.WriteHeader(http.StatusNoContent)
 }
 
