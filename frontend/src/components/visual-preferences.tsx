@@ -28,14 +28,24 @@ export function VisualPreferences({
           </Label>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox id="showNutrition" checked={showNutrition} onCheckedChange={toggleShowNutrition} />
-          <Label
-            htmlFor="showNutrition"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 w-full"
-          >
-            Show nutrition
-          </Label>
+        <div className="flex items-start space-x-2">
+          <Checkbox
+            id="showNutrition"
+            checked={showNutrition}
+            onCheckedChange={toggleShowNutrition}
+            className="mt-0.5"
+          />
+          <div className="w-full space-y-0.5">
+            <Label
+              htmlFor="showNutrition"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 w-full"
+            >
+              Show nutrition
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Calories, macros &amp; diet tags under each item
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

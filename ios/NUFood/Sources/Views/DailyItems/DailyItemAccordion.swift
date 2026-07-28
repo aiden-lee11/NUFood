@@ -27,8 +27,9 @@ struct DailyItemAccordion: View {
     @Environment(AppStore.self) private var store
     @Environment(AuthManager.self) private var auth
     @AppStorage("expandFolders") private var expandFolders = false
-    /// Option C: when on, each row shows a one-line macro caption under its name.
-    /// Local-only preference (mirrors `expandFolders`); see `DisplaySettingsSheet`.
+    /// Option C: when on, each row shows a one-line macro caption under its name plus
+    /// its green diet mini-tag. Local-only preference (mirrors `expandFolders`); see
+    /// `DisplaySettingsSheet`.
     @AppStorage("showNutrition") private var showNutrition = false
 
     /// User overrides of per-section expansion, keyed by section id. Absent → use default.
@@ -138,7 +139,8 @@ private struct AccordionSection: View {
     let section: StationSection
     @Binding var isExpanded: Bool
     let isFavorite: (DailyItem) -> Bool
-    /// Option C: whether to render the inline macro caption under each row.
+    /// Option C: whether to render the inline macro caption and green diet mini-tag
+    /// on each row. Allergen warnings ignore this — they're safety info.
     let showNutrition: Bool
     /// Item id → dietary-profile allergen conflict, populated only in "warn" mode.
     let warnings: [String: DietaryProfile.AllergenHit]
@@ -174,7 +176,10 @@ private struct AccordionSection: View {
                             isFavorite: isFavorite(item),
                             style: section.style,
                             subtitle: showNutrition ? NutritionFormat.inlineCaption(for: item) : nil,
-                            dietTag: item.primaryDietLabel,
+                            // Rides the same toggle as the macro caption: both are
+                            // "extra detail per row". The amber allergen warning below
+                            // is safety info and stays on regardless.
+                            dietTag: showNutrition ? item.primaryDietLabel : nil,
                             warning: warnings[item.id]?.label,
                             onInfo: { detailItem = item }
                         ) {

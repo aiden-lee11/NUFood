@@ -253,7 +253,7 @@ struct DisplaySettingsSheet: View {
                     Text("Show nutrition")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Calories & macros under each item")
+                    Text("Calories, macros & diet tags under each item")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }

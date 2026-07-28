@@ -25,9 +25,10 @@ interface Props {
  * muted ⓘ button (its own click target, stopPropagation) sitting LEFT of the star that
  * opens the nutrition detail dialog. Mirrors iOS `ItemRowButton` (SPEC §5.3).
  *
- * Rows also carry at most one green diet mini-tag (Vegan > Vegetarian > Gluten-free) and,
- * in the profile's "warn" mode, an amber allergen badge. Both are silent on items without
- * tag data, which is every item until the backend ships `filters`.
+ * Rows also carry at most one green diet mini-tag (Vegan > Vegetarian > Gluten-free),
+ * shown only while the "Show nutrition" display preference is on, and — always, whatever
+ * that preference says — an amber allergen badge in the profile's "warn" mode. Both are
+ * silent on items without tag data, which is every item until the backend ships `filters`.
  */
 const ItemRow: React.FC<{
   item: DailyItem;
@@ -40,7 +41,10 @@ const ItemRow: React.FC<{
 }> = ({ item, isFavorite, favoriteBorderClass, showNutrition, profile, onToggle, onInfo }) => {
   const caption = showNutrition ? inlineCaption(item) : null;
   const { conflict, dietTag } = evaluateItem(item, profile);
+  // The green diet tag is informational, so it rides along with "Show nutrition".
+  const visibleDietTag = showNutrition ? dietTag : null;
   // "hide" mode already removed conflicting items upstream — only "warn" badges them.
+  // Never gated on a display preference: allergen safety info always shows.
   const warning = profile.conflictMode === "warn" && conflict ? conflictLabel(conflict) : null;
 
   return (
@@ -60,11 +64,11 @@ const ItemRow: React.FC<{
         className="min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
       >
         <div className="truncate">{item.Name}</div>
-        {(dietTag || warning) && (
+        {(visibleDietTag || warning) && (
           <div className="mt-1 flex flex-wrap items-center gap-1">
-            {dietTag && (
+            {visibleDietTag && (
               <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
-                {dietTag.label}
+                {visibleDietTag.label}
               </span>
             )}
             {warning && (
