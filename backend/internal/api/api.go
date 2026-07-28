@@ -3,11 +3,12 @@ package api
 import (
 	"backend/internal/cache"
 	"backend/internal/db"
+	"backend/internal/mailer"
 	"backend/internal/middleware"
 	"backend/internal/models"
+	"backend/internal/scrapejob"
 	"backend/internal/scraper"
 	"backend/internal/store"
-	"backend/internal/mailer"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,7 +16,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -26,8 +26,6 @@ var allowedLocationPreferences = map[string]struct{}{
 	"Plex East": {},
 	"Plex West": {},
 }
-
-var scrapeJobMu sync.Mutex
 
 // Helper functions to convert between AllDataItem arrays and string arrays
 func allDataItemsToStrings(items []models.AllDataItem) []string {
@@ -54,11 +52,13 @@ func stringsToAllDataItems(names []string) []models.AllDataItem {
 // Expected Authorization:
 //   - No special authorization required.
 func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
-	if !scrapeJobMu.TryLock() {
+	// Shares one lock with the scheduler's full scrape and period refreshes, so
+	// a manual scrape and a scheduled one can never run concurrently.
+	if !scrapejob.TryLock() {
 		http.Error(w, "A scrape job is already running", http.StatusConflict)
 		return
 	}
-	defer scrapeJobMu.Unlock()
+	defer scrapejob.Unlock()
 
 	scraper := scraper.NewBrowserAPIScraper()
 
@@ -124,11 +124,13 @@ func ScrapeUpdateWeekly(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
-	if !scrapeJobMu.TryLock() {
+	// Shares one lock with the scheduler's full scrape and period refreshes, so
+	// a manual scrape and a scheduled one can never run concurrently.
+	if !scrapejob.TryLock() {
 		http.Error(w, "A scrape job is already running", http.StatusConflict)
 		return
 	}
-	defer scrapeJobMu.Unlock()
+	defer scrapejob.Unlock()
 
 	scraper := scraper.NewBrowserAPIScraper()
 
@@ -224,11 +226,13 @@ func ScrapeWeeklyItemsHandler(w http.ResponseWriter, r *http.Request) {
 //   - w: The HTTP response writer.
 //   - r: The HTTP request.
 func ScrapeLocationOperatingTimesHandler(w http.ResponseWriter, r *http.Request) {
-	if !scrapeJobMu.TryLock() {
+	// Shares one lock with the scheduler's full scrape and period refreshes, so
+	// a manual scrape and a scheduled one can never run concurrently.
+	if !scrapejob.TryLock() {
 		http.Error(w, "A scrape job is already running", http.StatusConflict)
 		return
 	}
-	defer scrapeJobMu.Unlock()
+	defer scrapejob.Unlock()
 
 	scraper := scraper.NewBrowserAPIScraper()
 	formattedDate := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")

@@ -415,3 +415,144 @@ func TestMigrateDeduplicatesExistingAllDataItems(t *testing.T) {
 	assert.EqualValues(t, 1, count)
 	assert.Error(t, testDB.Create(&db.GormAllDataItem{AllDataItem: models.AllDataItem{Name: "Eggs"}}).Error)
 }
+
+func periodItem(date, name, location, timeOfDay string) models.WeeklyItem {
+	return models.WeeklyItem{DailyItem: models.DailyItem{
+		Name:        name,
+		Date:        date,
+		Location:    location,
+		StationName: "Comfort",
+		TimeOfDay:   timeOfDay,
+	}}
+}
+
+func storedNames(t *testing.T, testDB *gorm.DB, date, location, timeOfDay string) []string {
+	t.Helper()
+	var rows []db.GormWeeklyItem
+	require.NoError(t, testDB.Where("date = ? AND location = ? AND time_of_day = ?", date, location, timeOfDay).
+		Order("name").Find(&rows).Error)
+
+	names := make([]string, 0, len(rows))
+	for _, row := range rows {
+		names = append(names, row.Name)
+	}
+	return names
+}
+
+func seedTwoDaysOfMenu(t *testing.T, testDB *gorm.DB) (today, tomorrow string) {
+	t.Helper()
+	now := time.Date(2026, time.July, 10, 12, 0, 0, 0, time.UTC)
+	today = now.Format("2006-01-02")
+	tomorrow = now.AddDate(0, 0, 1).Format("2006-01-02")
+
+	seed := []models.WeeklyItem{
+		periodItem(today, "Allison lunch", "Allison", "Lunch"),
+		periodItem(today, "Allison breakfast", "Allison", "Breakfast"),
+		periodItem(today, "Allison everyday", "Allison", "Everyday"),
+		periodItem(today, "Sargent lunch", "Sargent", "Lunch"),
+		periodItem(tomorrow, "Allison lunch tomorrow", "Allison", "Lunch"),
+	}
+	require.NoError(t, db.PersistScrapedMenu(seed, nil, []string{today, tomorrow}, now))
+	return today, tomorrow
+}
+
+// A refresh replaces only the slices it names: other periods at the same hall,
+// other halls, and other dates keep their rows.
+func TestReplaceMenuPeriodsTouchesOnlyNamedSlices(t *testing.T) {
+	testDB := setupTestDB(t)
+	today, tomorrow := seedTwoDaysOfMenu(t, testDB)
+
+	err := db.ReplaceMenuPeriods(
+		[]db.MenuPeriod{{Date: today, Location: "Allison", TimeOfDay: "Lunch"}},
+		[]models.WeeklyItem{periodItem(today, "New lunch entree", "Allison", "Lunch")},
+		[]models.AllDataItem{{Name: "New lunch entree"}},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"New lunch entree"}, storedNames(t, testDB, today, "Allison", "Lunch"))
+	assert.Equal(t, []string{"Allison breakfast"}, storedNames(t, testDB, today, "Allison", "Breakfast"))
+	assert.Equal(t, []string{"Allison everyday"}, storedNames(t, testDB, today, "Allison", "Everyday"))
+	assert.Equal(t, []string{"Sargent lunch"}, storedNames(t, testDB, today, "Sargent", "Lunch"))
+	assert.Equal(t, []string{"Allison lunch tomorrow"}, storedNames(t, testDB, tomorrow, "Allison", "Lunch"))
+
+	var allData []db.GormAllDataItem
+	require.NoError(t, testDB.Where("name = ?", "New lunch entree").Find(&allData).Error)
+	assert.Len(t, allData, 1, "newly seen food names are recorded")
+}
+
+// A fetch failure is expressed by omitting the slice, and must never delete.
+func TestReplaceMenuPeriodsWithNoSlicesLeavesEverythingAlone(t *testing.T) {
+	testDB := setupTestDB(t)
+	today, _ := seedTwoDaysOfMenu(t, testDB)
+
+	require.NoError(t, db.ReplaceMenuPeriods(nil, nil, nil))
+
+	assert.Equal(t, []string{"Allison lunch"}, storedNames(t, testDB, today, "Allison", "Lunch"))
+	assert.Equal(t, []string{"Sargent lunch"}, storedNames(t, testDB, today, "Sargent", "Lunch"))
+}
+
+// A successful fetch that found no menu (hall closed for that meal) clears the
+// slice — "closed" is real information, unlike a failure.
+func TestReplaceMenuPeriodsClearsSliceOnSuccessfulEmpty(t *testing.T) {
+	testDB := setupTestDB(t)
+	today, _ := seedTwoDaysOfMenu(t, testDB)
+
+	err := db.ReplaceMenuPeriods(
+		[]db.MenuPeriod{{Date: today, Location: "Allison", TimeOfDay: "Lunch"}},
+		nil,
+		nil,
+	)
+	require.NoError(t, err)
+
+	assert.Empty(t, storedNames(t, testDB, today, "Allison", "Lunch"))
+	assert.Equal(t, []string{"Allison breakfast"}, storedNames(t, testDB, today, "Allison", "Breakfast"))
+	assert.Equal(t, []string{"Sargent lunch"}, storedNames(t, testDB, today, "Sargent", "Lunch"))
+}
+
+// A hall serving Brunch instead of Lunch clears both names, so the meal slot
+// cannot end up holding two generations of rows.
+func TestReplaceMenuPeriodsHandlesBrunchAlias(t *testing.T) {
+	testDB := setupTestDB(t)
+	today, _ := seedTwoDaysOfMenu(t, testDB)
+
+	err := db.ReplaceMenuPeriods(
+		[]db.MenuPeriod{
+			{Date: today, Location: "Allison", TimeOfDay: "Lunch"},
+			{Date: today, Location: "Allison", TimeOfDay: "Brunch"},
+		},
+		[]models.WeeklyItem{periodItem(today, "Brunch waffles", "Allison", "Brunch")},
+		nil,
+	)
+	require.NoError(t, err)
+
+	assert.Empty(t, storedNames(t, testDB, today, "Allison", "Lunch"))
+	assert.Equal(t, []string{"Brunch waffles"}, storedNames(t, testDB, today, "Allison", "Brunch"))
+}
+
+// Writing an item whose slice was not cleared would duplicate stored rows.
+func TestReplaceMenuPeriodsRejectsItemsOutsideNamedSlices(t *testing.T) {
+	testDB := setupTestDB(t)
+	today, _ := seedTwoDaysOfMenu(t, testDB)
+
+	err := db.ReplaceMenuPeriods(
+		[]db.MenuPeriod{{Date: today, Location: "Allison", TimeOfDay: "Lunch"}},
+		[]models.WeeklyItem{periodItem(today, "Stray dinner item", "Allison", "Dinner")},
+		nil,
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unlisted period")
+
+	// The transaction must not have run at all.
+	assert.Equal(t, []string{"Allison lunch"}, storedNames(t, testDB, today, "Allison", "Lunch"))
+}
+
+func TestReplaceMenuPeriodsValidatesSlices(t *testing.T) {
+	setupTestDB(t)
+
+	assert.Error(t, db.ReplaceMenuPeriods(
+		[]db.MenuPeriod{{Date: "not-a-date", Location: "Allison", TimeOfDay: "Lunch"}}, nil, nil))
+	assert.Error(t, db.ReplaceMenuPeriods(
+		[]db.MenuPeriod{{Date: "2026-07-10", Location: "", TimeOfDay: "Lunch"}}, nil, nil))
+	assert.Error(t, db.ReplaceMenuPeriods(
+		[]db.MenuPeriod{{Date: "2026-07-10", Location: "Allison", TimeOfDay: ""}}, nil, nil))
+}

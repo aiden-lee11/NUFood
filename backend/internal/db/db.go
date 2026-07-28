@@ -217,6 +217,130 @@ func PersistScrapedMenu(items []models.WeeklyItem, allDataItems []models.AllData
 	})
 }
 
+// MenuPeriod identifies one (date, location, time of day) slice of the stored
+// menu — the granularity a period refresh replaces.
+type MenuPeriod struct {
+	Date      string
+	Location  string
+	TimeOfDay string
+}
+
+func (p MenuPeriod) String() string {
+	return fmt.Sprintf("%s/%s/%s", p.Date, p.Location, p.TimeOfDay)
+}
+
+func (p MenuPeriod) key() string {
+	return strings.Join([]string{p.Date, p.Location, p.TimeOfDay}, "\x00")
+}
+
+// ReplaceMenuPeriods atomically replaces exactly the named menu slices and
+// records any newly seen food names. Unlike PersistScrapedMenu it never touches
+// a whole date: rows for other periods at the same hall, other halls, and other
+// dates are left alone.
+//
+// Callers must pass only slices whose upstream fetch SUCCEEDED. A failed fetch
+// must be omitted entirely — omitting it preserves the existing rows, whereas
+// including it with no items would delete a good menu because the network
+// blipped. A successful fetch that legitimately produced nothing (hall closed
+// for that meal) is included with no items, which clears the slice.
+//
+// Passing no slices is a no-op, so a refresh in which every location failed
+// leaves the database untouched.
+func ReplaceMenuPeriods(periods []MenuPeriod, items []models.WeeklyItem, allDataItems []models.AllDataItem) error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+
+	cleanPeriods, err := normalizeMenuPeriods(periods)
+	if err != nil {
+		return err
+	}
+	if len(cleanPeriods) == 0 {
+		log.Println("No successfully fetched menu periods, leaving stored menu unchanged")
+		return nil
+	}
+
+	cleanItems, _, err := normalizeWeeklyItems(items)
+	if err != nil {
+		return err
+	}
+
+	// Refuse to write items outside the slices being replaced: such a row would
+	// be inserted without its own slice having been cleared, silently
+	// duplicating whatever is already stored there.
+	allowed := make(map[string]struct{}, len(cleanPeriods))
+	for _, period := range cleanPeriods {
+		allowed[period.key()] = struct{}{}
+	}
+	for _, item := range cleanItems {
+		period := MenuPeriod{
+			Date:      item.DailyItem.Date,
+			Location:  item.DailyItem.Location,
+			TimeOfDay: item.DailyItem.TimeOfDay,
+		}
+		if _, ok := allowed[period.key()]; !ok {
+			return fmt.Errorf("menu item %q belongs to unlisted period %s", item.DailyItem.Name, period)
+		}
+	}
+
+	return DB.Transaction(func(tx *gorm.DB) error {
+		for _, period := range cleanPeriods {
+			err := tx.Unscoped().
+				Where("date = ? AND location = ? AND time_of_day = ?", period.Date, period.Location, period.TimeOfDay).
+				Delete(&GormWeeklyItem{}).Error
+			if err != nil {
+				return fmt.Errorf("clear menu period %s: %w", period, err)
+			}
+		}
+
+		if err := insertWeeklyItems(tx, cleanItems); err != nil {
+			return fmt.Errorf("insert refreshed menu items: %w", err)
+		}
+
+		uniqueAllData := uniqueAllDataItems(allDataItems)
+		if len(uniqueAllData) == 0 {
+			return nil
+		}
+		gormItems := make([]GormAllDataItem, 0, len(uniqueAllData))
+		for _, item := range uniqueAllData {
+			gormItems = append(gormItems, AllDataItemToGorm(item))
+		}
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(&gormItems, 500).Error; err != nil {
+			return fmt.Errorf("insert all-data items: %w", err)
+		}
+		return nil
+	})
+}
+
+func normalizeMenuPeriods(periods []MenuPeriod) ([]MenuPeriod, error) {
+	seen := make(map[string]struct{}, len(periods))
+	result := make([]MenuPeriod, 0, len(periods))
+
+	for _, period := range periods {
+		period.Date = strings.TrimSpace(period.Date)
+		period.Location = strings.TrimSpace(period.Location)
+		period.TimeOfDay = strings.TrimSpace(period.TimeOfDay)
+
+		if _, err := time.Parse("2006-01-02", period.Date); err != nil {
+			return nil, fmt.Errorf("invalid menu period date %q: %w", period.Date, err)
+		}
+		if period.Location == "" {
+			return nil, errors.New("menu period is missing a location")
+		}
+		if period.TimeOfDay == "" {
+			return nil, errors.New("menu period is missing a time of day")
+		}
+
+		if _, exists := seen[period.key()]; exists {
+			continue
+		}
+		seen[period.key()] = struct{}{}
+		result = append(result, period)
+	}
+
+	return result, nil
+}
+
 func normalizeWeeklyItems(items []models.WeeklyItem) ([]models.WeeklyItem, []string, error) {
 	seenItems := make(map[string]struct{}, len(items))
 	seenDates := make(map[string]struct{})

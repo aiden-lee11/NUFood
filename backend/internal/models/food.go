@@ -26,6 +26,26 @@ type DiningHallResponse struct {
 	// LocationId string  `json:locationId`
 	Period Periods `json:"period"`
 	Date   string  `json:"date"`
+	// UpdatedAt is the upstream "last edited" stamp for this location/date/period
+	// menu (RFC3339, e.g. "2026-07-27T17:04:04Z"). Period refreshes compare it
+	// against the last value they saw and skip parsing and persisting when it is
+	// unchanged, which is the common case between meal-time polls.
+	UpdatedAt string `json:"updatedAt"`
+	// ClosedOnDate reports that the hall is closed for the whole date, and Status
+	// describes the hall's current service state. Both come from the /menu
+	// payload and are recorded so a refresh can tell "closed" apart from "fetch
+	// failed" — only the former may clear stored rows.
+	ClosedOnDate bool       `json:"closedOnDate"`
+	Status       MenuStatus `json:"status"`
+}
+
+// MenuStatus is the upstream service-state object on a menu response, e.g.
+// {"label":"open","message":"Open. Closes at 1:30pm.","color":"green"}. It is
+// an object, not a string: decoding it as a string fails the whole menu parse.
+type MenuStatus struct {
+	Label   string `json:"label"`
+	Message string `json:"message"`
+	Color   string `json:"color"`
 }
 
 type Periods struct {

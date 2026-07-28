@@ -63,9 +63,10 @@ func main() {
 
 	fmt.Println("UserCache initialized")
 
-	// Start the in-process menu scrape (replaces the old Vercel cron). Runs at
-	// 6am & 6pm Central by default; override times with SCRAPE_HOURS_CST or
-	// disable with ENABLE_SCRAPE_CRON=false.
+	// Start the in-process menu scrape (replaces the old Vercel cron). Full
+	// scrape at 6am Central by default, plus in-service refreshes; override the
+	// full-scrape times with SCRAPE_HOURS_CST or disable with
+	// ENABLE_SCRAPE_CRON=false.
 	scheduler.StartDailyScrape()
 
 	// Daily "favorites available today" email. Intentionally left OFF for now —

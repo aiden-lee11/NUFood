@@ -144,3 +144,117 @@ func TestBrowserAPIScraperLiveScrapeFood(t *testing.T) {
 type ServiceFixture struct {
 	ID string `json:"id"`
 }
+
+func TestPickServiceForMeal(t *testing.T) {
+	weekday := []models.Service{
+		{ID: "b", TimeOfDay: "Breakfast"},
+		{ID: "l", TimeOfDay: "Lunch"},
+		{ID: "d", TimeOfDay: "Dinner"},
+		{ID: "e", TimeOfDay: "Everyday"},
+	}
+	weekend := []models.Service{
+		{ID: "br", TimeOfDay: "Brunch"},
+		{ID: "d", TimeOfDay: "Dinner"},
+	}
+
+	cases := []struct {
+		name     string
+		services []models.Service
+		meal     string
+		wantID   string
+		wantOK   bool
+	}{
+		{"exact match", weekday, "Lunch", "l", true},
+		{"case insensitive", weekday, "dINNer", "d", true},
+		{"brunch serves a lunch request", weekend, "Lunch", "br", true},
+		{"brunch does not serve breakfast", weekend, "Breakfast", "", false},
+		{"exact lunch wins over brunch", append([]models.Service{{ID: "br", TimeOfDay: "Brunch"}}, weekday...), "Lunch", "l", true},
+		{"missing meal", weekend, "Breakfast", "", false},
+		{"empty meal", weekday, "  ", "", false},
+		{"no periods at all", nil, "Lunch", "", false},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, ok := pickServiceForMeal(c.services, c.meal)
+			if ok != c.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, c.wantOK)
+			}
+			if got.ID != c.wantID {
+				t.Fatalf("id = %q, want %q", got.ID, c.wantID)
+			}
+		})
+	}
+}
+
+// A run that stays under the navigation cap must never pay for a second browser
+// launch; one that exceeds it must recycle exactly as often as needed.
+func TestBrowserSessionRecycling(t *testing.T) {
+	cases := []struct {
+		name         string
+		max          int
+		navigations  int
+		wantRecycles int
+	}{
+		{"under the cap uses one session", 12, 11, 0},
+		{"exactly at the cap uses one session", 12, 12, 0},
+		{"one past the cap recycles once", 12, 13, 1},
+		{"long run recycles repeatedly", 5, 17, 3},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			opens := 0
+			session := &browserSession{
+				parent: context.Background(),
+				ctx:    context.Background(),
+				cancel: func() {},
+				max:    c.max,
+				open: func(ctx context.Context) (context.Context, context.CancelFunc, error) {
+					opens++
+					return context.Background(), func() {}, nil
+				},
+			}
+
+			for range c.navigations {
+				if err := session.ensureCapacity(); err != nil {
+					t.Fatalf("ensureCapacity: %v", err)
+				}
+				session.navigations++
+				session.totalNavigations++
+			}
+
+			if session.recycles != c.wantRecycles {
+				t.Fatalf("recycles = %d, want %d", session.recycles, c.wantRecycles)
+			}
+			if opens != c.wantRecycles {
+				t.Fatalf("browser launches after the first = %d, want %d", opens, c.wantRecycles)
+			}
+			if session.totalNavigations != c.navigations {
+				t.Fatalf("totalNavigations = %d, want %d", session.totalNavigations, c.navigations)
+			}
+			if session.navigations > c.max {
+				t.Fatalf("current session used %d navigations, over the cap of %d", session.navigations, c.max)
+			}
+		})
+	}
+}
+
+// A failed recycle must surface the error and leave the session safe to close.
+func TestBrowserSessionRecycleFailure(t *testing.T) {
+	session := &browserSession{
+		parent: context.Background(),
+		ctx:    context.Background(),
+		cancel: func() {},
+		max:    1,
+		open: func(ctx context.Context) (context.Context, context.CancelFunc, error) {
+			return nil, nil, errors.New("browser gone")
+		},
+	}
+	session.navigations = 1
+
+	if err := session.ensureCapacity(); err == nil {
+		t.Fatal("expected an error when the replacement session cannot start")
+	}
+	session.close() // must not panic
+}
