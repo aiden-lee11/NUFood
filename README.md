@@ -13,9 +13,9 @@ save your favorites, hit your macros.
 
 <br>
 
-<img src="docs/screens/ios-daily.png" alt="Today's menu at Allison" width="30%">&nbsp;
-<img src="docs/screens/ios-all.png" alt="Picking favorite items" width="30%">&nbsp;
-<img src="docs/screens/ios-planner.png" alt="Nutrient planner" width="30%">
+<img src="ios/docs/ios-daily.png" alt="Today's menu at Allison" width="30%">&nbsp;
+<img src="ios/docs/ios-all.png" alt="Picking favorite items" width="30%">&nbsp;
+<img src="ios/docs/ios-planner.png" alt="Nutrient planner" width="30%">
 
 </div>
 
