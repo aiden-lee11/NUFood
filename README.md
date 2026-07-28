@@ -1,38 +1,27 @@
+<div align="center">
+
 # NUFood
 
-A modern, fast alternative to Northwestern University's Dine on Campus app. View dining hall menus, operating hours, track your nutrition, and save your favorite foods to get personalized recommendations on where to dine.
+### Know what's worth the walk.
 
-Live at: [nufood.me](https://nufood.me)
+Every Northwestern dining menu in one place. See what's being served, search it,
+save your favorites, hit your macros.
 
-## Features
+[<img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" height="48">](https://apps.apple.com/us/app/nufood/id6790686338)
+&nbsp;&nbsp;
+**[nufood.me](https://nufood.me)**
 
--  Fast, responsive interface
--  Real-time dining hall items and operating hours
--  View future and past daily menus within the week
--  Search through all available menu items
--  Save favorite foods and get personalized recommendations
--  Mobile-friendly design
--  Email notifications of where favorite foods are
--  Nutrition tracking to hit your goals
--  Retain the last 30 days of successfully scraped menus
+<br>
 
-## Screenshots
+<img src="docs/screens/ios-daily.png" alt="Today's menu at Allison" width="30%">&nbsp;
+<img src="docs/screens/ios-all.png" alt="Picking favorite items" width="30%">&nbsp;
+<img src="docs/screens/ios-planner.png" alt="Nutrient planner" width="30%">
 
-### Weekly Items View
-![Weekly Items View showing dining locations items and their current status](./frontend/public/images/main.png)
+</div>
 
-### All Items View
-![Display of all historical items that Northwestern has served.](./frontend/public/images/allItems.png)
+<br>
 
-### Operation Hours
-![Operation Hours View showing dining locations and their status](./frontend/public/images/operationTimes.png)
+Built by a student who got tired of Dine on Campus. Menus refresh through the day,
+favorites tell you where your food is, and the planner adds up calories and macros as you build your plate.
 
-### Nutrition Tracker
-![Nutrition Tracker that allows you to see the macros of the foods being served.](./frontend/public/images/nutrition.png)
-
-### Favorite Items Selection
-![Favorite Items View showing your selected favorites.](./frontend/public/images/favorites.png)
-
-## Contributing
-
-This is primarily a personal project for Northwestern University students, but feel free to open issues if you encounter any bugs or have suggestions for improvements.
+Bugs or ideas → [open an issue](../../issues).
