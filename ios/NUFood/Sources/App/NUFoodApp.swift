@@ -45,6 +45,12 @@ struct NUFoodApp: App {
                     await auth.waitUntilResolved()
                     await store.loadIfNeeded()
                 }
+                // Separate from the load above so APNs registration is not gated on
+                // the network: it must be re-requested every launch, or an opted-in
+                // device never receives a token and never becomes reachable.
+                .task {
+                    await notifications.prepareForLaunch()
+                }
                 .onChange(of: auth.isSignedIn) { _, signedIn in
                     Task {
                         await store.loadIfNeeded()
