@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"firebase.google.com/go/v4/messaging"
 )
@@ -64,9 +65,24 @@ func Send(ctx context.Context, tokens []string, title, body string) (invalidToke
 			}
 			if messaging.IsUnregistered(r.Error) || messaging.IsInvalidArgument(r.Error) {
 				invalidTokens = append(invalidTokens, chunk[i])
+				continue
 			}
+			// Anything else (APNs auth failures, throttling, internal errors)
+			// is a send that did NOT reach the device but is not the token's
+			// fault. Swallowing these once masked an APNs-mismatch outage
+			// behind "N users notified".
+			log.Printf("push send failed for token %s…: %v", tokenPrefix(chunk[i]), r.Error)
 		}
 	}
 
 	return invalidTokens, nil
+}
+
+// tokenPrefix returns enough of a registration token to correlate log lines
+// with database rows without writing whole tokens into the logs.
+func tokenPrefix(token string) string {
+	if len(token) > 12 {
+		return token[:12]
+	}
+	return token
 }

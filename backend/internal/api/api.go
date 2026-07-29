@@ -459,6 +459,10 @@ func RegisterDeviceToken(w http.ResponseWriter, r *http.Request) {
 //
 // Expected Body:
 //   - JSON object {"token": "..."}.
+//
+// Every outcome is logged, mirroring RegisterDeviceToken: a token silently
+// disappearing from the table is indistinguishable from a registration outage
+// without it.
 func DeleteDeviceToken(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(string)
 
@@ -466,21 +470,25 @@ func DeleteDeviceToken(w http.ResponseWriter, r *http.Request) {
 		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("device token deletion failed for user %s: malformed body: %v", userID, err)
 		http.Error(w, "Error decoding JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	token := strings.TrimSpace(req.Token)
 	if token == "" {
+		log.Printf("device token deletion rejected for user %s: empty token", userID)
 		http.Error(w, "token field is required", http.StatusBadRequest)
 		return
 	}
 
 	if err := db.DeleteDeviceToken(userID, token); err != nil {
+		log.Printf("device token deletion failed for user %s: %v", userID, err)
 		http.Error(w, "Error deleting device token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("device token deleted for user %s", userID)
 	w.WriteHeader(http.StatusOK)
 }
 
