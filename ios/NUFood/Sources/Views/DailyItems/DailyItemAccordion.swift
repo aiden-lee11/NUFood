@@ -121,13 +121,24 @@ struct DailyItemAccordion: View {
             // collapse) so matches are always visible; clearing it restores the
             // stored override / default.
             get: { isSearching || (expandedOverrides[section.id] ?? section.defaultExpanded) },
-            set: { expandedOverrides[section.id] = $0 }
+            set: { expanded in
+                expandedOverrides[section.id] = expanded
+                // Only the header button writes this binding, so an event here is a
+                // deliberate open — collapsing, and the search-driven auto-expand
+                // (which goes through `get`), are both silent.
+                if expanded {
+                    AppAnalytics.locationExpanded(
+                        location: section.items.first?.location ?? "Unknown",
+                        station: section.title
+                    )
+                }
+            }
         )
     }
 
     private func handleTap(_ item: DailyItem) {
         if auth.isSignedIn {
-            store.toggleFavorite(item.name)
+            store.toggleFavorite(item.name, location: item.location)
         } else {
             onRequestAuth()
         }
@@ -479,6 +490,7 @@ private struct NutritionDetailSheet: View {
         var diets = profile.selectedDiets
         diets.insert(diet)
         dietsRaw = DietaryProfile.encode(diets)
+        AppAnalytics.dietaryFilterChanged(.diet, action: "added")
         pendingDiet = nil
     }
 

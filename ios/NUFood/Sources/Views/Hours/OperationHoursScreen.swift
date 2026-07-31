@@ -49,6 +49,7 @@ struct OperationHoursScreen: View {
                 clampSelectedDate()
             }
         }
+        .trackScreen(.hours)
     }
 
     // MARK: - Sections

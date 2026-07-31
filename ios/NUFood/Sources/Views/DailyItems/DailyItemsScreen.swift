@@ -138,6 +138,7 @@ struct DailyItemsScreen: View {
                 Text("We're having trouble loading the menu items. This could be due to a temporary issue with our data source. Please try again later or contact support if the problem persists.")
             }
         }
+        .trackScreen(.dailyItems)
     }
 
     // MARK: - Header

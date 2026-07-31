@@ -36,6 +36,7 @@ struct NutrientPlannerScreen: View {
                     }
                 }
         }
+        .trackScreen(.planner)
     }
 
     @ViewBuilder

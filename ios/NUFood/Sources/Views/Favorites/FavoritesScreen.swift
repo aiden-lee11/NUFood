@@ -47,6 +47,7 @@ struct FavoritesScreen: View {
                 pendingRemoved.removeAll()
             }
         }
+        .trackScreen(.favorites)
     }
 
     // MARK: - Favorites list

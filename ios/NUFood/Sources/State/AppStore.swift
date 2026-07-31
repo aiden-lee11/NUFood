@@ -175,7 +175,10 @@ final class AppStore {
 
     // MARK: - Mutations (optimistic; synced to backend when signed in)
 
-    func toggleFavorite(_ name: String) {
+    /// - `location`: the dining hall the tap came from, when the caller knows it
+    ///   (Daily Items does; All Items and Your Favorites are name-only lists). Used
+    ///   for analytics only — the stored favorite is always just the name.
+    func toggleFavorite(_ name: String, location: String? = nil) {
         // Web parity (SPEC §2.1.1): compare case-insensitively and trimmed;
         // store the original-cased name when adding.
         let key = name.trimmingCharacters(in: .whitespaces).lowercased()
@@ -184,9 +187,14 @@ final class AppStore {
         }
         if existing.isEmpty {
             favorites.insert(name)
+            // Logged here rather than per-view so every entry point (Daily Items rows,
+            // the context menu, the nutrition sheet, All Items, Your Favorites) is
+            // counted exactly once.
+            AppAnalytics.favoriteAdded(item: name, location: location)
             syncFavorites(revertAdding: [], revertRemoving: [name])
         } else {
             favorites.subtract(existing)
+            AppAnalytics.favoriteRemoved(item: name, location: location)
             syncFavorites(revertAdding: existing, revertRemoving: [])
         }
         persistLocal()
@@ -197,6 +205,11 @@ final class AppStore {
     func removeFavorites(_ names: Set<String>) {
         guard !names.isEmpty else { return }
         favorites.subtract(names)
+        // One event per removed name: the only caller (a swipe on Your Favorites)
+        // passes a single item, so this is not a fan-out risk.
+        for name in names {
+            AppAnalytics.favoriteRemoved(item: name, location: nil)
+        }
         persistLocal()
         syncFavorites(revertAdding: names, revertRemoving: [])
     }

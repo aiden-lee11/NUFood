@@ -23,6 +23,8 @@ targets:
         optional: true
     dependencies:
       - package: Firebase
+        product: FirebaseAnalyticsWithoutAdIdSupport
+      - package: Firebase
         product: FirebaseAuth
       - package: Firebase
         product: FirebaseMessaging

@@ -83,6 +83,7 @@ final class PlannerModel {
             entries.remove(at: index)
         } else {
             entries.append(Entry(item: item, quantity: 1))
+            AppAnalytics.plannerItemAdded(location: item.location, meal: item.timeOfDay)
         }
         persist()
     }

@@ -82,6 +82,18 @@ struct NUFoodApp: App {
 
 enum AppTab: String {
     case daily, all, hours, planner, favorites
+
+    /// The analytics screen this tab lands on, so the tab observer and the screens
+    /// themselves can never disagree about a name.
+    var screen: AppAnalytics.Screen {
+        switch self {
+        case .daily: return .dailyItems
+        case .all: return .allItems
+        case .hours: return .hours
+        case .planner: return .planner
+        case .favorites: return .favorites
+        }
+    }
 }
 
 struct RootView: View {
@@ -106,6 +118,13 @@ struct RootView: View {
                 .tag(AppTab.favorites)
         }
         .transientErrorToast()
+        // A tab's `.onAppear` is not guaranteed to refire when it is reselected, so
+        // the selection itself is the reliable navigation signal. The destination's
+        // own `.trackScreen` covers the first appearance; the dedupe in
+        // `AppAnalytics.screenView` keeps the two from double-counting.
+        .onChange(of: selection) { _, tab in
+            AppAnalytics.screenView(tab.screen)
+        }
         .onAppear {
             // Dev affordance: `simctl launch ... -initialTab hours` lands in
             // UserDefaults and preselects a tab (used for automated screenshots).

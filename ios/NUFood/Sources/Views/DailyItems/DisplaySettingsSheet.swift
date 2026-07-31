@@ -178,6 +178,11 @@ struct DisplaySettingsSheet: View {
             }
             .tint(Theme.primary)
             .padding(.top, 4)
+            // These two write @AppStorage directly rather than going through a
+            // handler, so the event hangs off the value instead.
+            .onChange(of: mayContainUnsafe) { _, unsafe in
+                AppAnalytics.dietaryFilterChanged(.mayContain, action: unsafe ? "on" : "off")
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 sectionLabel("When an item has my allergen")
@@ -187,29 +192,40 @@ struct DisplaySettingsSheet: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .onChange(of: conflictModeRaw) { _, mode in
+                    AppAnalytics.dietaryFilterChanged(.conflictMode, action: mode)
+                }
             }
             .padding(.top, 4)
         }
     }
 
+    /// Analytics note: only the *category* touched is reported, never which diet or
+    /// allergen — that is health information and stays on the device.
     private func toggleDiet(_ diet: String) {
         var diets = profile.selectedDiets
+        var added = false
         if let existing = diets.first(where: { DietaryTag.matches($0, diet) }) {
             diets.remove(existing)
         } else {
             diets.insert(diet)
+            added = true
         }
         dietsRaw = DietaryProfile.encode(diets)
+        AppAnalytics.dietaryFilterChanged(.diet, action: added ? "added" : "removed")
     }
 
     private func toggleAllergen(_ allergen: String) {
         var allergens = profile.avoidedAllergens
+        var added = false
         if let existing = allergens.first(where: { DietaryTag.matches($0, allergen) }) {
             allergens.remove(existing)
         } else {
             allergens.insert(allergen)
+            added = true
         }
         allergensRaw = DietaryProfile.encode(allergens)
+        AppAnalytics.dietaryFilterChanged(.allergen, action: added ? "added" : "removed")
     }
 
     /// Allergen tags actually present in the loaded week, unioned with the fixed list

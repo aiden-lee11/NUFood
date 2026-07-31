@@ -19,8 +19,25 @@ struct DatePickerSheet: View {
                 // if the current selection points at a gap/absent date.
                 return min(max(date, range.lowerBound), range.upperBound)
             },
-            set: { store.selectedDate = CentralTime.dateFormat.string(from: $0) }
+            set: { date in
+                let picked = CentralTime.dateFormat.string(from: date)
+                // The graphical picker also writes the day it opens on; only a real
+                // move is a "date changed".
+                guard picked != store.selectedDate else { return }
+                store.selectedDate = picked
+                AppAnalytics.dateChanged(offsetDays: offsetFromToday(picked))
+            }
         )
+    }
+
+    /// Signed day distance from today ("+2" = two days ahead), which is what the funnel
+    /// wants and keeps the parameter inside the loaded menu window.
+    private func offsetFromToday(_ dateString: String) -> Int {
+        guard
+            let today = CentralTime.date(from: store.syncedDay),
+            let picked = CentralTime.date(from: dateString)
+        else { return 0 }
+        return CentralTime.calendar.dateComponents([.day], from: today, to: picked).day ?? 0
     }
 
     private var selectableRange: ClosedRange<Date> {

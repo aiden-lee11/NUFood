@@ -31,6 +31,7 @@ struct AllItemsScreen: View {
         .sheet(isPresented: $showAuthPrompt) {
             AuthPromptSheet()
         }
+        .trackScreen(.allItems)
     }
 
     private var content: some View {
