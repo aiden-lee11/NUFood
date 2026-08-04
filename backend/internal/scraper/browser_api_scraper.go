@@ -81,6 +81,34 @@ type periodsResponse struct {
 	Periods    []models.Service `json:"periods"`
 }
 
+// periodMenuResponse is the envelope returned by
+// /locations/{id}/periods/{periodId}?date=... — since the upstream schema
+// change of 2026-08-03 this is the only endpoint that carries menu items; the
+// old /locations/{id}/menu?period=... endpoint still answers 200 but its
+// category list is always empty. The embedded DiningHallResponse keeps
+// decoding the legacy flat shape (period/date/updatedAt/closedOnDate/status at
+// the top level) so a reverted upstream keeps working unchanged.
+type periodMenuResponse struct {
+	models.DiningHallResponse
+	Menu struct {
+		Date   string         `json:"date"`
+		Period models.Periods `json:"period"`
+	} `json:"menu"`
+}
+
+// resolve flattens whichever shape upstream answered with into the legacy
+// DiningHallResponse the parsing pipeline consumes.
+func (r periodMenuResponse) resolve() models.DiningHallResponse {
+	menu := r.DiningHallResponse
+	if len(menu.Period.Categories) == 0 && len(r.Menu.Period.Categories) > 0 {
+		menu.Period = r.Menu.Period
+		if r.Menu.Date != "" {
+			menu.Date = r.Menu.Date
+		}
+	}
+	return menu
+}
+
 func NewBrowserAPIScraper() *BrowserAPIScraper {
 	return &BrowserAPIScraper{
 		Locations:         DefaultConfig.Locations,
@@ -405,12 +433,16 @@ func (s *BrowserAPIScraper) fetchPeriods(session *browserSession, location model
 // fetchMenu retrieves one period's menu and records its upstream edit stamp.
 // One navigation (plus retries).
 func (s *BrowserAPIScraper) fetchMenu(session *browserSession, location models.Location, date string, service models.Service) (models.DiningHallResponse, error) {
-	menuURL := fmt.Sprintf("%s/locations/%s/menu?date=%s&period=%s", s.BaseURL, location.Hash, date, service.ID)
+	menuURL := fmt.Sprintf("%s/locations/%s/periods/%s?date=%s", s.BaseURL, location.Hash, service.ID, date)
 
 	var menu models.DiningHallResponse
 	err := s.withRetry("fetch_menu", func() error {
-		menu = models.DiningHallResponse{}
-		return session.fetchJSON(menuURL, &menu, 25*time.Second)
+		var resp periodMenuResponse
+		if err := session.fetchJSON(menuURL, &resp, 25*time.Second); err != nil {
+			return err
+		}
+		menu = resp.resolve()
+		return nil
 	})
 	if err != nil {
 		return models.DiningHallResponse{}, err
