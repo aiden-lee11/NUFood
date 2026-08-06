@@ -81,13 +81,14 @@ type periodsResponse struct {
 	Periods    []models.Service `json:"periods"`
 }
 
-// periodMenuResponse is the envelope returned by
-// /locations/{id}/periods/{periodId}?date=... — since the upstream schema
-// change of 2026-08-03 this is the only endpoint that carries menu items; the
-// old /locations/{id}/menu?period=... endpoint still answers 200 but its
-// category list is always empty. The embedded DiningHallResponse keeps
-// decoding the legacy flat shape (period/date/updatedAt/closedOnDate/status at
-// the top level) so a reverted upstream keeps working unchanged.
+// periodMenuResponse decodes a menu fetch in either shape upstream has been
+// observed to serve. The normal /locations/{id}/menu?period=... response is
+// flat (period/date/updatedAt/closedOnDate/status at the top level) and is
+// what the embedded DiningHallResponse captures. During the 2026-08-03
+// upstream incident, requests from datacenter IPs instead got responses with
+// the menu nested under a "menu" key (and, worse, other campuses' data —
+// which is why BROWSERLESS_WS_URL must carry proxy=residential); the Menu
+// field keeps that nested shape decodable should it ever reappear.
 type periodMenuResponse struct {
 	models.DiningHallResponse
 	Menu struct {
@@ -433,7 +434,7 @@ func (s *BrowserAPIScraper) fetchPeriods(session *browserSession, location model
 // fetchMenu retrieves one period's menu and records its upstream edit stamp.
 // One navigation (plus retries).
 func (s *BrowserAPIScraper) fetchMenu(session *browserSession, location models.Location, date string, service models.Service) (models.DiningHallResponse, error) {
-	menuURL := fmt.Sprintf("%s/locations/%s/periods/%s?date=%s", s.BaseURL, location.Hash, service.ID, date)
+	menuURL := fmt.Sprintf("%s/locations/%s/menu?date=%s&period=%s", s.BaseURL, location.Hash, date, service.ID)
 
 	var menu models.DiningHallResponse
 	err := s.withRetry("fetch_menu", func() error {

@@ -142,11 +142,11 @@ func TestBrowserAPIScraperLiveJSONAPIs(t *testing.T) {
 	}
 
 	menuURL := fmt.Sprintf(
-		"%s/locations/%s/periods/%s?date=%s",
+		"%s/locations/%s/menu?date=%s&period=%s",
 		s.BaseURL,
 		s.Locations[0].Hash,
-		response.Periods[0].ID,
 		date,
+		response.Periods[0].ID,
 	)
 	var menuResp periodMenuResponse
 	if err := s.fetchJSONWithNewTab(browserCtx, menuURL, &menuResp, 30*time.Second); err != nil {
