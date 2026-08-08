@@ -63,7 +63,10 @@ type Category struct {
 }
 
 type Item struct {
-	// id string `json:"id"`
+	// ID is only consumed by decoy detection: when upstream's anti-bot layer
+	// poisons a response, every item in the menu is the same placeholder object
+	// repeated, so identical IDs across a whole menu mean the payload is fake.
+	ID   string `json:"id"`
 	Name string `json:"name"`
 	// mrn int `json:"mrn"`
 	// rev string `json:"rev"`

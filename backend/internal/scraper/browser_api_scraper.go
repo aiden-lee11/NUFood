@@ -13,6 +13,7 @@ import (
 
 	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 )
 
@@ -653,6 +654,18 @@ func fetchJSONInBrowser(ctx context.Context, url string, target any, configuredU
 			return emulation.SetUserAgentOverride(userAgent).
 				WithAcceptLanguage("en-US,en;q=0.9").
 				Do(ctx)
+		}),
+		// Since 2026-08-08 upstream fingerprints requests: API hits without the
+		// site's own Referer/Origin get decoy menus (every item the same
+		// "Caesar Salad" placeholder) instead of an error. Present the headers
+		// the dineoncampus SPA itself sends. IP reputation is checked too, so
+		// this works only together with the residential proxy on
+		// BROWSERLESS_WS_URL — headers alone from a datacenter IP still get
+		// decoys.
+		network.Enable(),
+		network.SetExtraHTTPHeaders(map[string]any{
+			"Referer": "https://dineoncampus.com/",
+			"Origin":  "https://dineoncampus.com",
 		}),
 		chromedp.Navigate(url),
 		chromedp.WaitReady("body", chromedp.ByQuery),

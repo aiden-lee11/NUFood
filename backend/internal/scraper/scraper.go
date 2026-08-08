@@ -25,6 +25,33 @@ var DefaultConfig = ScrapeConfig{
 	BaseURL: "https://apiv4.dineoncampus.com",
 }
 
+// menuIsDecoy reports whether a menu is upstream anti-bot poison rather than
+// real data. A poisoned response keeps the true category structure but replaces
+// every item with the same placeholder object repeated (observed 2026-08-08:
+// all items were one "Caesar Salad" with a single shared id and null fields).
+// Real menus never repeat one upstream item id across the whole menu, so ≥3
+// items all sharing one non-empty id is treated as fake. Storing a decoy is
+// worse than failing: the caller keeps yesterday's real rows on error.
+func menuIsDecoy(categories []models.Category) bool {
+	firstID := ""
+	total := 0
+	for _, category := range categories {
+		for _, item := range category.Items {
+			id := strings.TrimSpace(item.ID)
+			if id == "" {
+				return false
+			}
+			if firstID == "" {
+				firstID = id
+			} else if id != firstID {
+				return false
+			}
+			total++
+		}
+	}
+	return total >= 3
+}
+
 func parseItems(jsonResponse models.DiningHallResponse, location, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, error) {
 	var dailyItems []models.DailyItem
 	var allDataItems []models.AllDataItem
@@ -37,6 +64,9 @@ func parseItems(jsonResponse models.DiningHallResponse, location, timeOfDay stri
 	if period.Categories == nil {
 		log.Printf("No categories found for %s at %s on %s", location, timeOfDay, date)
 		return dailyItems, allDataItems, nil
+	}
+	if menuIsDecoy(period.Categories) {
+		return nil, nil, fmt.Errorf("upstream served decoy menu data for %s at %s on %s (every item is the same placeholder object)", location, timeOfDay, date)
 	}
 
 	for _, category := range period.Categories {
