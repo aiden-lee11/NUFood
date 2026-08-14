@@ -187,11 +187,12 @@ func runSession(cfg config, rng *rand.Rand, meal string, dry bool) {
 		dates = append(dates, now.AddDate(0, 0, d).Format("2006-01-02"))
 	}
 
-	wsURL, err := ensureChrome(cfg)
+	chrome, wsURL, err := launchChrome(cfg)
 	if err != nil {
 		log.Printf("[%s] chrome unavailable: %v", meal, err)
 		return
 	}
+	defer stopChrome(chrome, cfg)
 
 	s := scraper.NewSiteScraper(wsURL)
 	ctx, cancel := context.WithTimeout(context.Background(), sessionSpan)
@@ -305,33 +306,47 @@ func pingReload(cfg config) error {
 	return nil
 }
 
-// ensureChrome returns the DevTools websocket URL of a running Chrome, starting
-// one with a dedicated profile if it isn't already up.
-func ensureChrome(cfg config) (string, error) {
-	if ws := chromeWS(); ws != "" {
-		return ws, nil
-	}
-	// Launch and detach; it stays up for subsequent sessions.
+// launchChrome starts a fresh Chrome with the dedicated profile and returns it
+// with its DevTools websocket URL. Chrome runs only for the duration of a
+// session and is stopped afterward by stopChrome. Any prior instance using this
+// profile is cleared first so the debug port is free.
+func launchChrome(cfg config) (*exec.Cmd, string, error) {
+	killByProfile(cfg.profileDir)
+	time.Sleep(500 * time.Millisecond)
+
 	cmd := exec.Command(cfg.chromePath,
 		"--remote-debugging-port="+debugPort,
 		"--remote-allow-origins=*",
 		"--user-data-dir="+cfg.profileDir,
 		"--no-first-run",
 		"--no-default-browser-check",
-		"--window-position=-3000,-3000",
-		"--window-size=1200,900",
 		"about:blank",
 	)
 	if err := cmd.Start(); err != nil {
-		return "", fmt.Errorf("launch chrome: %w", err)
+		return nil, "", fmt.Errorf("launch chrome: %w", err)
 	}
 	for i := 0; i < 15; i++ {
 		time.Sleep(1 * time.Second)
 		if ws := chromeWS(); ws != "" {
-			return ws, nil
+			return cmd, ws, nil
 		}
 	}
-	return "", fmt.Errorf("chrome debug port did not come up")
+	stopChrome(cmd, cfg)
+	return nil, "", fmt.Errorf("chrome debug port did not come up")
+}
+
+// stopChrome ends the session's Chrome and its helper processes.
+func stopChrome(cmd *exec.Cmd, cfg config) {
+	if cmd != nil && cmd.Process != nil {
+		_ = cmd.Process.Kill()
+		_, _ = cmd.Process.Wait()
+	}
+	killByProfile(cfg.profileDir)
+}
+
+// killByProfile terminates any Chrome started against the given profile dir.
+func killByProfile(profileDir string) {
+	_ = exec.Command("pkill", "-f", "user-data-dir="+profileDir).Run()
 }
 
 func chromeWS() string {

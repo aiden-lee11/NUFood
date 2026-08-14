@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 )
@@ -55,6 +56,7 @@ func (s *SiteScraper) newSession(parent context.Context) (*siteSession, error) {
 	// itself: bounding it with a child timeout would tear the tab down when the
 	// child cancels. The parent context supplies the overall deadline.
 	if err := chromedp.Run(ctx,
+		chromedp.ActionFunc(minimizeWindow),
 		chromedp.Navigate(s.MenuPageURL),
 		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.Sleep(12*time.Second),
@@ -73,6 +75,21 @@ func (s *SiteScraper) newSession(parent context.Context) (*siteSession, error) {
 }
 
 func (ss *siteSession) close() { ss.cancel() }
+
+// minimizeWindow keeps the browser window off-screen while it works. Best
+// effort: any failure (e.g. an environment with no window) is ignored.
+func minimizeWindow(ctx context.Context) error {
+	c := chromedp.FromContext(ctx)
+	if c == nil || c.Target == nil {
+		return nil
+	}
+	winID, _, err := browser.GetWindowForTarget().WithTargetID(c.Target.TargetID).Do(ctx)
+	if err != nil {
+		return nil
+	}
+	_ = browser.SetWindowBounds(winID, &browser.Bounds{WindowState: browser.WindowStateMinimized}).Do(ctx)
+	return nil
+}
 
 // fetchJSON runs `fetch(url)` from inside the loaded page and decodes the
 // response. Credentials are omitted because adding them trips a CORS preflight
