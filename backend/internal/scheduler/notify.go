@@ -3,7 +3,6 @@ package scheduler
 import (
 	"backend/internal/db"
 	"backend/internal/push"
-	"backend/internal/scrapejob"
 	"context"
 	"log"
 	"os"
@@ -19,18 +18,6 @@ import (
 // mealLeadMinutes is how far ahead of a meal's start the notification fires, so
 // each configured time maps to the meal beginning this many minutes later.
 const mealLeadMinutes = 30
-
-const (
-	// preNotifyRefreshTimeout bounds the refresh chained ahead of a send. The
-	// push is only useful while it is still ahead of the meal, so a refresh that
-	// cannot finish inside this is abandoned and the stored menu is used
-	// instead. Five halls at two navigations each finish in well under a minute
-	// on a healthy day; this leaves room for retries against a slow upstream.
-	preNotifyRefreshTimeout = 6 * time.Minute
-	// preNotifyRefreshRetries is deliberately lower than the scheduled
-	// refresh's, because here every retry delays the send.
-	preNotifyRefreshRetries = 2
-)
 
 // clockTime is an hour:minute wall-clock slot interpreted in campusZone.
 type clockTime struct {
@@ -97,10 +84,8 @@ func notifyForTime(now time.Time) {
 	date := now.Format("2006-01-02")
 	log.Printf("meal notifications starting for %s on %s", meal, date)
 
-	// Re-read the menu this send is about to announce instead of trusting a
-	// refresh that ran earlier and may still have been mid-write.
-	refreshBeforeNotify(date, meal)
-
+	// Menus are collected off-box by the home scraper, which keeps the database
+	// current, so this send reads that data directly and never scrapes itself.
 	tokensByUser, err := db.GetAllDeviceTokens()
 	if err != nil {
 		log.Printf("meal notifications failed to load device tokens: %v", err)
@@ -144,42 +129,6 @@ func notifyForTime(now time.Time) {
 
 	log.Printf("meal notifications complete for %s: %d users notified, %d skipped, %d tokens pruned",
 		meal, notified, skipped, len(invalidTokens))
-}
-
-// refreshBeforeNotify re-scrapes the meal a send is about to announce so the
-// push reflects what the halls are serving right now rather than whatever the
-// last scheduled refresh left behind. It is a variable so tests can observe the
-// ordering without touching the network.
-//
-// Every failure mode ends the same way: log it and let the send proceed against
-// the stored menu. A stale notification is worth far more than a silent one,
-// and the refresh itself can no longer empty a slice it did not verify as
-// closed (see scrapejob.planPeriodRefresh).
-var refreshBeforeNotify = func(date, meal string) {
-	// Never queue behind another scrape — waiting for it would push the send
-	// past the meal it is announcing. Whatever is running is refreshing the same
-	// data anyway.
-	if !scrapejob.TryLock() {
-		log.Printf("pre-notify refresh for %s skipped: another scrape job is running", meal)
-		return
-	}
-	defer scrapejob.Unlock()
-
-	ctx, cancel := context.WithTimeout(context.Background(), preNotifyRefreshTimeout)
-	defer cancel()
-
-	summary, err := scrapejob.RunPeriodRefresh(ctx, scrapejob.PeriodRefreshOptions{
-		Date:    date,
-		Meal:    meal,
-		Retries: preNotifyRefreshRetries,
-	})
-	if err != nil {
-		log.Printf("pre-notify refresh for %s failed (using stored data): %v", meal, err)
-		return
-	}
-
-	log.Printf("pre-notify refresh for %s: ok slices=%d items=%d unchanged=%d failed=%d preserved=%d",
-		meal, summary.Slices, summary.Items, summary.Unchanged, summary.Failed, summary.Preserved)
 }
 
 // mealForFireTime derives the meal a notification announces from the wall-clock

@@ -508,30 +508,3 @@ func TestMealForFireTime(t *testing.T) {
 	}
 }
 
-// The whole point of the chained refresh is ordering: the menu must be re-read
-// before anything reads it to decide what to push.
-func TestNotifyRefreshesBeforeReadingTheMenu(t *testing.T) {
-	loc := mustChicago(t)
-
-	var calls []string
-	original := refreshBeforeNotify
-	t.Cleanup(func() { refreshBeforeNotify = original })
-	refreshBeforeNotify = func(date, meal string) {
-		calls = append(calls, date+" "+meal)
-	}
-
-	// The device-token load right after the refresh fails (no database in a unit
-	// test) and ends the pass there, which is exactly the ordering under test.
-	notifyForTime(time.Date(2026, 7, 27, 16, 30, 0, 0, loc))
-
-	if len(calls) != 1 || calls[0] != "2026-07-27 Dinner" {
-		t.Fatalf("expected one refresh of the meal being announced, got %v", calls)
-	}
-
-	// A fire time in no meal window sends nothing, so it must not spend a scrape.
-	calls = nil
-	notifyForTime(time.Date(2026, 7, 27, 2, 0, 0, 0, loc))
-	if len(calls) != 0 {
-		t.Fatalf("a pass with no meal must not refresh, got %v", calls)
-	}
-}
