@@ -13,17 +13,18 @@ import (
 
 	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 )
 
 type FetchErrorClass string
 
 const (
-	ErrBrowserLaunch       FetchErrorClass = "browser_launch"
-	ErrNavigationTimeout   FetchErrorClass = "navigation_timeout"
-	ErrCloudflareChallenge FetchErrorClass = "cloudflare_challenge"
-	ErrJSONParse           FetchErrorClass = "json_parse"
-	ErrNetwork             FetchErrorClass = "network"
+	ErrBrowserLaunch     FetchErrorClass = "browser_launch"
+	ErrNavigationTimeout FetchErrorClass = "navigation_timeout"
+	ErrBlockedResponse   FetchErrorClass = "blocked_response"
+	ErrJSONParse         FetchErrorClass = "json_parse"
+	ErrNetwork           FetchErrorClass = "network"
 )
 
 type BrowserFetchError struct {
@@ -79,6 +80,32 @@ type periodsResponse struct {
 	LocationID string           `json:"locationId"`
 	Date       string           `json:"date"`
 	Periods    []models.Service `json:"periods"`
+}
+
+// periodMenuResponse decodes a menu fetch in either shape the API returns. The
+// normal /locations/{id}/menu?period=... response is flat
+// (period/date/updatedAt/closedOnDate/status at the top level) and is what the
+// embedded DiningHallResponse captures. Some responses nest the menu under a
+// "menu" key instead; the Menu field keeps that shape decodable.
+type periodMenuResponse struct {
+	models.DiningHallResponse
+	Menu struct {
+		Date   string         `json:"date"`
+		Period models.Periods `json:"period"`
+	} `json:"menu"`
+}
+
+// resolve flattens whichever shape upstream answered with into the legacy
+// DiningHallResponse the parsing pipeline consumes.
+func (r periodMenuResponse) resolve() models.DiningHallResponse {
+	menu := r.DiningHallResponse
+	if len(menu.Period.Categories) == 0 && len(r.Menu.Period.Categories) > 0 {
+		menu.Period = r.Menu.Period
+		if r.Menu.Date != "" {
+			menu.Date = r.Menu.Date
+		}
+	}
+	return menu
 }
 
 func NewBrowserAPIScraper() *BrowserAPIScraper {
@@ -409,8 +436,12 @@ func (s *BrowserAPIScraper) fetchMenu(session *browserSession, location models.L
 
 	var menu models.DiningHallResponse
 	err := s.withRetry("fetch_menu", func() error {
-		menu = models.DiningHallResponse{}
-		return session.fetchJSON(menuURL, &menu, 25*time.Second)
+		var resp periodMenuResponse
+		if err := session.fetchJSON(menuURL, &resp, 25*time.Second); err != nil {
+			return err
+		}
+		menu = resp.resolve()
+		return nil
 	})
 	if err != nil {
 		return models.DiningHallResponse{}, err
@@ -621,6 +652,12 @@ func fetchJSONInBrowser(ctx context.Context, url string, target any, configuredU
 				WithAcceptLanguage("en-US,en;q=0.9").
 				Do(ctx)
 		}),
+		// Send the same Referer/Origin the web app sends with its API requests.
+		network.Enable(),
+		network.SetExtraHTTPHeaders(map[string]any{
+			"Referer": "https://dineoncampus.com/",
+			"Origin":  "https://dineoncampus.com",
+		}),
 		chromedp.Navigate(url),
 		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.Text("body", &bodyText, chromedp.ByQuery),
@@ -645,7 +682,7 @@ func decodeBrowserJSON(url, bodyText string, target any) error {
 	if strings.Contains(lowerBody, "cloudflare") ||
 		strings.Contains(lowerBody, "attention required!") ||
 		strings.Contains(lowerBody, "sorry, you have been blocked") {
-		return &BrowserFetchError{Class: ErrCloudflareChallenge, URL: url, Message: truncate(payload, 180)}
+		return &BrowserFetchError{Class: ErrBlockedResponse, URL: url, Message: truncate(payload, 180)}
 	}
 
 	if !json.Valid([]byte(payload)) {

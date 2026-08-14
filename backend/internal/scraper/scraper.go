@@ -25,6 +25,29 @@ var DefaultConfig = ScrapeConfig{
 	BaseURL: "https://apiv4.dineoncampus.com",
 }
 
+// menuIsMalformed reports whether a menu payload is unusable: every item is the
+// same object repeated (one shared id across 3+ items), which is never a real
+// menu. Payloads without item ids are not flagged.
+func menuIsMalformed(categories []models.Category) bool {
+	firstID := ""
+	total := 0
+	for _, category := range categories {
+		for _, item := range category.Items {
+			id := strings.TrimSpace(item.ID)
+			if id == "" {
+				return false
+			}
+			if firstID == "" {
+				firstID = id
+			} else if id != firstID {
+				return false
+			}
+			total++
+		}
+	}
+	return total >= 3
+}
+
 func parseItems(jsonResponse models.DiningHallResponse, location, timeOfDay string) ([]models.DailyItem, []models.AllDataItem, error) {
 	var dailyItems []models.DailyItem
 	var allDataItems []models.AllDataItem
@@ -37,6 +60,9 @@ func parseItems(jsonResponse models.DiningHallResponse, location, timeOfDay stri
 	if period.Categories == nil {
 		log.Printf("No categories found for %s at %s on %s", location, timeOfDay, date)
 		return dailyItems, allDataItems, nil
+	}
+	if menuIsMalformed(period.Categories) {
+		return nil, nil, fmt.Errorf("malformed menu for %s at %s on %s (every item is the same object)", location, timeOfDay, date)
 	}
 
 	for _, category := range period.Categories {

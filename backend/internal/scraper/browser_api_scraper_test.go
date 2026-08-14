@@ -28,7 +28,63 @@ func TestDecodeBrowserJSON(t *testing.T) {
 	}
 }
 
-func TestDecodeBrowserJSONClassifiesCloudflareBlock(t *testing.T) {
+func TestPeriodMenuResponseResolvesNestedShape(t *testing.T) {
+	// The post-2026-08-03 upstream shape: items live under menu.period, and the
+	// top level carries only locationId/date/periods.
+	nested := `{
+		"locationId": "5b33ae291178e909d807593d",
+		"date": "2026-08-04",
+		"periods": [{"id": "6a725346c7daecfb922d4114", "name": "Lunch", "slug": "lunch"}],
+		"menu": {
+			"id": 1,
+			"date": "2026-08-04",
+			"period": {
+				"id": "6a725346c7daecfb922d4114",
+				"name": "Lunch",
+				"categories": [{"name": "Comfort 1", "items": [{"name": "Orange Chicken and Vegetables"}]}]
+			}
+		}
+	}`
+
+	var resp periodMenuResponse
+	if err := decodeBrowserJSON("https://example.test/periods/x", nested, &resp); err != nil {
+		t.Fatalf("decode nested menu response: %v", err)
+	}
+	menu := resp.resolve()
+	if menu.Date != "2026-08-04" {
+		t.Fatalf("resolved date = %q, want 2026-08-04", menu.Date)
+	}
+	if len(menu.Period.Categories) != 1 || len(menu.Period.Categories[0].Items) != 1 {
+		t.Fatalf("resolved categories = %+v", menu.Period.Categories)
+	}
+	if got := menu.Period.Categories[0].Items[0].Name; got != "Orange Chicken and Vegetables" {
+		t.Fatalf("resolved item = %q", got)
+	}
+}
+
+func TestPeriodMenuResponseResolvesLegacyFlatShape(t *testing.T) {
+	flat := `{
+		"date": "2026-08-02",
+		"updatedAt": "2026-08-02T15:00:00Z",
+		"closedOnDate": false,
+		"status": {"label": "open", "message": "Open. Closes at 1:30pm.", "color": "green"},
+		"period": {"name": "Lunch", "categories": [{"name": "Comfort 1", "items": [{"name": "Pasta"}]}]}
+	}`
+
+	var resp periodMenuResponse
+	if err := decodeBrowserJSON("https://example.test/periods/x", flat, &resp); err != nil {
+		t.Fatalf("decode flat menu response: %v", err)
+	}
+	menu := resp.resolve()
+	if menu.Date != "2026-08-02" || menu.UpdatedAt != "2026-08-02T15:00:00Z" {
+		t.Fatalf("resolved flat response = %+v", menu)
+	}
+	if len(menu.Period.Categories) != 1 || menu.Period.Categories[0].Items[0].Name != "Pasta" {
+		t.Fatalf("resolved categories = %+v", menu.Period.Categories)
+	}
+}
+
+func TestDecodeBrowserJSONClassifiesBlockedResponse(t *testing.T) {
 	var response any
 	err := decodeBrowserJSON(
 		"https://example.test/periods",
@@ -40,8 +96,8 @@ func TestDecodeBrowserJSONClassifiesCloudflareBlock(t *testing.T) {
 	if !errors.As(err, &fetchErr) {
 		t.Fatalf("expected BrowserFetchError, got %T: %v", err, err)
 	}
-	if fetchErr.Class != ErrCloudflareChallenge {
-		t.Fatalf("expected %q, got %q", ErrCloudflareChallenge, fetchErr.Class)
+	if fetchErr.Class != ErrBlockedResponse {
+		t.Fatalf("expected %q, got %q", ErrBlockedResponse, fetchErr.Class)
 	}
 }
 
@@ -92,12 +148,16 @@ func TestBrowserAPIScraperLiveJSONAPIs(t *testing.T) {
 		date,
 		response.Periods[0].ID,
 	)
-	var menu models.DiningHallResponse
-	if err := s.fetchJSONWithNewTab(browserCtx, menuURL, &menu, 30*time.Second); err != nil {
+	var menuResp periodMenuResponse
+	if err := s.fetchJSONWithNewTab(browserCtx, menuURL, &menuResp, 30*time.Second); err != nil {
 		t.Fatalf("fetch live menu API: %v", err)
 	}
+	menu := menuResp.resolve()
 	if menu.Date == "" {
 		t.Fatal("live menu API returned an empty date")
+	}
+	if len(menu.Period.Categories) == 0 {
+		t.Fatal("live menu API returned no categories")
 	}
 
 	scheduleURL := fmt.Sprintf(

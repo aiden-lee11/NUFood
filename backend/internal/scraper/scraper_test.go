@@ -57,6 +57,59 @@ func TestParseItems(t *testing.T) {
 	assert.Equal(t, []models.AllDataItem{{Name: "Pancakes"}}, allDataItems)
 }
 
+func TestParseItemsRejectsMalformedMenu(t *testing.T) {
+	// Malformed: every item is the same object repeated — one shared id across
+	// the whole menu, which is never a real menu.
+	repeatedID := "690cbb70021b39505ff999fb"
+	sameObject := func(station string, n int) models.Category {
+		items := make([]models.Item, n)
+		for i := range items {
+			items[i] = models.Item{ID: repeatedID, Name: "Caesar Salad", Portion: "—"}
+		}
+		return models.Category{Name: station, Items: items}
+	}
+	malformed := models.DiningHallResponse{
+		Date: "2026-08-08",
+		Period: models.Periods{Categories: []models.Category{
+			sameObject("Comfort 1", 1), sameObject("Comfort 2", 10), sameObject("Bakery-Dessert", 1),
+		}},
+	}
+	if _, _, err := parseItems(malformed, "Allison", "Breakfast"); err == nil {
+		t.Fatal("parseItems accepted a menu where every item is the same object")
+	}
+
+	// Real menu: distinct item ids. Duplicate display names across stations are
+	// legitimate and must NOT be flagged.
+	real := models.DiningHallResponse{
+		Date: "2026-08-13",
+		Period: models.Periods{Categories: []models.Category{
+			{Name: "Comfort 1", Items: []models.Item{
+				{ID: "6a7e4db8190d6bcc98974a6f", Name: "Caesar Salad"},
+				{ID: "6a7e4db8190d6bcc98974b4f", Name: "Caesar Salad"},
+				{ID: "6a7e4db9190d6bcc9897493b", Name: "Grilled Chicken"},
+			}},
+		}},
+	}
+	daily, _, err := parseItems(real, "Allison", "Lunch")
+	if err != nil {
+		t.Fatalf("parseItems rejected a real menu with distinct ids: %v", err)
+	}
+	if len(daily) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(daily))
+	}
+
+	// Legacy payloads without item ids must never trip the detector.
+	noIDs := models.DiningHallResponse{
+		Date: "2026-08-13",
+		Period: models.Periods{Categories: []models.Category{
+			{Name: "Comfort 1", Items: []models.Item{{Name: "Pancakes"}, {Name: "Waffles"}, {Name: "Toast"}}},
+		}},
+	}
+	if _, _, err := parseItems(noIDs, "Allison", "Breakfast"); err != nil {
+		t.Fatalf("parseItems rejected an ID-less menu: %v", err)
+	}
+}
+
 func TestParseItemsAlwaysEmitsFilterSlice(t *testing.T) {
 	response := models.DiningHallResponse{
 		Date: "2026-07-10",

@@ -63,7 +63,9 @@ type Category struct {
 }
 
 type Item struct {
-	// id string `json:"id"`
+	// ID is the upstream item id. It is used only as a sanity check: identical
+	// IDs across a whole menu indicate a malformed payload.
+	ID   string `json:"id"`
 	Name string `json:"name"`
 	// mrn int `json:"mrn"`
 	// rev string `json:"rev"`
