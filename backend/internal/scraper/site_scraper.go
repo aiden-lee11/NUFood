@@ -24,15 +24,19 @@ type SiteScraper struct {
 	// MenuPageURL is loaded once per session to establish the page context the
 	// menu requests run in.
 	MenuPageURL string
-	APIBase     string
-	Locations   []models.Location
-	SiteID      string
+	// HoursPageURL is the operating-hours page, loaded when scraping hours so
+	// the request for the schedule comes from the page that normally makes it.
+	HoursPageURL string
+	APIBase      string
+	Locations    []models.Location
+	SiteID       string
 }
 
 func NewSiteScraper(browserWSURL string) *SiteScraper {
 	return &SiteScraper{
 		BrowserWSURL: browserWSURL,
 		MenuPageURL:  "https://dineoncampus.com/northwestern/whats-on-the-menu",
+		HoursPageURL: "https://dineoncampus.com/northwestern/hours-of-operation",
 		APIBase:      DefaultConfig.BaseURL,
 		Locations:    DefaultConfig.Locations,
 		SiteID:       DefaultConfig.SiteID,
@@ -45,9 +49,9 @@ type siteSession struct {
 	cancel context.CancelFunc
 }
 
-// newSession attaches to the running Chrome, opens a tab, loads the menu page,
-// and waits for it to finish loading.
-func (s *SiteScraper) newSession(parent context.Context) (*siteSession, error) {
+// newSession attaches to the running Chrome, opens a tab, loads pageURL, and
+// waits for it to finish loading. Later requests run from that page's context.
+func (s *SiteScraper) newSession(parent context.Context, pageURL string) (*siteSession, error) {
 	alloc, cancelAlloc := chromedp.NewRemoteAllocator(parent, s.BrowserWSURL)
 	ctx, cancelCtx := chromedp.NewContext(alloc)
 	cancel := func() { cancelCtx(); cancelAlloc() }
@@ -57,19 +61,19 @@ func (s *SiteScraper) newSession(parent context.Context) (*siteSession, error) {
 	// child cancels. The parent context supplies the overall deadline.
 	if err := chromedp.Run(ctx,
 		chromedp.ActionFunc(minimizeWindow),
-		chromedp.Navigate(s.MenuPageURL),
+		chromedp.Navigate(pageURL),
 		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.Sleep(12*time.Second),
 	); err != nil {
 		cancel()
-		return nil, fmt.Errorf("load menu page: %w", err)
+		return nil, fmt.Errorf("load %s: %w", pageURL, err)
 	}
 
 	var pageText string
 	_ = chromedp.Run(ctx, chromedp.Text("body", &pageText, chromedp.ByQuery))
 	if l := strings.ToLower(pageText); strings.Contains(l, "security verification") || strings.Contains(l, "just a moment") {
 		cancel()
-		return nil, fmt.Errorf("menu page did not finish loading")
+		return nil, fmt.Errorf("page did not finish loading")
 	}
 	return &siteSession{ctx: ctx, cancel: cancel}, nil
 }
@@ -157,7 +161,7 @@ type MealResult struct {
 // caller can space out requests. rng seeds the shuffle; pass a per-run source
 // so the order varies.
 func (s *SiteScraper) ScrapeSession(ctx context.Context, dates []string, meal string, rng *rand.Rand, pause func()) ([]MealResult, error) {
-	session, err := s.newSession(ctx)
+	session, err := s.newSession(ctx, s.MenuPageURL)
 	if err != nil {
 		return nil, err
 	}
@@ -210,4 +214,23 @@ func (s *SiteScraper) scrapeHallMeal(session *siteSession, loc models.Location, 
 	res.DailyItems = daily
 	res.AllItems = all
 	return res
+}
+
+// ScrapeHours loads the operating-hours page and reads the weekly schedule that
+// page fetches, returning parsed per-location hours. Loading the hours page
+// (rather than requesting the schedule from elsewhere) matches how the site is
+// normally used.
+func (s *SiteScraper) ScrapeHours(ctx context.Context, date string) ([]models.LocationOperatingTimes, error) {
+	session, err := s.newSession(ctx, s.HoursPageURL)
+	if err != nil {
+		return nil, err
+	}
+	defer session.close()
+
+	url := fmt.Sprintf("%s/locations/weekly_schedule?site_id=%s&date=%s", s.APIBase, s.SiteID, date)
+	var resp models.LocationOperationsResponse
+	if err := session.fetchJSON(url, &resp, 25*time.Second); err != nil {
+		return nil, err
+	}
+	return parseLocationOperatingTimes(resp.Locations)
 }

@@ -417,4 +417,11 @@ func refreshMenuStore() {
 	} else {
 		store.Set(allData)
 	}
+
+	hours, err := db.GetLocationOperatingTimes()
+	if err != nil {
+		log.Printf("warning: refresh operating-hours store failed: %v", err)
+	} else {
+		store.Set(hours)
+	}
 }

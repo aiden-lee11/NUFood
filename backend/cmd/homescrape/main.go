@@ -222,27 +222,61 @@ func runSession(cfg config, rng *rand.Rand, meal string, dry bool) {
 		}
 	}
 
+	// Operating hours change rarely; refresh them once a day in the morning
+	// session, from the hours page itself.
+	refreshHours := meal == "Breakfast"
+
 	if dry {
 		for _, r := range results {
 			if r.Err == nil && r.Matched && len(r.DailyItems) > 0 {
 				log.Printf("  %s %s: %d items (e.g. %s)", r.Date, r.Location, len(r.DailyItems), r.DailyItems[0].Name)
 			}
 		}
+		if refreshHours {
+			if hrs, err := s.ScrapeHours(ctx, dates[0]); err != nil {
+				log.Printf("[Hours] scrape failed: %v", err)
+			} else {
+				log.Printf("[Hours] %d locations", len(hrs))
+			}
+		}
 		return
 	}
-	if len(periods) == 0 {
-		log.Printf("[%s] nothing to write (no hall returned a menu); leaving stored data untouched", meal)
-		return
+
+	wrote := false
+	if len(periods) > 0 {
+		if err := db.ReplaceMenuPeriods(periods, items, all); err != nil {
+			log.Printf("[%s] menu db write failed: %v", meal, err)
+		} else {
+			wrote = true
+			log.Printf("[%s] wrote %d menu slices", meal, len(periods))
+		}
+	} else {
+		log.Printf("[%s] no menu to write; leaving stored menus untouched", meal)
 	}
-	if err := db.ReplaceMenuPeriods(periods, items, all); err != nil {
-		log.Printf("[%s] db write failed: %v", meal, err)
-		return
+
+	if refreshHours {
+		switch hrs, err := s.ScrapeHours(ctx, dates[0]); {
+		case err != nil:
+			log.Printf("[Hours] scrape failed: %v", err)
+		case len(hrs) == 0:
+			log.Printf("[Hours] empty result; leaving stored hours untouched")
+		default:
+			if err := db.ReplaceLocationOperatingTimes(hrs); err != nil {
+				log.Printf("[Hours] db write failed: %v", err)
+			} else {
+				wrote = true
+				log.Printf("[Hours] wrote %d locations", len(hrs))
+			}
+		}
 	}
-	if err := pingReload(cfg); err != nil {
-		log.Printf("[%s] wrote DB but store-refresh ping failed: %v", meal, err)
-		return
+
+	if wrote {
+		if err := pingReload(cfg); err != nil {
+			log.Printf("[%s] wrote DB but store-refresh ping failed: %v", meal, err)
+		} else {
+			log.Printf("[%s] refreshed the app", meal)
+		}
 	}
-	log.Printf("[%s] wrote %d slices and refreshed the app", meal, len(periods))
 }
 
 // buildPlan turns results into the DB write, applying the same safety rules as
