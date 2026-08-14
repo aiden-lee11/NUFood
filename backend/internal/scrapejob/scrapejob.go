@@ -397,6 +397,12 @@ func normalizeMeal(meal string) string {
 // are logged, not fatal: the DB is authoritative and a later request or restart
 // will recover. In the standalone CLI path the global store is nil and Set is a
 // safe no-op.
+// RefreshMenuStore reloads the in-memory menu store from the database. It is
+// the hook an external scraper (the home Mac) calls, via the reload endpoint,
+// after it has written fresh menus straight to the DB — otherwise the backend
+// keeps serving its lazily-loaded copy and clients go stale.
+func RefreshMenuStore() { refreshMenuStore() }
+
 func refreshMenuStore() {
 	weekly, err := db.GetAllWeeklyItems()
 	if err != nil {

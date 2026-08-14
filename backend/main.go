@@ -115,6 +115,11 @@ func main() {
 	apiRouter.HandleFunc("/scrapeWeeklyItems", middleware.ScrapeMiddleware(api.ScrapeWeeklyItemsHandler)).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/updateWeeklyItems", middleware.ScrapeMiddleware(api.ScrapeUpdateWeekly)).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/scrapeOperatingTimes", middleware.ScrapeMiddleware(api.ScrapeLocationOperatingTimesHandler)).Methods("POST", "OPTIONS")
+	// Home-Mac scraper writes menus to the DB directly, then calls this to
+	// refresh the in-memory store. scrapeHealth is public so the outage can be
+	// monitored without a token.
+	apiRouter.HandleFunc("/reloadMenuStore", middleware.ScrapeMiddleware(api.ReloadMenuStoreHandler)).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/scrapeHealth", api.ScrapeHealthHandler).Methods("GET", "OPTIONS")
 
 	// Mailing endpoints
 	apiRouter.HandleFunc("/sendMailing", middleware.AdminMiddleware(api.SendOutMailing)).Methods("GET", "OPTIONS")

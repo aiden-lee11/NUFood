@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -1005,4 +1006,59 @@ func ClearStoresHandler(w http.ResponseWriter, r *http.Request) {
 	cache.InitUserCache(8*time.Hour, 1000)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+// externalScrapeClock tracks the last time the home-Mac scraper reported a
+// successful ingest, so the health endpoint can flag a silent outage.
+var externalScrapeClock struct {
+	mu   sync.Mutex
+	last time.Time
+}
+
+func markExternalScrape(t time.Time) {
+	externalScrapeClock.mu.Lock()
+	externalScrapeClock.last = t
+	externalScrapeClock.mu.Unlock()
+}
+
+func lastExternalScrape() time.Time {
+	externalScrapeClock.mu.Lock()
+	defer externalScrapeClock.mu.Unlock()
+	return externalScrapeClock.last
+}
+
+// ReloadMenuStoreHandler reloads the in-memory menu store from the database.
+// The home-Mac scraper calls this (bearer scrape token) right after it writes
+// fresh menus to the DB directly, so the backend serves the new data instead of
+// its lazily-cached copy. It also stamps the external-scrape heartbeat.
+func ReloadMenuStoreHandler(w http.ResponseWriter, r *http.Request) {
+	scrapejob.RefreshMenuStore()
+	now := time.Now()
+	markExternalScrape(now)
+	log.Printf("menu store reloaded on external-scraper request at %s", now.Format(time.RFC3339))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "reloadedAt": now.UTC().Format(time.RFC3339)})
+}
+
+// ScrapeHealthHandler reports when the external scraper last succeeded, so a
+// monitor (or you) can tell if the home Mac has gone dark. Public read-only.
+func ScrapeHealthHandler(w http.ResponseWriter, r *http.Request) {
+	last := lastExternalScrape()
+	resp := map[string]any{}
+	if last.IsZero() {
+		resp["lastScrapeAt"] = nil
+		resp["ageSeconds"] = nil
+		resp["stale"] = true
+		resp["note"] = "no external scrape recorded since backend start"
+	} else {
+		age := time.Since(last)
+		resp["lastScrapeAt"] = last.UTC().Format(time.RFC3339)
+		resp["ageSeconds"] = int(age.Seconds())
+		// The scraper runs at least thrice daily; >8h silent means something is wrong.
+		resp["stale"] = age > 8*time.Hour
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(resp)
 }
