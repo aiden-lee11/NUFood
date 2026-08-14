@@ -92,13 +92,13 @@ func parseItems(jsonResponse models.DiningHallResponse, location, timeOfDay stri
 			for _, nutrient := range item.Nutrients {
 				switch nutrient.Name {
 				case "Calories":
-					dailyItem.Calories = nutrient.Value
+					dailyItem.Calories = string(nutrient.Value)
 				case "Protein (g)":
-					dailyItem.Protein = nutrient.Value
+					dailyItem.Protein = string(nutrient.Value)
 				case "Total Carbohydrates (g)":
-					dailyItem.Carbs = nutrient.Value
+					dailyItem.Carbs = string(nutrient.Value)
 				case "Total Fat (g)":
-					dailyItem.Fat = nutrient.Value
+					dailyItem.Fat = string(nutrient.Value)
 				}
 			}
 

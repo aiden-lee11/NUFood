@@ -216,6 +216,11 @@ func runSession(cfg config, rng *rand.Rand, meal string, dry bool) {
 
 	periods, items, all, matched, failed := buildPlan(meal, results)
 	log.Printf("[%s] dates=%v halls_with_menu=%d items=%d failures=%d", meal, dates, matched, len(items), failed)
+	for _, r := range results {
+		if r.Err != nil {
+			log.Printf("  fetch failure %s %s: %v", r.Date, r.Location, r.Err)
+		}
+	}
 
 	if dry {
 		for _, r := range results {

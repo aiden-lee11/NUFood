@@ -1,5 +1,33 @@
 package models
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
+// FlexString decodes a JSON value the API sends inconsistently as either a
+// string or a number (e.g. a nutrient value of "210" or 210), always yielding a
+// string. Without it, a single numeric value fails the whole menu decode.
+type FlexString string
+
+func (f *FlexString) UnmarshalJSON(b []byte) error {
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 || string(b) == "null" {
+		*f = ""
+		return nil
+	}
+	if b[0] == '"' {
+		var s string
+		if err := json.Unmarshal(b, &s); err != nil {
+			return err
+		}
+		*f = FlexString(s)
+		return nil
+	}
+	*f = FlexString(b) // number: keep its literal text
+	return nil
+}
+
 // Internal Structs
 type Location struct {
 	Name       string
@@ -85,8 +113,8 @@ type Item struct {
 
 type Nutrient struct {
 	// id string `json:"id"`
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name  string     `json:"name"`
+	Value FlexString `json:"value"`
 	// uom string `json:"uom"`
 	// value_numeric string `json:"value_numeric"`
 }
