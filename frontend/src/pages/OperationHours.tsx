@@ -45,9 +45,11 @@ const locationGrouping: LocationGrouping = {
     "Backlot at Kresge Cafe",
     "Cafe Coralie",
     "Lisa's Cafe",
-    // seems like this is just not a thing tracked by api anymore?
-    // 9/15/25
-    // "Café Bergson", 
+    "Harry's Cafe",
+    // Café Bergson returned under this name (8/14/26).
+    "Reprise Coffee at Cafe Bergson",
+    "SLICE Pizzeria",
+    "The Market at Foster Walker",
   ],
 };
 

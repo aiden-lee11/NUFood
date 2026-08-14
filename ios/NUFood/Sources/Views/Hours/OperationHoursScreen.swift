@@ -237,6 +237,8 @@ struct OperationHoursScreen: View {
             locations: [
                 "Protein Bar", "847 at Fran's Cafe", "Tech Express",
                 "Backlot at Kresge Cafe", "Cafe Coralie", "Lisa's Cafe",
+                "Harry's Cafe", "Reprise Coffee at Cafe Bergson",
+                "SLICE Pizzeria", "The Market at Foster Walker",
             ]
         ),
     ]
