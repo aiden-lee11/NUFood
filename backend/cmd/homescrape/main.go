@@ -31,15 +31,17 @@ const (
 // mealWindow is the local-Central time span within which a meal's daily update
 // runs, at a random moment inside the window, ahead of that meal's service.
 type mealWindow struct {
-	meal            string
-	startHour, endH int
-	startMin, endM  int
+	meal      string
+	startHour int
+	startMin  int
+	endHour   int
+	endMin    int
 }
 
 var windows = []mealWindow{
-	{"Breakfast", 6, 0, 6, 40},
-	{"Lunch", 10, 15, 10, 50},
-	{"Dinner", 16, 0, 16, 40},
+	{meal: "Breakfast", startHour: 6, startMin: 0, endHour: 6, endMin: 40},
+	{meal: "Lunch", startHour: 10, startMin: 15, endHour: 10, endMin: 50},
+	{meal: "Dinner", startHour: 16, startMin: 0, endHour: 16, endMin: 40},
 }
 
 type config struct {
@@ -146,9 +148,12 @@ func planDay(now time.Time, loc *time.Location, rng *rand.Rand) []*session {
 	var out []*session
 	for _, w := range windows {
 		start := time.Date(now.Year(), now.Month(), now.Day(), w.startHour, w.startMin, 0, 0, loc)
-		end := time.Date(now.Year(), now.Month(), now.Day(), w.endH, w.endM, 0, 0, loc)
+		end := time.Date(now.Year(), now.Month(), now.Day(), w.endHour, w.endMin, 0, 0, loc)
 		span := int(end.Sub(start).Seconds())
-		fire := start.Add(time.Duration(rng.Intn(span)) * time.Second)
+		fire := start
+		if span > 0 {
+			fire = start.Add(time.Duration(rng.Intn(span)) * time.Second)
+		}
 		out = append(out, &session{meal: w.meal, fire: fire})
 	}
 	return out
