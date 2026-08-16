@@ -4,8 +4,13 @@ import (
 	"backend/internal/db"
 	"backend/internal/models"
 	"backend/internal/scraper"
+	"backend/internal/store"
 	"errors"
+	"fmt"
 	"testing"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func key(location, date, period string) scraper.MenuKey {
@@ -211,4 +216,42 @@ func TestTryLockIsExclusive(t *testing.T) {
 		t.Fatal("expected the lock to be claimable again after release")
 	}
 	Unlock()
+}
+
+// Clearing the menu table is a legitimate state, so a refresh must empty the
+// store instead of leaving the last snapshot to be served forever.
+func TestRefreshMenuStoreEmptiesStoreWhenMenuTableIsEmpty(t *testing.T) {
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
+	testDB, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open test db: %v", err)
+	}
+	if err := db.Migrate(testDB); err != nil {
+		t.Fatalf("migrate test db: %v", err)
+	}
+	db.DB = testDB
+	t.Cleanup(func() {
+		sqlDB, err := testDB.DB()
+		if err != nil {
+			t.Fatalf("test db handle: %v", err)
+		}
+		if err := sqlDB.Close(); err != nil {
+			t.Fatalf("close test db: %v", err)
+		}
+		db.DB = nil
+	})
+
+	store.InitStore()
+	t.Cleanup(store.Clear)
+	store.Set(map[string][]models.DailyItem{"2026-08-16": {{Name: "Stale", Date: "2026-08-16"}}})
+	store.Set([]models.AllDataItem{{Name: "Stale"}})
+
+	refreshMenuStore()
+
+	if weekly := store.GetWeeklyItems(); len(weekly) != 0 {
+		t.Fatalf("expected the weekly-items store to be emptied, got %d dates", len(weekly))
+	}
+	if allData := store.GetAllDataItems(); len(allData) != 0 {
+		t.Fatalf("expected the all-items store to be emptied, got %d items", len(allData))
+	}
 }

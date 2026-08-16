@@ -13,6 +13,7 @@ import (
 	"backend/internal/scraper"
 	"backend/internal/store"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -404,7 +405,13 @@ func normalizeMeal(meal string) string {
 func RefreshMenuStore() { refreshMenuStore() }
 
 func refreshMenuStore() {
+	// An empty menu table is a legitimate state (e.g. between terms), so the
+	// store must be emptied too rather than left holding the last snapshot.
 	weekly, err := db.GetAllWeeklyItems()
+	if errors.Is(err, db.NoItemsInDB) {
+		weekly = map[string][]models.DailyItem{}
+		err = nil
+	}
 	if err != nil {
 		log.Printf("warning: refresh weekly-items store failed: %v", err)
 	} else {
@@ -412,6 +419,10 @@ func refreshMenuStore() {
 	}
 
 	allData, err := db.GetAllDataItems()
+	if errors.Is(err, db.NoItemsInDB) {
+		allData = []models.AllDataItem{}
+		err = nil
+	}
 	if err != nil {
 		log.Printf("warning: refresh all-items store failed: %v", err)
 	} else {

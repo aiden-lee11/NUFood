@@ -525,6 +525,10 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	if allItems == nil {
 		fmt.Println("All data items in store were nil, falling back to db")
 		allItems, err = db.GetAllDataItems()
+		if errors.Is(err, db.NoItemsInDB) {
+			allItems = []models.AllDataItem{}
+			err = nil
+		}
 		store.Set(allItems)
 		if err != nil {
 			http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
@@ -537,6 +541,10 @@ func GetAllDataHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Weekly items in store were nil, falling back to db")
 		// Fetch from database and convert to the format expected by frontend
 		dbWeeklyItems, err := db.GetAllWeeklyItems()
+		if errors.Is(err, db.NoItemsInDB) {
+			dbWeeklyItems = map[string][]models.DailyItem{}
+			err = nil
+		}
 		store.Set(dbWeeklyItems)
 		if err != nil {
 			http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
@@ -704,6 +712,10 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 	if allItems == nil {
 		fmt.Println("All Data items in store were nil, falling back to db")
 		allItems, err = db.GetAllDataItems()
+		if errors.Is(err, db.NoItemsInDB) {
+			allItems = []models.AllDataItem{}
+			err = nil
+		}
 		store.Set(allItems)
 		if err != nil {
 			http.Error(w, "Error fetching all items: "+err.Error(), http.StatusInternalServerError)
@@ -717,6 +729,10 @@ func GetGeneralDataHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Weekly items in store were nil, falling back to db")
 		// Fetch from database and convert to the format expected by frontend
 		dbWeeklyItems, err := db.GetAllWeeklyItems()
+		if errors.Is(err, db.NoItemsInDB) {
+			dbWeeklyItems = map[string][]models.DailyItem{}
+			err = nil
+		}
 		store.Set(dbWeeklyItems)
 		if err != nil {
 			http.Error(w, "Error fetching weeklyItems items: "+err.Error(), http.StatusInternalServerError)
