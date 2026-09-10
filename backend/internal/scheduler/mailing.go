@@ -3,8 +3,6 @@ package scheduler
 import (
 	"backend/internal/mailer"
 	"log"
-	"os"
-	"strings"
 	"time"
 
 	// Embed the timezone database so LoadLocation(campusZone) works even on
@@ -16,14 +14,14 @@ import (
 // the day and lands in inboxes before breakfast ("start of each day").
 var defaultMailingHours = []int{7}
 
-// StartDailyMailing launches the background "daily favorites" email loop unless
-// disabled via ENABLE_MAILING_CRON=false. Send times are MAILING_HOURS_CST
+// StartDailyMailing launches the background "daily favorites" email loop when
+// ENABLE_MAILING_CRON=true (unset means off). Send times are MAILING_HOURS_CST
 // (comma-separated hours 0-23 in America/Chicago, default "7"). It mirrors
 // StartDailyScrape: one goroutine that sleeps until the next scheduled time and
 // calls mailer.SendEmails. Failures are logged, never fatal.
 func StartDailyMailing() {
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("ENABLE_MAILING_CRON")), "false") {
-		log.Println("daily mailing disabled via ENABLE_MAILING_CRON=false")
+	if !enabledByEnv("ENABLE_MAILING_CRON") {
+		log.Println("daily mailing disabled (set ENABLE_MAILING_CRON=true to enable)")
 		return
 	}
 

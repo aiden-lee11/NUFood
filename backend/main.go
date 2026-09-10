@@ -21,11 +21,13 @@ import (
 )
 
 func main() {
-	// Load .env file only if not in production
+	// Local runs load .env.local only. Production credentials live in .env,
+	// which is reserved for manual ops (psql, scripts) and never auto-loaded,
+	// so a dev server can't reach the production database by accident.
 	if os.Getenv("RENDER") != "true" && os.Getenv("RAILWAY") != "true" {
-		env_err := godotenv.Load()
+		env_err := godotenv.Load(".env.local")
 		if env_err != nil {
-			log.Printf("Error loading .env file: %v", env_err)
+			log.Printf("Error loading .env.local file: %v", env_err)
 		}
 	}
 
@@ -63,16 +65,16 @@ func main() {
 
 	fmt.Println("UserCache initialized")
 
-	// Start the in-process menu scrape (replaces the old Vercel cron). Full
-	// scrape at 6am Central by default, plus in-service refreshes; override the
-	// full-scrape times with SCRAPE_HOURS_CST or disable with
-	// ENABLE_SCRAPE_CRON=false.
+	// Start the in-process menu scrape (replaces the old Vercel cron). Off
+	// unless ENABLE_SCRAPE_CRON=true / ENABLE_REFRESH_CRON=true; full scrape at
+	// 6am Central by default, plus in-service refreshes; override the
+	// full-scrape times with SCRAPE_HOURS_CST.
 	scheduler.StartDailyScrape()
 
 	// Daily "favorites available today" email. Intentionally left OFF for now —
 	// uncomment to enable once the school year starts (dining halls open again).
-	// Sends at 7am Central by default; override with MAILING_HOURS_CST or disable
-	// with ENABLE_MAILING_CRON=false. Requires BASE_URL and SECRET_KEY to be set,
+	// Off unless ENABLE_MAILING_CRON=true; sends at 7am Central by default,
+	// override with MAILING_HOURS_CST. Requires BASE_URL and SECRET_KEY to be set,
 	// plus a mail provider plugged into the mailer package's Sender seam
 	// (mailer.SetSender) — until one is installed, sends are skipped with a clear
 	// "no mail provider configured" error.
@@ -80,8 +82,8 @@ func main() {
 
 	// Meal-time push notifications: 30 minutes before each meal period, refresh
 	// that meal's menu and then push opted-in users the favorites available for
-	// it. Fires at 6:30, 10:30, and 16:30 Central by default; override with
-	// NOTIFY_TIMES_CST or disable with ENABLE_NOTIFY_CRON=false. StartDailyScrape
+	// it. Off unless ENABLE_NOTIFY_CRON=true; fires at 6:30, 10:30, and 16:30
+	// Central by default, override with NOTIFY_TIMES_CST. StartDailyScrape
 	// reads the same two settings, so its refresh plan stays clear of these sends.
 	scheduler.StartDailyNotify()
 

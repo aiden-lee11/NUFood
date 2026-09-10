@@ -136,23 +136,23 @@ type menuScheduler struct {
 	runCount int
 }
 
-// StartDailyScrape launches the background menu loop. The full scrape is
-// disabled by ENABLE_SCRAPE_CRON=false and the in-service refreshes by
-// ENABLE_REFRESH_CRON=false; either may run without the other.
+// StartDailyScrape launches the background menu loop. The full scrape runs
+// only with ENABLE_SCRAPE_CRON=true and the in-service refreshes only with
+// ENABLE_REFRESH_CRON=true; either may run without the other.
 //
 // Times are configurable in America/Chicago: SCRAPE_HOURS_CST (comma-separated
 // hours 0-23, default 06:00) for the full scrape and REFRESH_TICKS_CST
 // (comma-separated "H:MM" or "H:MM=Meal") for refreshes, which otherwise follow
 // the halls' stored operating hours.
 func StartDailyScrape() {
-	fullEnabled := !disabledByEnv("ENABLE_SCRAPE_CRON")
-	refreshEnabled := !disabledByEnv("ENABLE_REFRESH_CRON")
+	fullEnabled := enabledByEnv("ENABLE_SCRAPE_CRON")
+	refreshEnabled := enabledByEnv("ENABLE_REFRESH_CRON")
 
 	if !fullEnabled {
-		log.Println("daily scrape disabled via ENABLE_SCRAPE_CRON=false")
+		log.Println("daily scrape disabled (set ENABLE_SCRAPE_CRON=true to enable)")
 	}
 	if !refreshEnabled {
-		log.Println("menu refreshes disabled via ENABLE_REFRESH_CRON=false")
+		log.Println("menu refreshes disabled (set ENABLE_REFRESH_CRON=true to enable)")
 	}
 	if !fullEnabled && !refreshEnabled {
 		return
@@ -486,7 +486,7 @@ func preNotifyConflict(tick refreshTick, notifyTimes []clockTime) (clockTime, bo
 // clear of, reading the same configuration the notify cron does so the two
 // cannot drift apart. No notify cron means no blackout.
 func notifyBlackoutTimes() []clockTime {
-	if disabledByEnv("ENABLE_NOTIFY_CRON") {
+	if !enabledByEnv("ENABLE_NOTIFY_CRON") {
 		return nil
 	}
 	return parseNotifyTimes("NOTIFY_TIMES_CST", defaultNotifyTimes)
@@ -663,9 +663,11 @@ func parseRefreshTicks(envName string) []refreshTick {
 	return ticks
 }
 
-// disabledByEnv reports whether a kill-switch env var is set to "false".
-func disabledByEnv(envName string) bool {
-	return strings.EqualFold(strings.TrimSpace(os.Getenv(envName)), "false")
+// enabledByEnv reports whether a cron gate env var is explicitly "true".
+// Crons are opt-in: unset means OFF, so a stray local process pointed at the
+// production database can never scrape on its own.
+func enabledByEnv(envName string) bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv(envName)), "true")
 }
 
 func describeTicks(ticks []refreshTick) string {

@@ -29,15 +29,15 @@ type clockTime struct {
 // and Dinner (17:00) — the meal boundaries the iOS app hardcodes.
 var defaultNotifyTimes = []clockTime{{6, 30}, {10, 30}, {16, 30}}
 
-// StartDailyNotify launches the background meal-notification loop unless
-// disabled via ENABLE_NOTIFY_CRON=false. Send times are NOTIFY_TIMES_CST
+// StartDailyNotify launches the background meal-notification loop when
+// ENABLE_NOTIFY_CRON=true (unset means off). Send times are NOTIFY_TIMES_CST
 // (comma-separated "H:MM" 24h values in America/Chicago, default
 // "6:30,10:30,16:30"). It mirrors StartDailyScrape: one goroutine that sleeps
 // until the next scheduled time, re-reads the meal it is about to announce and
 // pushes each user their upcoming favorites. Failures are logged, never fatal.
 func StartDailyNotify() {
-	if disabledByEnv("ENABLE_NOTIFY_CRON") {
-		log.Println("meal notifications disabled via ENABLE_NOTIFY_CRON=false")
+	if !enabledByEnv("ENABLE_NOTIFY_CRON") {
+		log.Println("meal notifications disabled (set ENABLE_NOTIFY_CRON=true to enable)")
 		return
 	}
 

@@ -7,3 +7,4 @@ coverage/
 backend
 example.json
 example_todays_menu.json
+.env.local

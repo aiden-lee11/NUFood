@@ -425,7 +425,7 @@ func TestEnsureTicksAppliesTheBlackout(t *testing.T) {
 }
 
 func TestNotifyBlackoutTimes(t *testing.T) {
-	t.Setenv("ENABLE_NOTIFY_CRON", "")
+	t.Setenv("ENABLE_NOTIFY_CRON", "true")
 	t.Setenv("NOTIFY_TIMES_CST", "")
 	if got := notifyBlackoutTimes(); len(got) != len(defaultNotifyTimes) {
 		t.Fatalf("got %v, want the notify defaults %v", got, defaultNotifyTimes)
@@ -436,6 +436,12 @@ func TestNotifyBlackoutTimes(t *testing.T) {
 		t.Fatalf("the blackout must follow NOTIFY_TIMES_CST, got %v", got)
 	}
 
+	// The gate is opt-in: unset and "false" both mean no notify cron and
+	// therefore no blackout.
+	t.Setenv("ENABLE_NOTIFY_CRON", "")
+	if got := notifyBlackoutTimes(); got != nil {
+		t.Fatalf("unset notify cron means no blackout, got %v", got)
+	}
 	t.Setenv("ENABLE_NOTIFY_CRON", "false")
 	if got := notifyBlackoutTimes(); got != nil {
 		t.Fatalf("no notify cron means no blackout, got %v", got)
